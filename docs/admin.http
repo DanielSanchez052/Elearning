@@ -1,0 +1,328 @@
+### ============================================================
+### E-Learning Multipaís — Admin Module
+### Gestión de Países y Roles
+### ============================================================
+
+@baseUrl = https://localhost:7001/api
+@contentType = application/json
+
+### Tokens — obtén estos haciendo login con cada rol
+@superAdminToken = PEGA_TOKEN_SUPER_ADMIN
+@adminToken      = PEGA_TOKEN_ADMIN
+@studentToken    = PEGA_TOKEN_STUDENT
+
+### IDs de prueba
+@countryId  = 1
+@newCountryId = 0
+@userId     = PEGA_GUID_DE_USUARIO
+
+
+# ──────────────────────────────────────────────────────────────
+# 1. PAÍSES
+# ──────────────────────────────────────────────────────────────
+
+### 1a. Listar todos los países — Admin o Super Admin (200 OK)
+GET {{baseUrl}}/admin/countries
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 1b. Listar países — como Admin (200 OK)
+GET {{baseUrl}}/admin/countries
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 1c. Listar países — sin token (401 Unauthorized)
+GET {{baseUrl}}/admin/countries
+
+###
+
+### 1d. Listar países — como Student (403 Forbidden)
+GET {{baseUrl}}/admin/countries
+Authorization: Bearer {{studentToken}}
+
+###
+
+### 1e. Obtener país por Id (200 OK)
+GET {{baseUrl}}/admin/countries/{{countryId}}
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 1f. Obtener país inexistente (404 Not Found)
+GET {{baseUrl}}/admin/countries/9999
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 1g. Crear país — Super Admin (201 Created)
+### Guarda el id del response en @newCountryId
+POST {{baseUrl}}/admin/countries
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "code": "PER",
+  "name": "Perú"
+}
+
+###
+
+### 1h. Error — código duplicado (409 Conflict)
+POST {{baseUrl}}/admin/countries
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "code": "PER",
+  "name": "Perú Duplicado"
+}
+
+###
+
+### 1i. Error — código inválido, no 3 letras (400 Bad Request)
+POST {{baseUrl}}/admin/countries
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "code": "PE",
+  "name": "Perú"
+}
+
+###
+
+### 1j. Error — crear país como Admin (403 Forbidden)
+POST {{baseUrl}}/admin/countries
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "code": "ECU",
+  "name": "Ecuador"
+}
+
+###
+
+### 1k. Toggle status — desactivar país (204 No Content)
+PATCH {{baseUrl}}/admin/countries/{{countryId}}/toggle-status
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 1l. Toggle status — activar país (vuelve a ejecutar el mismo)
+PATCH {{baseUrl}}/admin/countries/{{countryId}}/toggle-status
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 1m. Error — toggle como Admin (403 Forbidden)
+PATCH {{baseUrl}}/admin/countries/{{countryId}}/toggle-status
+Authorization: Bearer {{adminToken}}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 2. USUARIOS
+# ──────────────────────────────────────────────────────────────
+
+### 2a. Listar todos los usuarios — Super Admin sin filtros (200 OK)
+GET {{baseUrl}}/admin/users
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 2b. Super Admin — filtrar por país
+GET {{baseUrl}}/admin/users?countryId=1
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 2c. Super Admin — filtrar por rol
+GET {{baseUrl}}/admin/users?role=student
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 2d. Super Admin — búsqueda por nombre o email
+GET {{baseUrl}}/admin/users?search=juan
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 2e. Super Admin — solo verificados
+GET {{baseUrl}}/admin/users?isEmailVerified=true
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 2f. Super Admin — filtros combinados con paginación
+GET {{baseUrl}}/admin/users?countryId=1&role=student&isEmailVerified=true&page=1&pageSize=10
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 2g. Admin — lista usuarios (forzado a su propio país aunque mande countryId=9999)
+GET {{baseUrl}}/admin/users?countryId=9999
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 2h. Obtener usuario por Id (200 OK)
+GET {{baseUrl}}/admin/users/{{userId}}
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 2i. Obtener usuario inexistente (404 Not Found)
+GET {{baseUrl}}/admin/users/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 3. CAMBIO DE ROL
+# ──────────────────────────────────────────────────────────────
+
+### 3a. Super Admin — asignar rol Admin (200 OK)
+PATCH {{baseUrl}}/admin/users/{{userId}}/role
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "role": "admin"
+}
+
+###
+
+### 3b. Super Admin — asignar rol Instructor
+PATCH {{baseUrl}}/admin/users/{{userId}}/role
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "role": "instructor"
+}
+
+###
+
+### 3c. Admin — asignar Student (permitido)
+PATCH {{baseUrl}}/admin/users/{{userId}}/role
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "role": "student"
+}
+
+###
+
+### 3d. Error — Admin intenta asignar Admin (403 Forbidden)
+PATCH {{baseUrl}}/admin/users/{{userId}}/role
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "role": "admin"
+}
+
+###
+
+### 3e. Error — Admin intenta asignar Super Admin (403 Forbidden)
+PATCH {{baseUrl}}/admin/users/{{userId}}/role
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "role": "super_admin"
+}
+
+###
+
+### 3f. Error — rol inválido (400 Bad Request)
+PATCH {{baseUrl}}/admin/users/{{userId}}/role
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "role": "jefe_supremo"
+}
+
+###
+
+### 3g. Error — usuario ya tiene ese rol (409 Conflict)
+### Ejecuta 3c dos veces para provocar este error
+PATCH {{baseUrl}}/admin/users/{{userId}}/role
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "role": "student"
+}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 4. CAMBIO DE PAÍS — solo Super Admin
+# ──────────────────────────────────────────────────────────────
+
+### 4a. Super Admin — cambiar país de usuario (204 No Content)
+PATCH {{baseUrl}}/admin/users/{{userId}}/country
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "countryId": 2
+}
+
+###
+
+### 4b. Error — Admin intenta cambiar país (403 Forbidden)
+PATCH {{baseUrl}}/admin/users/{{userId}}/country
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "countryId": 2
+}
+
+###
+
+### 4c. Error — país inexistente (404 Not Found)
+PATCH {{baseUrl}}/admin/users/{{userId}}/country
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "countryId": 9999
+}
+
+###
+
+### 4d. Error — país desactivado (409 Conflict)
+### Desactiva primero un país con 1k, luego prueba asignarlo
+PATCH {{baseUrl}}/admin/users/{{userId}}/country
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "countryId": {{countryId}}
+}
+
+###
+
+### 4e. Error — usuario ya pertenece a ese país (409 Conflict)
+### Ejecuta 4a dos veces con el mismo countryId
+PATCH {{baseUrl}}/admin/users/{{userId}}/country
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "countryId": 2
+}
+
+###

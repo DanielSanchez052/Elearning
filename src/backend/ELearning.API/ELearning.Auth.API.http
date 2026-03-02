@@ -1,0 +1,360 @@
+﻿### ============================================================
+### E-Learning Multipaís — Auth Module
+### Archivo de pruebas HTTP (.http)
+### Compatible con: VS Code REST Client / JetBrains Rider / Visual Studio
+### ============================================================
+
+@baseUrl = http://localhost:5277/api
+@contentType = application/json
+
+### Variables que se llenan durante las pruebas
+@registeredEmail = test@elearning.com
+@registeredPassword = Password123
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OTRiZDA5OS1iODI0LTRiNWEtODI2Yi0zYzUxZDE1MzIwZDAiLCJlbWFpbCI6InRlc3RAZWxlYXJuaW5nLmNvbSIsIm5hbWUiOiJKdWFuIFDDqXJleiIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6InN0dWRlbnQiLCJjb3VudHJ5X2lkIjoiMSIsImp0aSI6IjQzZTZiNjg2LWY1OWMtNDQxZi05YmNiLWI1MWM4ZTdlMjIwNiIsIm5iZiI6MTc3MjQwNDcwOSwiZXhwIjoxNzcyNDA4MzA5LCJpc3MiOiJFTGVhcm5pbmdBUEkiLCJhdWQiOiJFTGVhcm5pbmdBcHAifQ.9aQDv1JQ7W34HTbkLLmwfoNh8pCgULOlk-SOHSPkTio
+@verifyToken = 56b8c3b7cfd641c2b5abab1c5d49f7bf
+@resetToken = 4aefc5294ea44e14bf987ec5c3d3e79b
+
+
+# ──────────────────────────────────────────────────────────────
+# 1. REGISTER
+# ──────────────────────────────────────────────────────────────
+
+### 1a. Registro exitoso
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "fullName": "Juan Pérez",
+  "email": "{{registeredEmail}}",
+  "password": "{{registeredPassword}}",
+  "countryId": 1
+}
+
+###
+
+### 1b. Error — email ya registrado (409 Conflict)
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "fullName": "Juan Pérez",
+  "email": "{{registeredEmail}}",
+  "password": "{{registeredPassword}}",
+  "countryId": 1
+}
+
+###
+
+### 1c. Error — validación: campos vacíos (400 Bad Request)
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "fullName": "",
+  "email": "",
+  "password": "",
+  "countryId": 0
+}
+
+###
+
+### 1d. Error — validación: email inválido (400 Bad Request)
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "fullName": "Juan Pérez",
+  "email": "esto-no-es-un-email",
+  "password": "{{registeredPassword}}",
+  "countryId": 1
+}
+
+###
+
+### 1e. Error — validación: contraseña débil (400 Bad Request)
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "fullName": "Juan Pérez",
+  "email": "otro@elearning.com",
+  "password": "1234",
+  "countryId": 1
+}
+
+###
+
+### 1f. Error — país inexistente (404 Not Found)
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "fullName": "Juan Pérez",
+  "email": "nuevo@elearning.com",
+  "password": "{{registeredPassword}}",
+  "countryId": 9999
+}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 2. VERIFY EMAIL
+# Copia el token desde la BD o los logs antes de correr estas pruebas:
+# SELECT email_verify_token FROM users WHERE email = 'test@elearning.com';
+# ──────────────────────────────────────────────────────────────
+
+### 2a. Verificación exitosa (204 No Content)
+POST {{baseUrl}}/auth/verify-email
+Content-Type: {{contentType}}
+
+{
+  "token": "{{verifyToken}}"
+}
+
+###
+
+### 2b. Error — token inválido (404 Not Found)
+POST {{baseUrl}}/auth/verify-email
+Content-Type: {{contentType}}
+
+{
+  "token": "tokeninvalidoquenoexiste"
+}
+
+###
+
+### 2c. Error — email ya verificado (409 Conflict)
+### Corre 2a dos veces para provocar este error
+POST {{baseUrl}}/auth/verify-email
+Content-Type: {{contentType}}
+
+{
+  "token": "{{verifyToken}}"
+}
+
+###
+
+### 2d. Error — token vacío (400 Bad Request)
+POST {{baseUrl}}/auth/verify-email
+Content-Type: {{contentType}}
+
+{
+  "token": ""
+}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 3. LOGIN
+# El email debe estar verificado antes de hacer login.
+# ──────────────────────────────────────────────────────────────
+
+### 3a. Login exitoso — copia el accessToken del response y pégalo en @accessToken
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{registeredEmail}}",
+  "password": "{{registeredPassword}}"
+}
+
+###
+
+### 3b. Error — credenciales incorrectas (401 Unauthorized)
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{registeredEmail}}",
+  "password": "ContraseñaIncorrecta99"
+}
+
+###
+
+### 3c. Error — email no existe (401 Unauthorized)
+### Debe devolver el mismo mensaje que 3b (sin revelar si el email existe)
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "noexiste@elearning.com",
+  "password": "{{registeredPassword}}"
+}
+
+###
+
+### 3d. Error — email no verificado (401 Unauthorized)
+### Registra un nuevo usuario sin verificarlo y prueba el login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "sinverificar@elearning.com",
+  "password": "{{registeredPassword}}"
+}
+
+###
+
+### 3e. Error — campos vacíos (400 Bad Request)
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "",
+  "password": ""
+}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 4. GET CURRENT USER
+# Requiere el accessToken del login (3a).
+# Pégalo en @accessToken arriba antes de correr estas pruebas.
+# ──────────────────────────────────────────────────────────────
+
+### 4a. Usuario actual exitoso (200 OK)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{accessToken}}
+
+###
+
+### 4b. Error — sin token (401 Unauthorized)
+GET {{baseUrl}}/auth/me
+
+###
+
+### 4c. Error — token inválido (401 Unauthorized)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer tokeninvalido.queno.funciona
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 5. FORGOT PASSWORD
+# ──────────────────────────────────────────────────────────────
+
+### 5a. Solicitud exitosa — siempre devuelve 200 aunque el email no exista
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: {{contentType}}
+
+{
+  "email": "{{registeredEmail}}"
+}
+
+###
+
+### 5b. Email no registrado — debe devolver 200 igual (sin revelar si existe)
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: {{contentType}}
+
+{
+  "email": "noexiste@elearning.com"
+}
+
+###
+
+### 5c. Error — email vacío (400 Bad Request)
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: {{contentType}}
+
+{
+  "email": ""
+}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 6. RESET PASSWORD
+# Copia el token desde la BD antes de correr estas pruebas:
+# SELECT reset_token, reset_token_expires FROM users WHERE email = 'test@elearning.com';
+# ──────────────────────────────────────────────────────────────
+
+### 6a. Reset exitoso (200 OK)
+POST {{baseUrl}}/auth/reset-password
+Content-Type: {{contentType}}
+
+{
+  "token": "{{resetToken}}",
+  "newPassword": "NuevaPassword456",
+  "confirmPassword": "NuevaPassword456"
+}
+
+###
+
+### 6b. Error — token inválido (404 Not Found)
+POST {{baseUrl}}/auth/reset-password
+Content-Type: {{contentType}}
+
+{
+  "token": "tokeninvalidoquenoexiste",
+  "newPassword": "NuevaPassword456",
+  "confirmPassword": "NuevaPassword456"
+}
+
+###
+
+### 6c. Error — token expirado (409 Conflict)
+### Espera 15 minutos o modifica reset_token_expires en la BD a un valor pasado
+POST {{baseUrl}}/auth/reset-password
+Content-Type: {{contentType}}
+
+{
+  "token": "{{resetToken}}",
+  "newPassword": "NuevaPassword456",
+  "confirmPassword": "NuevaPassword456"
+}
+
+###
+
+### 6d. Error — contraseñas no coinciden (400 Bad Request)
+POST {{baseUrl}}/auth/reset-password
+Content-Type: {{contentType}}
+
+{
+  "token": "{{resetToken}}",
+  "newPassword": "NuevaPassword456",
+  "confirmPassword": "OtraPassword789"
+}
+
+###
+
+### 6e. Error — contraseña débil (400 Bad Request)
+POST {{baseUrl}}/auth/reset-password
+Content-Type: {{contentType}}
+
+{
+  "token": "{{resetToken}}",
+  "newPassword": "1234",
+  "confirmPassword": "1234"
+}
+
+###
+
+### 6f. Verificar que el token no puede reutilizarse después del reset exitoso
+### Corre 6a primero, luego este — debe devolver 404
+POST {{baseUrl}}/auth/reset-password
+Content-Type: {{contentType}}
+
+{
+  "token": "{{resetToken}}",
+  "newPassword": "OtraPassword123",
+  "confirmPassword": "OtraPassword123"
+}
+
+###
+
+### 6g. Login con la nueva contraseña después del reset exitoso
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{registeredEmail}}",
+  "password": "NuevaPassword456"
+}
+
+###

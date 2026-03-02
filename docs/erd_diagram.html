@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>ERD — E-Learning Multipaís</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@600;700;800&display=swap');
+
+    :root {
+      --navy: #0f1f3d;
+      --blue: #1a56db;
+      --blue-light: #1e40af;
+      --cyan: #06b6d4;
+      --green: #10b981;
+      --orange: #f59e0b;
+      --red: #ef4444;
+      --purple: #8b5cf6;
+      --pink: #ec4899;
+      --gray: #94a3b8;
+      --bg: #080e1f;
+      --card: #0d1730;
+      --card2: #111d3a;
+      --border: #1e3058;
+      --text: #e2e8f0;
+      --text-dim: #64748b;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(26, 86, 219, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(26, 86, 219, 0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: relative;
+      z-index: 10;
+      padding: 36px 48px 28px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(13, 23, 48, 0.95) 0%, transparent 100%);
+      display: flex;
+      align-items: flex-end;
+      gap: 32px;
+    }
+
+    .header-title h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
+
+    .header-title h1 span {
+      color: var(--cyan);
+    }
+
+    .header-title p {
+      font-size: 11px;
+      color: var(--gray);
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 20px;
+      margin-left: auto;
+      align-items: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 10px;
+      color: var(--gray);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      z-index: 1;
+      padding: 40px 48px 60px;
+      overflow: auto;
+    }
+
+    .erd-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 300px);
+      grid-template-rows: auto;
+      gap: 24px 40px;
+      width: max-content;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* SVG lines layer */
+    .lines-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: visible;
+    }
+
+    .table-card {
+      position: relative;
+      z-index: 2;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .table-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px rgba(26, 86, 219, 0.18);
+    }
+
+    .table-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-icon {
+      font-size: 14px;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+
+    .table-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .table-tag {
+      margin-left: auto;
+      font-size: 9px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .table-fields {
+      padding: 6px 0;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 20px 1fr auto;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      font-size: 11px;
+      border-bottom: 1px solid rgba(30, 48, 88, 0.5);
+      transition: background 0.15s;
+    }
+
+    .field-row:last-child {
+      border-bottom: none;
+    }
+
+    .field-row:hover {
+      background: rgba(26, 86, 219, 0.07);
+    }
+
+    .field-key {
+      font-size: 9px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .field-name {
+      color: var(--text);
+    }
+
+    .field-name.pk {
+      color: var(--orange);
+      font-weight: 600;
+    }
+
+    .field-name.fk {
+      color: var(--cyan);
+    }
+
+    .field-type {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-align: right;
+    }
+
+    .field-note {
+      grid-column: 2 / 4;
+      font-size: 9px;
+      color: var(--text-dim);
+      padding-top: 1px;
+      opacity: 0.7;
+      font-style: italic;
+    }
+
+    /* color themes per table */
+    .t-users .table-header {
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.15), transparent);
+    }
+
+    .t-users .table-header .table-icon {
+      background: rgba(139, 92, 246, 0.2);
+    }
+
+    .t-users .table-name {
+      color: #a78bfa;
+    }
+
+    .t-users .table-tag {
+      background: rgba(139, 92, 246, 0.15);
+      color: #a78bfa;
+    }
+
+    .t-countries .table-header {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.15), transparent);
+    }
+
+    .t-countries .table-header .table-icon {
+      background: rgba(16, 185, 129, 0.2);
+    }
+
+    .t-countries .table-name {
+      color: #34d399;
+    }
+
+    .t-countries .table-tag {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+    }
+
+    .t-courses .table-header {
+      background: linear-gradient(90deg, rgba(26, 86, 219, 0.2), transparent);
+    }
+
+    .t-courses .table-header .table-icon {
+      background: rgba(26, 86, 219, 0.25);
+    }
+
+    .t-courses .table-name {
+      color: #60a5fa;
+    }
+
+    .t-courses .table-tag {
+      background: rgba(26, 86, 219, 0.2);
+      color: #60a5fa;
+    }
+
+    .t-lessons .table-header {
+      background: linear-gradient(90deg, rgba(6, 182, 212, 0.15), transparent);
+    }
+
+    .t-lessons .table-header .table-icon {
+      background: rgba(6, 182, 212, 0.2);
+    }
+
+    .t-lessons .table-name {
+      color: #22d3ee;
+    }
+
+    .t-lessons .table-tag {
+      background: rgba(6, 182, 212, 0.15);
+      color: #22d3ee;
+    }
+
+    .t-quiz .table-header {
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.12), transparent);
+    }
+
+    .t-quiz .table-header .table-icon {
+      background: rgba(245, 158, 11, 0.18);
+    }
+
+    .t-quiz .table-name {
+      color: #fbbf24;
+    }
+
+    .t-quiz .table-tag {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+    }
+
+    .t-enrollments .table-header {
+      background: linear-gradient(90deg, rgba(236, 72, 153, 0.12), transparent);
+    }
+
+    .t-enrollments .table-header .table-icon {
+      background: rgba(236, 72, 153, 0.18);
+    }
+
+    .t-enrollments .table-name {
+      color: #f472b6;
+    }
+
+    .t-enrollments .table-tag {
+      background: rgba(236, 72, 153, 0.15);
+      color: #f472b6;
+    }
+
+    .t-progress .table-header {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.12), transparent);
+    }
+
+    .t-progress .table-header .table-icon {
+      background: rgba(16, 185, 129, 0.18);
+    }
+
+    .t-progress .table-name {
+      color: #6ee7b7;
+    }
+
+    .t-progress .table-tag {
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+    }
+
+    .t-badges .table-header {
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), transparent);
+    }
+
+    .t-badges .table-header .table-icon {
+      background: rgba(245, 158, 11, 0.2);
+    }
+
+    .t-badges .table-name {
+      color: #fcd34d;
+    }
+
+    .t-badges .table-tag {
+      background: rgba(245, 158, 11, 0.18);
+      color: #fcd34d;
+    }
+
+    .t-ubadges .table-header {
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.1), transparent);
+    }
+
+    .t-ubadges .table-header .table-icon {
+      background: rgba(245, 158, 11, 0.15);
+    }
+
+    .t-ubadges .table-name {
+      color: #f59e0b;
+    }
+
+    .t-ubadges .table-tag {
+      background: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+    }
+
+    .t-notifications .table-header {
+      background: linear-gradient(90deg, rgba(239, 68, 68, 0.12), transparent);
+    }
+
+    .t-notifications .table-header .table-icon {
+      background: rgba(239, 68, 68, 0.18);
+    }
+
+    .t-notifications .table-name {
+      color: #fca5a5;
+    }
+
+    .t-notifications .table-tag {
+      background: rgba(239, 68, 68, 0.12);
+      color: #fca5a5;
+    }
+
+    .t-course_countries .table-header {
+      background: linear-gradient(90deg, rgba(99, 102, 241, 0.15), transparent);
+    }
+
+    .t-course_countries .table-header .table-icon {
+      background: rgba(99, 102, 241, 0.2);
+    }
+
+    .t-course_countries .table-name {
+      color: #a5b4fc;
+    }
+
+    .t-course_countries .table-tag {
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+    }
+
+    .t-quiz_options .table-header {
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.08), transparent);
+    }
+
+    .t-quiz_options .table-header .table-icon {
+      background: rgba(245, 158, 11, 0.12);
+    }
+
+    .t-quiz_options .table-name {
+      color: #d97706;
+    }
+
+    .t-quiz_options .table-tag {
+      background: rgba(245, 158, 11, 0.08);
+      color: #d97706;
+    }
+
+    /* decisions panel */
+    .decisions-panel {
+      position: relative;
+      z-index: 10;
+      background: var(--card2);
+      border-top: 1px solid var(--border);
+      padding: 28px 48px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .decision-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .decision-label {
+      font-size: 9px;
+      color: var(--gray);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .decision-value {
+      font-size: 11px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .decision-value strong {
+      color: var(--cyan);
+    }
+
+    footer {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 16px;
+      font-size: 10px;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="header-title">
+      <h1>Modelo de Datos — <span>E-Learning Multipaís</span></h1>
+      <p>PostgreSQL · 12 tablas · Diseñado para ASP.NET Core 10 + Entity Framework Core</p>
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#f59e0b"></div>PK — Primary Key
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#06b6d4"></div>FK — Foreign Key
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#64748b"></div>Campo regular
+      </div>
+    </div>
+  </header>
+
+  <div class="canvas-wrapper">
+    <div class="erd-grid" id="grid">
+
+      <!-- ROW 1 -->
+
+      <!-- COUNTRIES -->
+      <div class="table-card t-countries" id="tbl-countries" style="grid-column:1; grid-row:1">
+        <div class="table-header">
+          <div class="table-icon">🌎</div>
+          <span class="table-name">countries</span>
+          <span class="table-tag">Cat.</span>
+        </div>
+        <div class="table-fields">
+          <div class="field-row"><span class="field-key" style="color:#f59e0b">PK</span><span
+              class="field-name pk">id</span><span class="field-type">SERIAL</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">code</span><span
+              class="field-type">VARCHAR(3)</span></div>
+          <div class="field-note">Ej: COL, MEX, ARG — UNIQUE</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">name</span><span
+              class="field-type">VARCHAR(100)</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">is_active</span><span
+              class="field-type">BOOLEAN</span></div>
+          <div class="field-note">DEFAULT true</div>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div class="table-card t-users" id="tbl-users" style="grid-column:2; grid-row:1">
+        <div class="table-header">
+          <div class="table-icon">👤</div>
+          <span class="table-name">users</span>
+          <span class="table-tag">Core</span>
+        </div>
+        <div class="table-fields">
+          <div class="field-row"><span class="field-key" style="color:#f59e0b">PK</span><span
+              class="field-name pk">id</span><span class="field-type">UUID</span></div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">country_id</span><span class="field-type">INT</span></div>
+          <div class="field-note">Fijo al registrarse → countries.id</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">full_name</span><span
+              class="field-type">VARCHAR(150)</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">email</span><span
+              class="field-type">VARCHAR(200)</span></div>
+          <div class="field-note">UNIQUE NOT NULL</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">password_hash</span><span
+              class="field-type">TEXT</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">role</span><span
+              class="field-type">user_role ENUM</span></div>
+          <div class="field-note">super_admin | admin | instructor | student</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">is_email_verified</span><span
+              class="field-type">BOOLEAN</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">last_login_at</span><span
+              class="field-type">TIMESTAMPTZ</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">created_at</span><span
+              class="field-type">TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+
+      <!-- COURSES -->
+      <div class="table-card t-courses" id="tbl-courses" style="grid-column:3; grid-row:1">
+        <div class="table-header">
+          <div class="table-icon">📚</div>
+          <span class="table-name">courses</span>
+          <span class="table-tag">Core</span>
+        </div>
+        <div class="table-fields">
+          <div class="field-row"><span class="field-key" style="color:#f59e0b">PK</span><span
+              class="field-name pk">id</span><span class="field-type">UUID</span></div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">created_by</span><span class="field-type">UUID</span></div>
+          <div class="field-note">→ users.id (instructor/admin)</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">title</span><span
+              class="field-type">VARCHAR(200)</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">description</span><span
+              class="field-type">TEXT</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">is_active</span><span
+              class="field-type">BOOLEAN</span></div>
+          <div class="field-note">Afecta el cálculo del nivel Móvil</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">is_global</span><span
+              class="field-type">BOOLEAN</span></div>
+          <div class="field-note">TRUE = visible a todos los países</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">time_limit_mins</span><span
+              class="field-type">INT</span></div>
+          <div class="field-note">NULL = sin medalla Velocista</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">thumbnail_url</span><span
+              class="field-type">TEXT</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">created_at</span><span
+              class="field-type">TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+
+      <!-- ROW 2 -->
+
+      <!-- COURSE_COUNTRIES (pivot) -->
+      <div class="table-card t-course_countries" id="tbl-course_countries" style="grid-column:1; grid-row:2">
+        <div class="table-header">
+          <div class="table-icon">🔗</div>
+          <span class="table-name">course_countries</span>
+          <span class="table-tag">Pivot</span>
+        </div>
+        <div class="table-fields">
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">course_id</span><span class="field-type">UUID</span></div>
+          <div class="field-note">→ courses.id · PK compuesta</div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">country_id</span><span class="field-type">INT</span></div>
+          <div class="field-note">→ countries.id · PK compuesta</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">assigned_at</span><span
+              class="field-type">TIMESTAMPTZ</span></div>
+          <div class="field-note">Relación M:N cursos ↔ países</div>
+        </div>
+      </div>
+
+      <!-- LESSONS -->
+      <div class="table-card t-lessons" id="tbl-lessons" style="grid-column:2; grid-row:2">
+        <div class="table-header">
+          <div class="table-icon">🎬</div>
+          <span class="table-name">lessons</span>
+          <span class="table-tag">Core</span>
+        </div>
+        <div class="table-fields">
+          <div class="field-row"><span class="field-key" style="color:#f59e0b">PK</span><span
+              class="field-name pk">id</span><span class="field-type">UUID</span></div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">course_id</span><span class="field-type">UUID</span></div>
+          <div class="field-note">→ courses.id</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">title</span><span
+              class="field-type">VARCHAR(200)</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">type</span><span
+              class="field-type">lesson_type ENUM</span></div>
+          <div class="field-note">video | pdf | quiz</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">content_url</span><span
+              class="field-type">TEXT</span></div>
+          <div class="field-note">S3/Blob URL — NULL si type=quiz</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">order_index</span><span
+              class="field-type">INT</span></div>
+          <div class="field-note">Orden dentro del curso</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">is_required</span><span
+              class="field-type">BOOLEAN</span></div>
+          <div class="field-note">Si bloquea avance al siguiente</div>
+        </div>
+      </div>
+
+      <!-- ENROLLMENTS -->
+      <div class="table-card t-enrollments" id="tbl-enrollments" style="grid-column:3; grid-row:2">
+        <div class="table-header">
+          <div class="table-icon">📋</div>
+          <span class="table-name">course_enrollments</span>
+          <span class="table-tag">Progress</span>
+        </div>
+        <div class="table-fields">
+          <div class="field-row"><span class="field-key" style="color:#f59e0b">PK</span><span
+              class="field-name pk">id</span><span class="field-type">UUID</span></div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">user_id</span><span class="field-type">UUID</span></div>
+          <div class="field-note">→ users.id</div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">course_id</span><span class="field-type">UUID</span></div>
+          <div class="field-note">→ courses.id · UNIQUE(user, course)</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">enrolled_at</span><span
+              class="field-type">TIMESTAMPTZ</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">started_at</span><span
+              class="field-type">TIMESTAMPTZ</span></div>
+          <div class="field-note">Para medalla Velocista</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">completed_at</span><span
+              class="field-type">TIMESTAMPTZ</span></div>
+          <div class="field-note">NULL = no completado aún</div>
+        </div>
+      </div>
+
+      <!-- ROW 3 -->
+
+      <!-- QUIZ TABLE -->
+      <div class="table-card t-quiz" id="tbl-quiz" style="grid-column:1; grid-row:3">
+        <div class="table-header">
+          <div class="table-icon">❓</div>
+          <span class="table-name">quiz_questions</span>
+          <span class="table-tag">Quiz</span>
+        </div>
+        <div class="table-fields">
+          <div class="field-row"><span class="field-key" style="color:#f59e0b">PK</span><span
+              class="field-name pk">id</span><span class="field-type">UUID</span></div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">lesson_id</span><span class="field-type">UUID</span></div>
+          <div class="field-note">→ lessons.id (type=quiz)</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">question_text</span><span
+              class="field-type">TEXT</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">pass_score</span><span
+              class="field-type">DECIMAL(5,2)</span></div>
+          <div class="field-note">Umbral de aprobación (0-100)</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">max_attempts</span><span
+              class="field-type">INT</span></div>
+          <div class="field-note">Configurable por quiz</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">order_index</span><span
+              class="field-type">INT</span></div>
+        </div>
+      </div>
+
+      <!-- QUIZ OPTIONS -->
+      <div class="table-card t-quiz_options" id="tbl-quiz_options" style="grid-column:2; grid-row:3">
+        <div class="table-header">
+          <div class="table-icon">🔘</div>
+          <span class="table-name">quiz_options</span>
+          <span class="table-tag">Quiz</span>
+        </div>
+        <div class="table-fields">
+          <div class="field-row"><span class="field-key" style="color:#f59e0b">PK</span><span
+              class="field-name pk">id</span><span class="field-type">UUID</span></div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">question_id</span><span class="field-type">UUID</span></div>
+          <div class="field-note">→ quiz_questions.id</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">option_text</span><span
+              class="field-type">TEXT</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">is_correct</span><span
+              class="field-type">BOOLEAN</span></div>
+          <div class="field-note">Solo 1 opción correcta por pregunta</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">order_index</span><span
+              class="field-type">INT</span></div>
+        </div>
+      </div>
+
+      <!-- USER PROGRESS -->
+      <div class="table-card t-progress" id="tbl-progress" style="grid-column:3; grid-row:3">
+        <div class="table-header">
+          <div class="table-icon">📈</div>
+          <span class="table-name">user_lesson_progress</span>
+          <span class="table-tag">Progress</span>
+        </div>
+        <div class="table-fields">
+          <div class="field-row"><span class="field-key" style="color:#f59e0b">PK</span><span
+              class="field-name pk">id</span><span class="field-type">UUID</span></div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">enrollment_id</span><span class="field-type">UUID</span></div>
+          <div class="field-note">→ course_enrollments.id</div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">lesson_id</span><span class="field-type">UUID</span></div>
+          <div class="field-note">→ lessons.id · UNIQUE(enrollment, lesson)</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">is_completed</span><span
+              class="field-type">BOOLEAN</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">completed_at</span><span
+              class="field-type">TIMESTAMPTZ</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">quiz_score</span><span
+              class="field-type">DECIMAL(5,2)</span></div>
+          <div class="field-note">NULL si type != quiz</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">attempts_used</span><span
+              class="field-type">INT</span></div>
+        </div>
+      </div>
+
+      <!-- ROW 4 -->
+
+      <!-- BADGES -->
+      <div class="table-card t-badges" id="tbl-badges" style="grid-column:1; grid-row:4">
+        <div class="table-header">
+          <div class="table-icon">🏅</div>
+          <span class="table-name">badges</span>
+          <span class="table-tag">Cat.</span>
+        </div>
+        <div class="table-fields">
+          <div class="field-row"><span class="field-key" style="color:#f59e0b">PK</span><span
+              class="field-name pk">id</span><span class="field-type">SERIAL</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">code</span><span
+              class="field-type">VARCHAR(50)</span></div>
+          <div class="field-note">login_first | login_streak_7 | course_done | speedster</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">name</span><span
+              class="field-type">VARCHAR(100)</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">description</span><span
+              class="field-type">TEXT</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">icon_url</span><span
+              class="field-type">TEXT</span></div>
+        </div>
+      </div>
+
+      <!-- USER BADGES -->
+      <div class="table-card t-ubadges" id="tbl-ubadges" style="grid-column:2; grid-row:4">
+        <div class="table-header">
+          <div class="table-icon">🎖</div>
+          <span class="table-name">user_badges</span>
+          <span class="table-tag">Gamif.</span>
+        </div>
+        <div class="table-fields">
+          <div class="field-row"><span class="field-key" style="color:#f59e0b">PK</span><span
+              class="field-name pk">id</span><span class="field-type">UUID</span></div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">user_id</span><span class="field-type">UUID</span></div>
+          <div class="field-note">→ users.id</div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">badge_id</span><span class="field-type">INT</span></div>
+          <div class="field-note">→ badges.id · UNIQUE(user, badge)</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">obtained_at</span><span
+              class="field-type">TIMESTAMPTZ</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">metadata</span><span
+              class="field-type">JSONB</span></div>
+          <div class="field-note">Ej: {streak_days: 7, course_id: "..."}</div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATIONS -->
+      <div class="table-card t-notifications" id="tbl-notifications" style="grid-column:3; grid-row:4">
+        <div class="table-header">
+          <div class="table-icon">🔔</div>
+          <span class="table-name">notifications</span>
+          <span class="table-tag">Sistema</span>
+        </div>
+        <div class="table-fields">
+          <div class="field-row"><span class="field-key" style="color:#f59e0b">PK</span><span
+              class="field-name pk">id</span><span class="field-type">UUID</span></div>
+          <div class="field-row"><span class="field-key" style="color:#06b6d4">FK</span><span
+              class="field-name fk">user_id</span><span class="field-type">UUID</span></div>
+          <div class="field-note">→ users.id</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">type</span><span
+              class="field-type">notif_type ENUM</span></div>
+          <div class="field-note">badge_earned | new_course | reminder</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">title</span><span
+              class="field-type">VARCHAR(150)</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">message</span><span
+              class="field-type">TEXT</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">is_read</span><span
+              class="field-type">BOOLEAN</span></div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">reference_id</span><span
+              class="field-type">UUID</span></div>
+          <div class="field-note">ID del badge o curso relacionado</div>
+          <div class="field-row"><span class="field-key"></span><span class="field-name">created_at</span><span
+              class="field-type">TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+
+    </div><!-- /erd-grid -->
+  </div><!-- /canvas-wrapper -->
+
+  <div class="decisions-panel">
+    <div class="decision-card">
+      <div class="decision-label">🌎 Multipaís en cursos</div>
+      <div class="decision-value">Tabla pivot <strong>course_countries</strong> (M:N). Un curso puede estar en varios
+        países. Si <strong>is_global=true</strong>, se ignora la pivot y el curso es visible a todos.</div>
+    </div>
+    <div class="decision-card">
+      <div class="decision-label">📊 Nivel Móvil</div>
+      <div class="decision-value">Se calcula en tiempo real: <strong>COUNT(completados del país) / COUNT(courses WHERE
+          is_active AND país)</strong>. El denominador se recalcula con Redis cuando cambia el catálogo.</div>
+    </div>
+    <div class="decision-card">
+      <div class="decision-label">🏅 Medalla Velocista</div>
+      <div class="decision-value">Se compara <strong>completed_at − started_at</strong> (de course_enrollments) con
+        <strong>courses.time_limit_mins</strong>. Si está bajo el umbral → medalla automática.</div>
+    </div>
+    <div class="decision-card">
+      <div class="decision-label">❓ Quizzes flexibles</div>
+      <div class="decision-value">Cualquier lección puede ser de <strong>type=quiz</strong> en cualquier posición del
+        curso (order_index). El campo <strong>is_required</strong> controla si bloquea el avance.</div>
+    </div>
+    <div class="decision-card">
+      <div class="decision-label">🔒 País fijo por usuario</div>
+      <div class="decision-value">El campo <strong>users.country_id</strong> no tiene lógica de cambio. Solo el Super
+        Admin podría modificarlo vía SQL/panel especial si fuese necesario.</div>
+    </div>
+    <div class="decision-card">
+      <div class="decision-label">🔁 Intentos de quiz</div>
+      <div class="decision-value">Controlado por <strong>quiz_questions.max_attempts</strong> y
+        <strong>user_lesson_progress.attempts_used</strong>. Cada intento actualiza el score y el contador.</div>
+    </div>
+  </div>
+
+  <footer>E-Learning Multipaís · Modelo de Datos v1.0 · PostgreSQL 16 · EF Core 10</footer>
+
+</body>
+
+</html>

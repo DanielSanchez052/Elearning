@@ -1,0 +1,28 @@
+@ELearning.API_HostAddress = http://localhost:5277
+
+GET {{ELearning.API_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###
+
+POST {{ELearning.API_HostAddress}}/api/auth/register
+Accept: application/json
+Content-type: application/json
+
+{
+  "FullName": "Daniel",
+  "Email": "sanchezd0528@gmail.com",
+  "Password": "Admin123*",
+  "CountryId": 1
+}
+
+###
+
+POST {{ELearning.API_HostAddress}}/api/auth/login
+Accept: application/json
+Content-type: application/json
+
+{
+  "Email": "sanchezd0528@gmail.com",
+  "Password": "Admin123*"
+}
