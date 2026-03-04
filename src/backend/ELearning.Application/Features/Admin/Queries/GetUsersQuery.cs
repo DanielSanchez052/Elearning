@@ -38,7 +38,7 @@ public sealed class GetUsersHandler
 
         var (users, totalCount) = await _users.GetPagedAsync(
             countryId: query.CountryId,
-            role: query.Role,
+            role: query.Role?.ToLower(),
             search: query.Search,
             isEmailVerified: query.IsEmailVerified,
             page: page,

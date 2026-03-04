@@ -38,7 +38,7 @@ public class AdminController(
 
     /// GET api/admin/countries
     [HttpGet("countries")]
-    [Authorize(Roles = "admin,super_admin")]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<IActionResult> GetCountries()
     {
         var result = await getCountriesHandler.HandleAsync(
@@ -49,7 +49,7 @@ public class AdminController(
 
     /// GET api/admin/countries/{id}
     [HttpGet("countries/{id:int}")]
-    [Authorize(Roles = "admin,super_admin")]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<IActionResult> GetCountryById(int id)
     {
         var result = await getCountryByIdHandler.HandleAsync(
@@ -60,7 +60,7 @@ public class AdminController(
 
     /// POST api/admin/countries
     [HttpPost("countries")]
-    [Authorize(Roles = "super_admin")]
+    [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> CreateCountry([FromBody] CreateCountryCommand cmd)
     {
         var result = await createCountryHandler.HandleAsync(cmd, HttpContext.RequestAborted);
@@ -69,7 +69,7 @@ public class AdminController(
 
     /// PATCH api/admin/countries/{id}/toggle-status
     [HttpPatch("countries/{id:int}/toggle-status")]
-    [Authorize(Roles = "super_admin")]
+    [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> ToggleCountryStatus(int id)
     {
         var result = await toggleCountryHandler.HandleAsync(
@@ -83,7 +83,7 @@ public class AdminController(
     /// GET api/admin/users?countryId=1&role=student&search=juan&isEmailVerified=true&page=1&pageSize=20
     /// Admin ve solo su país — Super Admin puede ver todos
     [HttpGet("users")]
-    [Authorize(Roles = "admin,super_admin")]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<IActionResult> GetUsers(
         [FromQuery] int? countryId = null,
         [FromQuery] string? role = null,
@@ -113,7 +113,7 @@ public class AdminController(
 
     /// GET api/admin/users/{id}
     [HttpGet("users/{id:guid}")]
-    [Authorize(Roles = "admin,super_admin")]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<IActionResult> GetUserById(Guid id)
     {
         var result = await getUserByIdHandler.HandleAsync(
@@ -124,7 +124,7 @@ public class AdminController(
 
     /// PATCH api/admin/users/{id}/role
     [HttpPatch("users/{id:guid}/role")]
-    [Authorize(Roles = "admin,super_admin")]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<IActionResult> ChangeUserRole(Guid id, [FromBody] ChangeRoleRequest request)
     {
         var cmd = new ChangeUserRoleCommand(
@@ -140,7 +140,7 @@ public class AdminController(
 
     /// PATCH api/admin/users/{id}/country
     [HttpPatch("users/{id:guid}/country")]
-    [Authorize(Roles = "super_admin")]
+    [Authorize(Roles = "superadmin")]
     public async Task<IActionResult> ChangeUserCountry(Guid id, [FromBody] ChangeCountryRequest request)
     {
         var cmd = new ChangeUserCountryCommand(

@@ -9,7 +9,7 @@
 
 ### Variables que se llenan durante las pruebas
 @registeredEmail = test@elearning.com
-@registeredPassword = Password123
+@registeredPassword = Admin123*
 @accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OTRiZDA5OS1iODI0LTRiNWEtODI2Yi0zYzUxZDE1MzIwZDAiLCJlbWFpbCI6InRlc3RAZWxlYXJuaW5nLmNvbSIsIm5hbWUiOiJKdWFuIFDDqXJleiIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6InN0dWRlbnQiLCJjb3VudHJ5X2lkIjoiMSIsImp0aSI6IjQzZTZiNjg2LWY1OWMtNDQxZi05YmNiLWI1MWM4ZTdlMjIwNiIsIm5iZiI6MTc3MjQwNDcwOSwiZXhwIjoxNzcyNDA4MzA5LCJpc3MiOiJFTGVhcm5pbmdBUEkiLCJhdWQiOiJFTGVhcm5pbmdBcHAifQ.9aQDv1JQ7W34HTbkLLmwfoNh8pCgULOlk-SOHSPkTio
 @verifyToken = 56b8c3b7cfd641c2b5abab1c5d49f7bf
 @resetToken = 4aefc5294ea44e14bf987ec5c3d3e79b
@@ -179,7 +179,7 @@ POST {{baseUrl}}/auth/login
 Content-Type: {{contentType}}
 
 {
-  "email": "noexiste@elearning.com",
+  "email": "test@elearning.com",
   "password": "{{registeredPassword}}"
 }
 

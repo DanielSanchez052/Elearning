@@ -86,7 +86,7 @@ public sealed class UserRepository : IUserRepository
 
         if (!string.IsNullOrWhiteSpace(role))
         {
-            query = query.Where(u => u.Role.ToString() == role);
+            query = query.Where(u => u.Role.ToString().ToLower() == role);
         }
 
         if (!string.IsNullOrWhiteSpace(search))

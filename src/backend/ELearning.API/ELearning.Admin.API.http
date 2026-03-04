@@ -3,18 +3,18 @@
 ### Gestión de Países y Roles
 ### ============================================================
 
-@baseUrl = https://localhost:7001/api
+@baseUrl = http://localhost:5277/api
 @contentType = application/json
 
 ### Tokens — obtén estos haciendo login con cada rol
-@superAdminToken = PEGA_TOKEN_SUPER_ADMIN
-@adminToken      = PEGA_TOKEN_ADMIN
-@studentToken    = PEGA_TOKEN_STUDENT
+@superAdminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MmU2NGEwYy1lYTQxLTQyZDctYmYzNi1mM2IzY2YxMTIxZWMiLCJlbWFpbCI6InNhbmNoZXpkMDUyOEBnbWFpbC5jb20iLCJuYW1lIjoiRGFuaWVsIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoic3VwZXJhZG1pbiIsImNvdW50cnlfaWQiOiIxIiwianRpIjoiOTkyYWNlOTAtZWNhOC00YWRkLTlhYTMtOTc3YmI0YzQ3YmY3IiwibmJmIjoxNzcyNTg2NjAxLCJleHAiOjE3NzI1OTAyMDEsImlzcyI6IkVMZWFybmluZ0FQSSIsImF1ZCI6IkVMZWFybmluZ0FwcCJ9.5_7_ISruHpgwdtZItlA_U2OXGih7mdzjZgRk_kozLMs
+@adminToken      = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlNDFhZWNlMS02N2U1LTRkNjgtYTNjMS03NjFmMTZjOWQyMWEiLCJlbWFpbCI6InNpbnZlcmlmaWNhckBlbGVhcm5pbmcuY29tIiwibmFtZSI6Ikp1YW4gUMOpcmV6IHNpbiB2ZXJpZmljYXIiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJhZG1pbiIsImNvdW50cnlfaWQiOiIxIiwianRpIjoiZDFlMmU3OGYtYjAxNC00NmFjLTllN2EtNTA1MTQxYWFiY2JiIiwibmJmIjoxNzcyNTg2NjU4LCJleHAiOjE3NzI1OTAyNTgsImlzcyI6IkVMZWFybmluZ0FQSSIsImF1ZCI6IkVMZWFybmluZ0FwcCJ9.W97jliPoSRFKAcAjyZE5ZD6f2iYoCQCVVNypLkzKtnU
+@studentToken    = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OTRiZDA5OS1iODI0LTRiNWEtODI2Yi0zYzUxZDE1MzIwZDAiLCJlbWFpbCI6InRlc3RAZWxlYXJuaW5nLmNvbSIsIm5hbWUiOiJKdWFuIFDDqXJleiIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6InN0dWRlbnQiLCJjb3VudHJ5X2lkIjoiMSIsImp0aSI6ImMwYTgxOTY3LTJmN2YtNDJmZS1hMTkwLWVmZDRjNjgzOWE2NSIsIm5iZiI6MTc3MjU4NjY4NCwiZXhwIjoxNzcyNTkwMjg0LCJpc3MiOiJFTGVhcm5pbmdBUEkiLCJhdWQiOiJFTGVhcm5pbmdBcHAifQ.d0bskQ_NwJvBpCvyMJTUXrRZLeqlMHCLZqEeCS5Wulc
 
 ### IDs de prueba
 @countryId  = 1
 @newCountryId = 1
-@userId     = PEGA_GUID_DE_USUARIO
+@userId     = 694bd099-b824-4b5a-826b-3c51d15320d0
 
 
 # ──────────────────────────────────────────────────────────────
@@ -237,7 +237,7 @@ Authorization: Bearer {{adminToken}}
 Content-Type: {{contentType}}
 
 {
-  "role": "super_admin"
+  "role": "superadmin"
 }
 
 ###

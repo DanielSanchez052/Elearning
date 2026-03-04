@@ -24,7 +24,7 @@ public class CountryRepository : ICountryRepository
     {
         return _db.Countries
             .AsNoTracking()
-            .AnyAsync(c => c.Code.ToLower() == code.ToLower(), ct);
+            .AnyAsync(c => c.Code.ToLower() == code, ct);
     }
 
     public async Task<IReadOnlyList<Country>> GetAllAsync(CancellationToken ct = default)

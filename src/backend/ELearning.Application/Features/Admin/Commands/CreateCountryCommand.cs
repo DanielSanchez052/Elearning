@@ -20,7 +20,7 @@ public sealed class CreateCountryHandler : ICommandHandler<CreateCountryCommand,
 
     public async Task<Result<int>> HandleAsync(CreateCountryCommand cmd, CancellationToken ct = default)
     {
-        var codeExists = await _countries.ExistsByCodeAsync(cmd.Code.ToUpperInvariant(), ct);
+        var codeExists = await _countries.ExistsByCodeAsync(cmd.Code.ToLower(), ct);
         if (codeExists)
             return Result.Conflict<int>($"Ya existe un país con el código '{cmd.Code.ToUpperInvariant()}'.");
 

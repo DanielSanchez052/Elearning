@@ -6,7 +6,7 @@ namespace ELearning.Application.Features.Admin.Validators;
 public sealed class ChangeUserRoleValidator : IValidator<ChangeUserRoleCommand>
 {
     // Roles válidos que pueden asignarse
-    private static readonly string[] ValidRoles = ["student", "instructor", "admin", "super_admin"];
+    private static readonly string[] ValidRoles = ["student", "instructor", "admin", "superadmin"];
 
     public ValidationResult Validate(ChangeUserRoleCommand cmd)
     {
