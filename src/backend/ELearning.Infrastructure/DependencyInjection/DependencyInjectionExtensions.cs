@@ -34,7 +34,7 @@ public static class DependencyInjectionExtensions
 
     public static IServiceCollection AddServices(this IServiceCollection services)
     {
-        services.AddScoped<IStorageService, StorageService>();
+        services.AddScoped<IStorageService, LocalStorageService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<ICacheService, CacheService>();
         services.AddScoped<IPasswordHasherService, PasswordHasherService>();

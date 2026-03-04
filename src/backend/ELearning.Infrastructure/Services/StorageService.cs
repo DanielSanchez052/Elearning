@@ -1,7 +1,0 @@
-using ELearning.Domain.Interfaces.Services;
-
-namespace ELearning.Infrastructure.Services;
-
-public class StorageService : IStorageService
-{
-}
