@@ -13,6 +13,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddCorsConfiguration();
 builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddAuthorizationPolicies();
 builder.Services.AddDbContextConfiguration(builder.Configuration);
 
 builder.Services.AddApplication();
@@ -23,6 +24,8 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     options.SuppressModelStateInvalidFilter = true;
 });
 
+builder.Services.AddSwaggerConfiguration();
+
 var app = builder.Build();
 
 
@@ -31,10 +34,11 @@ app.UseRequestLogging();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwaggerConfiguration();
 }
 
 app.UseCorsConfiguration();
+app.UseSecurityHeaders();
 
 app.UseAuthentication();
 app.UseAuthorization();
