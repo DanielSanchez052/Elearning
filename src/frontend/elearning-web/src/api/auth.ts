@@ -1,4 +1,4 @@
-import { api } from '../lib/axios';
+import axios from '@/lib/axios';
 import type { LoginResponse, CurrentUser } from '../types/user.types';
 
 // ── Request types ─────────────────────────────────────────────────────────────
@@ -33,20 +33,20 @@ export interface VerifyEmailRequest {
 
 export const authApi = {
   register: (data: RegisterRequest) =>
-    api.post<{ value: string }>('/auth/register', data),
+    axios.post<{ value: string }>('/auth/register', data),
 
   login: (data: LoginRequest) =>
-    api.post<LoginResponse>('/auth/login', data),
+    axios.post<LoginResponse>('/auth/login', data),
 
   verifyEmail: (data: VerifyEmailRequest) =>
-    api.post('/auth/verify-email', data),
+    axios.post('/auth/verify-email', data),
 
   forgotPassword: (data: ForgotPasswordRequest) =>
-    api.post('/auth/forgot-password', data),
+    axios.post('/auth/forgot-password', data),
 
   resetPassword: (data: ResetPasswordRequest) =>
-    api.post('/auth/reset-password', data),
+    axios.post('/auth/reset-password', data),
 
   getMe: () =>
-    api.get<CurrentUser>('/auth/me'),
+    axios.get<CurrentUser>('/auth/me'),
 };

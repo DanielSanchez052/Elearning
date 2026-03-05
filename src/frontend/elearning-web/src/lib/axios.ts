@@ -1,12 +1,14 @@
 import axios, { AxiosError } from 'axios';
 import type { ApiError } from '../types';
 
-export const api = axios.create({
+const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'https://localhost:7001/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+export default api;
 
 // ── Request interceptor — adjunta el JWT en cada request ─────────────────────
 api.interceptors.request.use((config) => {

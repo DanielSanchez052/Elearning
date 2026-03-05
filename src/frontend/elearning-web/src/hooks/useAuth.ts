@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { authApi } from '@/api/auth';
 import { countriesApi } from '@/api/countries';
-import { useAuthStore } from '@/features/auth/authStore';
+import { useAuthStore } from '@/store/authStore';
 import { getApiErrorMessage } from '@/lib/axios';
 
 // ── Zod schemas — espejean las reglas del backend ─────────────────────────────

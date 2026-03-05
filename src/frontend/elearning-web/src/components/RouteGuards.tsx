@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuthStore } from '@/features/auth/authStore';
+import { useAuthStore } from '@/store/authStore';
 import type { UserRole } from '../types/user.types';
 
 // ── Ruta protegida — requiere autenticación ───────────────────────────────────

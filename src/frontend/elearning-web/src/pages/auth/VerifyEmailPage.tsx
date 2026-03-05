@@ -1,5 +1,5 @@
-import { AuthLayout } from '@/features/auth/AuthLayout';
-import { useVerifyEmail } from '@/features/auth/useAuth';
+import { AuthLayout } from '@/components/layout/AuthLayout';
+import { useVerifyEmail } from '@/hooks/useAuth';
 import { Link, useSearchParams } from 'react-router-dom';
 
 export default function VerifyEmailPage() {

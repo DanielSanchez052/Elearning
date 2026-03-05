@@ -1,7 +1,7 @@
-import { api } from '../lib/axios';
-import type { Country } from '../types';
+import axios from '@/lib/axios';
+import type { Country } from '../types/user.types';
 
 export const countriesApi = {
   getActive: () =>
-    api.get<CountryDto[]>('/countries'),
+    axios.get<Country[]>('/countries'),
 };
