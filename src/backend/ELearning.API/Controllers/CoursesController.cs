@@ -1,4 +1,5 @@
 using ELearning.API.Extensions;
+using ELearning.API.Models;
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Courses.Commands;
 using ELearning.Application.Features.Courses.DTOs;
@@ -255,36 +256,3 @@ public class CoursesController(
         return this.ToActionResult(result);
     }
 }
-
-// ── Request bodies ────────────────────────────────────────────────────────────
-
-public sealed record CreateCourseRequest(
-    string Title,
-    string? Description,
-    string? ThumbnailUrl,
-    bool IsGlobal
-);
-
-public sealed record UpdateCourseRequest(
-    string Title,
-    string? Description,
-    string? ThumbnailUrl,
-    bool IsGlobal
-);
-
-public sealed record AssignCountriesRequest(List<int> CountryIds);
-
-public sealed record CreateLessonRequest(
-    string Title,
-    string Type,
-    string? ContentUrl,
-    bool IsRequired
-);
-
-public sealed record UpdateLessonRequest(
-    string Title,
-    string? ContentUrl,
-    bool IsRequired
-);
-
-public sealed record ReorderLessonsRequest(List<LessonOrderItem> Orders);

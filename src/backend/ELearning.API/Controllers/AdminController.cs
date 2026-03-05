@@ -1,4 +1,5 @@
 ﻿using ELearning.API.Extensions;
+using ELearning.API.Models;
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Admin.Commands;
 using ELearning.Application.Features.Admin.DTOs;
@@ -9,14 +10,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ELearning.API.Controllers;
-
-// ── Request bodies simples ────────────────────────────────────────────────────
-// Records pequeños para los bodies de los PATCH.
-// No usan el Command directamente para no exponer campos internos
-// como RequesterId y RequesterRole que se extraen del JWT en el controlador.
-
-public sealed record ChangeRoleRequest(string Role);
-public sealed record ChangeCountryRequest(int CountryId);
 
 [ApiController]
 [Route("api/admin")]
