@@ -684,176 +684,166 @@ los controladores con estos handlers.
 | 📄 ELearning.Tests.csproj                                             |
 +-----------------------------------------------------------------------+
 
-**3.3 Frontend --- Next.js (src/frontend/)**
+**3.3 Frontend --- React (src/frontend/)**
+
+El frontend es una aplicación React construida con Vite para un desarrollo rápido y eficiente. Utiliza un stack moderno enfocado en simplicidad y rendimiento: Tailwind CSS para estilos, shadcn/ui para componentes accesibles, TanStack Query para data fetching, Zustand para estado global, React Router para navegación, React Hook Form con Zod para formularios, y Axios para HTTP requests. Incluye Video.js para videos y react-pdf para PDFs.
 
 +-----------------------------------------------------------------------+
-| 📁 src/frontend/ ← proyecto Next.js 14 con App Router                 |
+| 📁 src/frontend/ ← aplicación React con Vite                         |
 |                                                                       |
-| 📁 app/ ← rutas de Next.js (App Router)                               |
+| 📁 src/ ← código fuente principal                                     |
 |                                                                       |
-| │ 📁 (public)/ ← rutas sin autenticación                              |
+| │ 📁 api/ ← funciones que llaman a la API (una por módulo)            |
 |                                                                       |
-| │ │ 📁 login/                                                         |
+| │ │ 📄 auth.ts ← login, register, refresh token                       |
 |                                                                       |
-| │ │ │ 📄 page.tsx                                                     |
+| │ │ 📄 courses.ts ← CRUD de cursos, enrollments                       |
 |                                                                       |
-| │ │ 📁 register/                                                      |
+| │ │ 📄 lessons.ts ← gestión de lecciones y progreso                   |
 |                                                                       |
-| │ │ 📄 page.tsx                                                       |
+| │ │ 📄 quizzes.ts ← envío de respuestas de quizzes                    |
 |                                                                       |
-| │ │                                                                   |
+| │ │ 📄 notifications.ts ← gestión de notificaciones                   |
 |                                                                       |
-| │ 📁 (protected)/ ← rutas que requieren login                         |
-|                                                                       |
-| │ │ 📁 dashboard/                                                     |
-|                                                                       |
-| │ │ │ 📄 page.tsx                                                     |
-|                                                                       |
-| │ │ 📁 courses/                                                       |
-|                                                                       |
-| │ │ │ 📄 page.tsx ← catálogo                                          |
-|                                                                       |
-| │ │ │ 📁 \[courseId\]/                                                |
-|                                                                       |
-| │ │ │ 📄 page.tsx ← detalle del curso                                 |
-|                                                                       |
-| │ │ │ 📁 lessons/                                                     |
-|                                                                       |
-| │ │ │ 📁 \[lessonId\]/                                                |
-|                                                                       |
-| │ │ │ 📄 page.tsx ← lección individual                                |
-|                                                                       |
-| │ │ 📁 profile/                                                       |
-|                                                                       |
-| │ │ │ 📄 page.tsx ← perfil + medallas + certificados                  |
-|                                                                       |
-| │ │ 📁 notifications/                                                 |
-|                                                                       |
-| │ │ 📄 page.tsx                                                       |
-|                                                                       |
-| │ │                                                                   |
-|                                                                       |
-| │ 📁 (admin)/ ← rutas exclusivas de admin/superadmin                  |
-|                                                                       |
-| │ │ 📁 admin/                                                         |
-|                                                                       |
-| │ │ │ 📁 courses/                                                     |
-|                                                                       |
-| │ │ │ │ 📄 page.tsx ← gestión de cursos                               |
-|                                                                       |
-| │ │ │ 📁 users/                                                       |
-|                                                                       |
-| │ │ │ │ 📄 page.tsx                                                   |
-|                                                                       |
-| │ │ │ 📁 reports/                                                     |
-|                                                                       |
-| │ │ │ 📄 page.tsx                                                     |
-|                                                                       |
-| │ │ 📄 layout.tsx ← layout con guard de rol admin                     |
-|                                                                       |
-| │ │                                                                   |
-|                                                                       |
-| │ 📄 layout.tsx ← layout raíz (fuentes, providers globales)           |
-|                                                                       |
-| │ 📄 not-found.tsx                                                    |
+| │ │ 📄 admin.ts ← endpoints de administración                         |
 |                                                                       |
 | │                                                                     |
+| │ 📁 components/ ← componentes reutilizables                          |
 |                                                                       |
-| 📁 components/ ← componentes reutilizables                            |
+| │ │ 📁 ui/ ← componentes base de shadcn/ui                            |
 |                                                                       |
-| │ 📁 ui/ ← componentes base sin lógica de negocio                     |
+| │ │ │ 📄 Button.tsx                                                    |
 |                                                                       |
-| │ │ 📄 Button.tsx                                                     |
+| │ │ │ 📄 Card.tsx                                                      |
 |                                                                       |
-| │ │ 📄 Card.tsx                                                       |
+| │ │ │ 📄 Modal.tsx                                                     |
 |                                                                       |
-| │ │ 📄 Modal.tsx                                                      |
+| │ │ │ 📄 ProgressBar.tsx                                               |
 |                                                                       |
-| │ │ 📄 ProgressBar.tsx                                                |
-|                                                                       |
-| │ │ 📄 Badge.tsx                                                      |
-|                                                                       |
-| │ │                                                                   |
-|                                                                       |
-| │ 📁 courses/ ← componentes específicos de cursos                     |
-|                                                                       |
-| │ │ 📄 CourseCard.tsx                                                 |
-|                                                                       |
-| │ │ 📄 CourseCatalog.tsx                                              |
-|                                                                       |
-| │ │ 📄 VideoPlayer.tsx                                                |
-|                                                                       |
-| │ │ 📄 PdfViewer.tsx                                                  |
-|                                                                       |
-| │ │ 📄 LessonSidebar.tsx                                              |
+| │ │ │ 📄 Badge.tsx                                                     |
 |                                                                       |
 | │ │                                                                   |
+| │ │ 📁 courses/ ← componentes específicos de cursos                   |
 |                                                                       |
-| │ 📁 quiz/                                                            |
+| │ │ │ 📄 CourseCard.tsx                                                |
 |                                                                       |
-| │ │ 📄 QuizQuestion.tsx                                               |
+| │ │ │ 📄 CourseCatalog.tsx                                             |
 |                                                                       |
-| │ │ 📄 QuizResult.tsx                                                 |
+| │ │ │ 📄 VideoPlayer.tsx ← usa Video.js                               |
 |                                                                       |
-| │ │                                                                   |
+| │ │ │ 📄 PdfViewer.tsx ← usa react-pdf                                |
 |                                                                       |
-| │ 📁 gamification/                                                    |
-|                                                                       |
-| │ │ 📄 BadgeCard.tsx                                                  |
-|                                                                       |
-| │ │ 📄 MobileLevelIndicator.tsx                                       |
+| │ │ │ 📄 LessonSidebar.tsx                                             |
 |                                                                       |
 | │ │                                                                   |
+| │ │ 📁 quiz/                                                          |
 |                                                                       |
-| │ 📁 layout/                                                          |
+| │ │ │ 📄 QuizQuestion.tsx                                              |
 |                                                                       |
-| │ 📄 Navbar.tsx                                                       |
+| │ │ │ 📄 QuizResult.tsx                                                |
 |                                                                       |
-| │ 📄 Sidebar.tsx                                                      |
+| │ │                                                                   |
+| │ │ 📁 gamification/                                                  |
 |                                                                       |
-| │ 📄 NotificationBell.tsx                                             |
+| │ │ │ 📄 BadgeCard.tsx                                                 |
 |                                                                       |
-| │                                                                     |
+| │ │ │ 📄 MobileLevelIndicator.tsx                                      |
 |                                                                       |
-| 📁 lib/ ← lógica compartida del frontend                              |
+| │ │                                                                   |
+| │ │ 📁 layout/                                                        |
 |                                                                       |
-| │ 📄 api.ts ← cliente Axios con baseURL e interceptores               |
+| │ │ 📄 Navbar.tsx                                                      |
 |                                                                       |
-| │ 📄 auth.ts ← helpers de JWT (leer, guardar, expiración)             |
+| │ │ 📄 Sidebar.tsx                                                     |
 |                                                                       |
-| │ 📄 utils.ts                                                         |
-|                                                                       |
-| │                                                                     |
-|                                                                       |
-| 📁 hooks/ ← custom hooks de React                                     |
-|                                                                       |
-| │ 📄 useAuth.ts                                                       |
-|                                                                       |
-| │ 📄 useCourseProgress.ts                                             |
-|                                                                       |
-| │ 📄 useNotifications.ts                                              |
+| │ │ 📄 NotificationBell.tsx                                            |
 |                                                                       |
 | │                                                                     |
+| │ 📁 features/ ← por módulo: auth, courses, admin                     |
 |                                                                       |
-| 📁 store/ ← estado global con Zustand                                 |
+| │ │ 📁 auth/ ← páginas y lógica de autenticación                      |
 |                                                                       |
-| │ 📄 authStore.ts ← usuario, token, rol                               |
+| │ │ │ 📄 LoginForm.tsx                                                 |
 |                                                                       |
-| │ 📄 notificationStore.ts                                             |
+| │ │ │ 📄 RegisterForm.tsx                                              |
+|                                                                       |
+| │ │ 📁 courses/ ← páginas y lógica de cursos                          |
+|                                                                       |
+| │ │ │ 📄 CourseList.tsx                                                |
+|                                                                       |
+| │ │ │ 📄 CourseDetail.tsx                                              |
+|                                                                       |
+| │ │ 📁 admin/ ← páginas de administración                             |
+|                                                                       |
+| │ │ │ 📄 AdminDashboard.tsx                                            |
+|                                                                       |
+| │ │ │ 📄 UserManagement.tsx                                            |
 |                                                                       |
 | │                                                                     |
+| │ 📁 hooks/ ← custom hooks con TanStack Query                         |
 |                                                                       |
-| 📁 types/ ← tipos TypeScript compartidos                              |
+| │ │ 📄 useAuth.ts ← hook para autenticación                           |
 |                                                                       |
-| │ 📄 course.types.ts                                                  |
+| │ │ 📄 useCourses.ts ← hook para cursos                               |
 |                                                                       |
-| │ 📄 user.types.ts                                                    |
-|                                                                       |
-| │ 📄 quiz.types.ts                                                    |
+| │ │ 📄 useNotifications.ts ← hook para notificaciones                 |
 |                                                                       |
 | │                                                                     |
+| │ 📁 lib/ ← axios instance, zod schemas                               |
 |                                                                       |
-| 📄 next.config.ts                                                     |
+| │ │ 📄 axios.ts ← instancia de Axios con interceptores                |
+|                                                                       |
+| │ │ 📄 schemas.ts ← esquemas Zod para validación                      |
+|                                                                       |
+| │ │ 📄 utils.ts ← utilidades generales                                |
+|                                                                       |
+| │                                                                     |
+| │ 📁 pages/ ← componentes de página (usados por React Router)         |
+|                                                                       |
+| │ │ 📄 Login.tsx                                                       |
+|                                                                       |
+| │ │ 📄 Register.tsx                                                    |
+|                                                                       |
+| │ │ 📄 Dashboard.tsx                                                   |
+|                                                                       |
+| │ │ 📄 CourseCatalog.tsx                                               |
+|                                                                       |
+| │ │ 📄 CourseDetail.tsx                                                |
+|                                                                       |
+| │ │ 📄 Lesson.tsx                                                      |
+|                                                                       |
+| │ │ 📄 Profile.tsx                                                     |
+|                                                                       |
+| │ │ 📄 AdminPanel.tsx                                                  |
+|                                                                       |
+| │                                                                     |
+| │ 📁 store/ ← Zustand stores                                          |
+|                                                                       |
+| │ │ 📄 authStore.ts ← estado de usuario y token                       |
+|                                                                       |
+| │ │ 📄 notificationStore.ts ← estado de notificaciones                |
+|                                                                       |
+| │                                                                     |
+| │ 📁 types/ ← TypeScript types que espejean los DTOs del backend      |
+|                                                                       |
+| │ │ 📄 course.types.ts                                                 |
+|                                                                       |
+| │ │ 📄 user.types.ts                                                   |
+|                                                                       |
+| │ │ 📄 quiz.types.ts                                                   |
+|                                                                       |
+| │ │ 📄 notification.types.ts                                           |
+|                                                                       |
+| │                                                                     |
+| │ 📄 App.tsx ← componente raíz con React Router                       |
+|                                                                       |
+| │ 📄 main.tsx ← punto de entrada                                       |
+|                                                                       |
+| │                                                                     |
+| │                                                                     |
+| 📄 index.html                                                         |
+|                                                                       |
+| 📄 vite.config.ts                                                     |
 |                                                                       |
 | 📄 tailwind.config.ts                                                 |
 |                                                                       |
