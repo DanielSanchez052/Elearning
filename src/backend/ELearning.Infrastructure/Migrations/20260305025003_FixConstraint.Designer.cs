@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using ELearning.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ELearning.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260305025003_FixConstraint")]
+    partial class FixConstraint
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -171,9 +174,14 @@ namespace ELearning.Infrastructure.Migrations
                         .HasColumnName("assigned_at")
                         .HasDefaultValueSql("NOW()");
 
+                    b.Property<int?>("CountryId1")
+                        .HasColumnType("integer");
+
                     b.HasKey("CourseId", "CountryId");
 
                     b.HasIndex("CountryId");
+
+                    b.HasIndex("CountryId1");
 
                     b.ToTable("course_countries", (string)null);
                 });
@@ -415,6 +423,9 @@ namespace ELearning.Infrastructure.Migrations
                     b.Property<int>("CountryId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("CountryId1")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -472,6 +483,8 @@ namespace ELearning.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CountryId");
+
+                    b.HasIndex("CountryId1");
 
                     b.HasIndex("Email")
                         .IsUnique();
@@ -579,10 +592,14 @@ namespace ELearning.Infrastructure.Migrations
             modelBuilder.Entity("ELearning.Domain.Entities.CourseCountry", b =>
                 {
                     b.HasOne("ELearning.Domain.Entities.Country", "Country")
-                        .WithMany("CourseCountries")
+                        .WithMany()
                         .HasForeignKey("CountryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("ELearning.Domain.Entities.Country", null)
+                        .WithMany("CourseCountries")
+                        .HasForeignKey("CountryId1");
 
                     b.HasOne("ELearning.Domain.Entities.Course", "Course")
                         .WithMany("CourseCountries")
@@ -661,10 +678,14 @@ namespace ELearning.Infrastructure.Migrations
             modelBuilder.Entity("ELearning.Domain.Entities.User", b =>
                 {
                     b.HasOne("ELearning.Domain.Entities.Country", "Country")
-                        .WithMany("Users")
+                        .WithMany()
                         .HasForeignKey("CountryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("ELearning.Domain.Entities.Country", null)
+                        .WithMany("Users")
+                        .HasForeignKey("CountryId1");
 
                     b.Navigation("Country");
                 });

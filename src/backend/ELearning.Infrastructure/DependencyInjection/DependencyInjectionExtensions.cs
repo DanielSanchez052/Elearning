@@ -28,6 +28,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IBadgeRepository, BadgeRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<ICountryRepository, CountryRepository>();
+        services.AddScoped<ILessonRepository, LessonRepository>();
 
         return services;
     }

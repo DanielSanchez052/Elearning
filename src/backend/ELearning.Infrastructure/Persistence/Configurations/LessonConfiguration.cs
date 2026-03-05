@@ -11,6 +11,8 @@ public class LessonConfiguration : IEntityTypeConfiguration<Lesson>
     {
         builder.ToTable("lessons");
 
+        builder.ToTable(t => t.HasCheckConstraint("chk_lessons_url", "(type IN ('Video', 'Pdf') AND content_url IS NOT NULL) OR type = 'Quiz'"));
+
         builder.HasKey(l => l.Id);
 
         builder.Property(l => l.Id)
@@ -51,8 +53,5 @@ public class LessonConfiguration : IEntityTypeConfiguration<Lesson>
             .WithMany(c => c.Lessons)
             .HasForeignKey(l => l.CourseId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasCheckConstraint("chk_lessons_url", 
-            "(type IN ('video', 'pdf') AND content_url IS NOT NULL) OR type = 'quiz'");
     }
 }

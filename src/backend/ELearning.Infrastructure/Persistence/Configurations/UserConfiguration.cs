@@ -68,7 +68,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(u => u.Role);
 
         builder.HasOne(u => u.Country)
-            .WithMany()
+            .WithMany(c => c.Users)
             .HasForeignKey(u => u.CountryId)
             .OnDelete(DeleteBehavior.Restrict);
     }

@@ -29,7 +29,7 @@ public class CourseCountryConfiguration : IEntityTypeConfiguration<CourseCountry
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(cc => cc.Country)
-            .WithMany()
+            .WithMany(c => c.CourseCountries)
             .HasForeignKey(cc => cc.CountryId)
             .OnDelete(DeleteBehavior.Cascade);
 

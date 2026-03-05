@@ -1,0 +1,414 @@
+### ============================================================
+### E-Learning Multipaís — Courses Module
+### CRUD de cursos y lecciones
+### ============================================================
+
+@baseUrl          = http://localhost:5277/api
+@contentType      = application/json
+
+@superAdminToken  = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MmU2NGEwYy1lYTQxLTQyZDctYmYzNi1mM2IzY2YxMTIxZWMiLCJlbWFpbCI6InN1cGVyYWRtaW5AZWxlYXJuaW5nLmNvbSIsIm5hbWUiOiJEYW5pZWwiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJzdXBlcmFkbWluIiwiY291bnRyeV9pZCI6IjEiLCJqdGkiOiJlMDM2Yzc2OS05ODEwLTQxYTAtODQxNy0yNjZmYTU1MjdjNDIiLCJuYmYiOjE3NzI2Nzc2MDAsImV4cCI6MTc3MjY4MTIwMCwiaXNzIjoiRUxlYXJuaW5nQVBJIiwiYXVkIjoiRUxlYXJuaW5nQXBwIn0.8jKYLwwqR84CduJQZjY4cHyZ8pkqMQUiZ8Bo404b_gk
+@adminToken       = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlNDFhZWNlMS02N2U1LTRkNjgtYTNjMS03NjFmMTZjOWQyMWEiLCJlbWFpbCI6ImFkbWluQGVsZWFybmluZy5jb20iLCJuYW1lIjoiSnVhbiBQw6lyZXogc2luIHZlcmlmaWNhciIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImFkbWluIiwiY291bnRyeV9pZCI6IjEiLCJqdGkiOiIzYjlhYmMyZi1hYjQ0LTQ0NjItYjJjMi1hY2M5ODJmOGFjNTciLCJuYmYiOjE3NzI2Nzc2MTgsImV4cCI6MTc3MjY4MTIxOCwiaXNzIjoiRUxlYXJuaW5nQVBJIiwiYXVkIjoiRUxlYXJuaW5nQXBwIn0.hSlxx69KTo1E1SWaAxrUMYStk9YH3dqeI6oi9pqSoTM
+@instructorToken  = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMjY0ZGE3Zi0wOGRlLTRkYWUtOTcyMi03Mjg1YzA5MjhjYTUiLCJlbWFpbCI6Imluc3RydWN0b3JAZWxlYXJuaW5nLmNvbSIsIm5hbWUiOiJJbnN0cnVjdG9yIEp1YW4gUMOpcmV6IiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiaW5zdHJ1Y3RvciIsImNvdW50cnlfaWQiOiIxIiwianRpIjoiNjMxYWYyNzMtNDY1MC00ZDZhLTg5N2ItOGUxODMxMzkxODQzIiwibmJmIjoxNzcyNjc3NTgxLCJleHAiOjE3NzI2ODExODEsImlzcyI6IkVMZWFybmluZ0FQSSIsImF1ZCI6IkVMZWFybmluZ0FwcCJ9.uFJGamJfCgeM2BjLo0f-aLd7A0mtv-rtyu6aCi5I3xY
+@studentToken     = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OTRiZDA5OS1iODI0LTRiNWEtODI2Yi0zYzUxZDE1MzIwZDAiLCJlbWFpbCI6InN0dWRlbnRAZWxlYXJuaW5nLmNvbSIsIm5hbWUiOiJKdWFuIFDDqXJleiIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6InN0dWRlbnQiLCJjb3VudHJ5X2lkIjoiMiIsImp0aSI6ImU3NWM3OTg1LTc2MTQtNDRmYi1iMTFhLTQ4MmI2YzRjNzAyYiIsIm5iZiI6MTc3MjY3NzU1NiwiZXhwIjoxNzcyNjgxMTU2LCJpc3MiOiJFTGVhcm5pbmdBUEkiLCJhdWQiOiJFTGVhcm5pbmdBcHAifQ.JNHWoLOI3S14TpL_54zauIHQQSt14PZm5J0nSTk-Gh8
+
+@courseId         = f365429b-5400-43ed-9173-0a7ab4b467bb
+@lessonId         = c1e25732-44be-4d1b-adbf-f4d860d0d610
+
+
+# ──────────────────────────────────────────────────────────────
+# 1. CATÁLOGO PÚBLICO
+# ──────────────────────────────────────────────────────────────
+
+### 1a. Catálogo del país del usuario autenticado (200 OK)
+GET {{baseUrl}}/courses
+Authorization: Bearer {{studentToken}}
+
+###
+
+### 1b. Catálogo con búsqueda por título
+GET {{baseUrl}}/courses?search=excel
+Authorization: Bearer {{studentToken}}
+
+###
+
+### 1c. Catálogo paginado
+GET {{baseUrl}}/courses?page=1&pageSize=5
+Authorization: Bearer {{studentToken}}
+
+###
+
+### 1d. Error — sin token (401 Unauthorized)
+GET {{baseUrl}}/courses
+
+###
+
+### 1e. Detalle de un curso (200 OK)
+GET {{baseUrl}}/courses/{{courseId}}
+Authorization: Bearer {{studentToken}}
+
+###
+
+### 1f. Error — curso inexistente (404 Not Found)
+GET {{baseUrl}}/courses/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{studentToken}}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 2. ADMIN — LISTA COMPLETA
+# ──────────────────────────────────────────────────────────────
+
+### 2a. Super Admin — todos los cursos
+GET {{baseUrl}}/courses/admin
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 2b. Super Admin — filtrar por país
+GET {{baseUrl}}/courses/admin?countryId=1
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 2c. Super Admin — solo inactivos
+GET {{baseUrl}}/courses/admin?isActive=false
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### 2d. Admin — solo ve cursos de su país (forzado automáticamente)
+GET {{baseUrl}}/courses/admin
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 2e. Instructor — solo ve sus propios cursos (forzado automáticamente)
+GET {{baseUrl}}/courses/admin
+Authorization: Bearer {{instructorToken}}
+
+###
+
+### 2f. Error — Student intenta ver lista admin (403 Forbidden)
+GET {{baseUrl}}/courses/admin
+Authorization: Bearer {{studentToken}}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 3. CREAR CURSO
+# ──────────────────────────────────────────────────────────────
+
+### 3a. Instructor crea curso en su país (201 Created)
+### Guarda el id del response en @courseId
+POST {{baseUrl}}/courses
+Authorization: Bearer {{instructorToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Excel para Contadores",
+  "description": "Aprende Excel desde cero hasta nivel avanzado",
+  "thumbnailUrl": "http://localhost:5000/uploads/thumbnails/abc123_portada.jpg",
+  "isGlobal": false
+}
+
+###
+
+### 3b. Instructor crea curso global
+POST {{baseUrl}}/courses
+Authorization: Bearer {{instructorToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Introducción a la Programación",
+  "description": "Conceptos básicos aplicables en cualquier país",
+  "thumbnailUrl": null,
+  "isGlobal": true
+}
+
+###
+
+### 3c. Error — título vacío (400 Bad Request)
+POST {{baseUrl}}/courses
+Authorization: Bearer {{instructorToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "",
+  "description": "Descripción",
+  "thumbnailUrl": null,
+  "isGlobal": false
+}
+
+###
+
+### 3d. Error — Student intenta crear curso (403 Forbidden)
+POST {{baseUrl}}/courses
+Authorization: Bearer {{studentToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Mi Curso",
+  "isGlobal": false
+}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 4. EDITAR CURSO
+# ──────────────────────────────────────────────────────────────
+
+### 4a. Instructor edita su propio curso (204 No Content)
+PUT {{baseUrl}}/courses/{{courseId}}
+Authorization: Bearer {{instructorToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Excel para Contadores — Edición 2025",
+  "description": "Descripción actualizada",
+  "thumbnailUrl": null,
+  "isGlobal": false
+}
+
+###
+
+### 4b. Admin edita cualquier curso de su país (204 No Content)
+PUT {{baseUrl}}/courses/{{courseId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Excel Avanzado",
+  "description": "Actualizado por admin",
+  "thumbnailUrl": null,
+  "isGlobal": false
+}
+
+###
+
+### 4c. Error — Instructor intenta editar curso de otro instructor (403 Forbidden)
+### Usa el token de un instructor diferente al creador del curso
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 5. PUBLICAR / DESPUBLICAR
+# ──────────────────────────────────────────────────────────────
+
+### 5a. Error — publicar curso sin lecciones (409 Conflict)
+PATCH {{baseUrl}}/courses/{{courseId}}/toggle-status
+Authorization: Bearer {{instructorToken}}
+
+###
+
+### 5b. Publicar curso con lecciones (204 No Content)
+### Agrega lecciones primero con la sección 7, luego ejecuta este
+PATCH {{baseUrl}}/courses/{{courseId}}/toggle-status
+Authorization: Bearer {{instructorToken}}
+
+###
+
+### 5c. Despublicar curso (vuelve a ejecutar el mismo)
+PATCH {{baseUrl}}/courses/{{courseId}}/toggle-status
+Authorization: Bearer {{instructorToken}}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 6. ASIGNAR PAÍSES
+# ──────────────────────────────────────────────────────────────
+
+### 6a. Asignar múltiples países a un curso (204 No Content)
+PUT {{baseUrl}}/courses/{{courseId}}/countries
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "countryIds": [1, 2]
+}
+
+###
+
+### 6b. Reasignar — reemplaza la lista anterior
+PUT {{baseUrl}}/courses/{{courseId}}/countries
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "countryIds": [1]
+}
+
+###
+
+### 6c. Error — curso global no acepta asignación de países (409 Conflict)
+### Usa el courseId de un curso global creado en 3b
+
+###
+
+### 6d. Error — país inexistente (404 Not Found)
+PUT {{baseUrl}}/courses/{{courseId}}/countries
+Authorization: Bearer {{superAdminToken}}
+Content-Type: {{contentType}}
+
+{
+  "countryIds": [9999]
+}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 7. LECCIONES — CREAR
+# ──────────────────────────────────────────────────────────────
+
+### 7a. Crear lección de video (200 OK)
+### Guarda el id del response en @lessonId
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Authorization: Bearer {{instructorToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Clase 1 — Introducción a Excel",
+  "type": "video",
+  "contentUrl": "http://localhost:5000/uploads/videos/abc123_clase1.mp4",
+  "isRequired": true
+}
+
+###
+
+### 7b. Crear lección de PDF
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Authorization: Bearer {{instructorToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Material de apoyo",
+  "type": "pdf",
+  "contentUrl": "http://localhost:5000/uploads/pdfs/abc123_material.pdf",
+  "isRequired": false
+}
+
+###
+
+### 7c. Crear lección de quiz (sin contentUrl)
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Authorization: Bearer {{instructorToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Quiz — Capítulo 1",
+  "type": "quiz",
+  "contentUrl": null,
+  "isRequired": true
+}
+
+###
+
+### 7d. Error — video sin contentUrl (400 Bad Request)
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Authorization: Bearer {{instructorToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Clase sin URL",
+  "type": "video",
+  "contentUrl": null,
+  "isRequired": true
+}
+
+###
+
+### 7e. Error — tipo inválido (400 Bad Request)
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Authorization: Bearer {{instructorToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Lección",
+  "type": "audio",
+  "contentUrl": null,
+  "isRequired": true
+}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 8. LECCIONES — EDITAR Y ELIMINAR
+# ──────────────────────────────────────────────────────────────
+
+### 8a. Editar lección (204 No Content)
+PUT {{baseUrl}}/courses/{{courseId}}/lessons/{{lessonId}}
+Authorization: Bearer {{instructorToken}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Clase 1 — Introducción actualizada",
+  "contentUrl": "http://localhost:5000/uploads/videos/nuevo_abc123.mp4",
+  "isRequired": true
+}
+
+###
+
+### 8b. Eliminar lección (204 No Content)
+DELETE {{baseUrl}}/courses/{{courseId}}/lessons/{{lessonId}}
+Authorization: Bearer {{instructorToken}}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 9. REORDENAR LECCIONES
+# ──────────────────────────────────────────────────────────────
+
+### 9a. Reordenar — envía la lista completa con el nuevo orden
+### Reemplaza los GUIDs con los IDs reales de tus lecciones
+PATCH {{baseUrl}}/courses/{{courseId}}/lessons/reorder
+Authorization: Bearer {{instructorToken}}
+Content-Type: {{contentType}}
+
+{
+  "orders": [
+    { "lessonId": "01f3a755-6c49-4a4d-9fd1-03d481cbabe2", "newOrder": 3 },
+    { "lessonId": "4d41ec6b-1b93-4fdc-a5a1-8e13e0ad282f", "newOrder": 1 },
+    { "lessonId": "f15a3131-9551-44ba-85a0-6db452a05700", "newOrder": 2 }
+  ]
+}
+
+###
+
+### 9b. Error — orden duplicado (400 Bad Request)
+PATCH {{baseUrl}}/courses/{{courseId}}/lessons/reorder
+Authorization: Bearer {{instructorToken}}
+Content-Type: {{contentType}}
+
+{
+  "orders": [
+    { "lessonId": "f15a3131-9551-44ba-85a0-6db452a05700", "newOrder": 1 },
+    { "lessonId": "4d41ec6b-1b93-4fdc-a5a1-8e13e0ad282f", "newOrder": 1 }
+  ]
+}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# 10. ELIMINAR CURSO
+# ──────────────────────────────────────────────────────────────
+
+### 10a. Eliminar curso inactivo (204 No Content)
+DELETE {{baseUrl}}/courses/{{courseId}}
+Authorization: Bearer {{instructorToken}}
+
+###
+
+### 10b. Error — eliminar curso publicado con inscritos (409 Conflict)
+### Publica el curso (5b), inscribe un estudiante y luego intenta eliminar
+DELETE {{baseUrl}}/courses/{{courseId}}
+Authorization: Bearer {{instructorToken}}
+
+###

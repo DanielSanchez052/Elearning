@@ -63,8 +63,8 @@ POST {{baseUrl}}/auth/register
 Content-Type: {{contentType}}
 
 {
-  "fullName": "Juan Pérez",
-  "email": "esto-no-es-un-email",
+  "fullName": "Instructor Juan Pérez",
+  "email": "instructor@email.com",
   "password": "{{registeredPassword}}",
   "countryId": 1
 }

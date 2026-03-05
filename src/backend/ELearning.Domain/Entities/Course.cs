@@ -20,7 +20,7 @@ public class Course
 
     private Course() { }
 
-    public static Course Create(string title, string? description, string? thumbnailUrl, Guid createdBy, bool isGlobal, int? timeLimitMins = null)
+    public static Course Create(string title, string? description, string? thumbnailUrl, Guid createdBy, bool isGlobal)
     {
         return new Course
         {
@@ -30,10 +30,10 @@ public class Course
             ThumbnailUrl = thumbnailUrl,
             CreatedBy = createdBy,
             IsGlobal = isGlobal,
-            TimeLimitMins = timeLimitMins,
             IsActive = false,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            TimeLimitMins = null,
         };
     }
 
@@ -49,13 +49,13 @@ public class Course
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Update(string title, string? description, string? thumbnailUrl, bool isGlobal, int? timeLimitMins)
+    public void Update(string title, string? description, string? thumbnailUrl, bool isGlobal)
     {
         Title = title;
         Description = description;
         ThumbnailUrl = thumbnailUrl;
         IsGlobal = isGlobal;
-        TimeLimitMins = timeLimitMins;
+        TimeLimitMins = null;
         UpdatedAt = DateTime.UtcNow;
     }
 }

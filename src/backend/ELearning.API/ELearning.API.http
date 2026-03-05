@@ -5,15 +5,13 @@ Accept: application/json
 
 ###
 
-POST {{ELearning.API_HostAddress}}/api/auth/register
+POST {{ELearning.API_HostAddress}}/api/auth/login
 Accept: application/json
 Content-type: application/json
 
 {
-  "FullName": "Daniel",
-  "Email": "sanchezd0528@gmail.com",
-  "Password": "Admin123*",
-  "CountryId": 1
+  "Email": "student@elearning.com",
+  "Password": "Admin123*"
 }
 
 ###
@@ -23,6 +21,28 @@ Accept: application/json
 Content-type: application/json
 
 {
-  "Email": "sanchezd0528@gmail.com",
+  "Email": "instructor@elearning.com",
+  "Password": "Admin123*"
+}
+
+###
+
+POST {{ELearning.API_HostAddress}}/api/auth/login
+Accept: application/json
+Content-type: application/json
+
+{
+  "Email": "superadmin@elearning.com",
+  "Password": "Admin123*"
+}
+
+###
+
+POST {{ELearning.API_HostAddress}}/api/auth/login
+Accept: application/json
+Content-type: application/json
+
+{
+  "Email": "admin@elearning.com",
   "Password": "Admin123*"
 }
