@@ -9,8 +9,8 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import VerifyEmailPage from './pages/auth/VerifyEmailPage';
 // import DashboardPage       from './pages/DashboardPage';
-// import CatalogPage         from './pages/courses/CatalogPage';
-// import CourseDetailPage    from './pages/courses/CourseDetailPage';
+import CatalogPage from './pages/courses/CatalogPage';
+import CourseDetailPage from './pages/courses/CourseDetailPage';
 // import AdminCoursesPage    from './pages/admin/AdminCoursesPage';
 // import AdminUsersPage      from './pages/admin/AdminUsersPage';
 // import AdminCountriesPage  from './pages/admin/AdminCountriesPage';
@@ -48,8 +48,8 @@ export default function App() {
           {/* ── Rutas protegidas — requieren autenticación ─────────────────── */}
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<div>Dashboard</div>} />
-            <Route path="/courses" element={<div>Catalog</div>} />
-            <Route path="/courses/:id" element={<div>Course Detail</div>} />
+            <Route path="/courses" element={<CatalogPage />} />
+            <Route path="/courses/:id" element={<CourseDetailPage />} />
 
             {/* ── Solo instructores, admins y super_admin ─────────────────── */}
             <Route element={<RoleRoute allowedRoles={['instructor', 'admin', 'superadmin']} />}>

@@ -37,15 +37,12 @@ public sealed class GetCourseCatalogHandler
             pageSize: pageSize,
             ct: ct);
 
-        //TODO: Revisar esto ya que puede ser problematico 
-        // Obtener conteo de lecciones por curso en paralelo
-        var lessonCounts = await Task.WhenAll(
-            courses.Select(async c =>
+        var lessonCounts = courses.Select(c =>
             {
-                var lessons = await _lessons.GetByCourseAsync(c.Id, ct);
+                var lessons = _lessons.GetByCourseAsync(c.Id, ct).GetAwaiter().GetResult();
                 return (CourseId: c.Id, lessons.Count);
-            }));
-
+            });
+        
         var lessonCountMap = lessonCounts.ToDictionary(x => x.CourseId, x => x.Count);
 
         var dtos = courses.Select(c => new CourseSummaryDto(
