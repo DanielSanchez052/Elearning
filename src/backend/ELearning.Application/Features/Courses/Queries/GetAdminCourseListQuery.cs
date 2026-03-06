@@ -40,12 +40,11 @@ public sealed class GetAdminCourseListHandler : IQueryHandler<GetAdminCourseList
             pageSize: pageSize,
             ct: ct);
 
-        var lessonCounts = await Task.WhenAll(
-            courses.Select(async c =>
+        var lessonCounts = courses.Select(c =>
             {
-                var lessons = await _lessons.GetByCourseAsync(c.Id, ct);
-                return (CourseId: c.Id, Count: lessons.Count);
-            }));
+                var lessons = _lessons.GetByCourseAsync(c.Id, ct).GetAwaiter().GetResult();
+                return (CourseId: c.Id, lessons.Count);
+            });
 
         var lessonCountMap = lessonCounts.ToDictionary(x => x.CourseId, x => x.Count);
 

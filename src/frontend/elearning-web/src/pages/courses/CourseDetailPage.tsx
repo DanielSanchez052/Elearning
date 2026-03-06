@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import AdminAccessButton from '@/components/AdminAccessButton';
 import { useCourseDetail } from '@/hooks/useCourses';
 import type { LessonDto } from '@/types/course.types';
 import LessonPlayer from '@/components/courses/LessonPlayer';
@@ -34,10 +35,13 @@ export default function CourseDetailPage() {
 
         {/* Breadcrumb */}
         <div className="border-b border-white/[0.06]">
-          <div className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-2 text-sm text-zinc-500">
-            <Link to="/courses" className="hover:text-zinc-300 transition-colors">Catálogo</Link>
-            <span>/</span>
-            <span className="text-zinc-300 truncate max-w-xs">{course.title}</span>
+          <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-zinc-500">
+              <Link to="/courses" className="hover:text-zinc-300 transition-colors">Catálogo</Link>
+              <span>/</span>
+              <span className="text-zinc-300 truncate max-w-xs">{course.title}</span>
+            </div>
+            <AdminAccessButton />
           </div>
         </div>
 

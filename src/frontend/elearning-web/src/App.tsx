@@ -2,18 +2,21 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProtectedRoute, PublicRoute, RoleRoute } from './components/RouteGuards';
 
-// ── Páginas (las crearemos en cada feature) ───────────────────────────────────
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import VerifyEmailPage from './pages/auth/VerifyEmailPage';
-// import DashboardPage       from './pages/DashboardPage';
+import DashboardPage from './pages/DashboardPage';
 import CatalogPage from './pages/courses/CatalogPage';
 import CourseDetailPage from './pages/courses/CourseDetailPage';
-// import AdminCoursesPage    from './pages/admin/AdminCoursesPage';
-// import AdminUsersPage      from './pages/admin/AdminUsersPage';
-// import AdminCountriesPage  from './pages/admin/AdminCountriesPage';
+
+import AdminLayout from './components/layout/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminCoursesPage from './pages/admin/AdminCoursesPage';
+import AdminCountriesPage from './pages/admin/AdminCountriesPage';
+import AdminCourseFormPage from './pages/admin/AdminCourseFormPage';
 // import UnauthorizedPage    from './pages/UnauthorizedPage';
 
 const queryClient = new QueryClient({
@@ -47,28 +50,33 @@ export default function App() {
 
           {/* ── Rutas protegidas — requieren autenticación ─────────────────── */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<div>Dashboard</div>} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/courses" element={<CatalogPage />} />
             <Route path="/courses/:id" element={<CourseDetailPage />} />
 
             {/* ── Solo instructores, admins y super_admin ─────────────────── */}
             <Route element={<RoleRoute allowedRoles={['instructor', 'admin', 'superadmin']} />}>
-              <Route path="/courses/manage" element={<div>Manage Courses</div>} />
-              <Route path="/courses/new" element={<div>New Course</div>} />
-              <Route path="/courses/:id/edit" element={<div>Edit Course</div>} />
+              <Route element={<AdminLayout />}>
+                <Route path="/admin/courses" element={<AdminCoursesPage />} />
+                <Route path="/admin/courses/new" element={<AdminCourseFormPage />} />
+                <Route path="/admin/courses/:id/edit" element={<AdminCourseFormPage />} />
+              </Route>
             </Route>
 
             {/* ── Solo admins y super_admin ───────────────────────────────── */}
             <Route element={<RoleRoute allowedRoles={['admin', 'superadmin']} />}>
-              <Route path="/admin/users" element={<div>Admin Users</div>} />
-              <Route path="/admin/courses" element={<div>Admin Courses</div>} />
-              <Route path="/admin/countries" element={<div>Admin Countries</div>} />
+              <Route element={<AdminLayout />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/users" element={<AdminUsersPage />} />
+                <Route path="/admin/countries" element={<AdminCountriesPage />} />
+              </Route>
             </Route>
+
           </Route>
 
           {/* ── Utilidades ─────────────────────────────────────────────────── */}
           <Route path="/unauthorized" element={<div>No tienes permisos</div>} />
-          <Route path="/" element={<div>Landing</div>} />
+          <Route path="/" element={<LoginPage />} />
           <Route path="*" element={<div>404</div>} />
 
         </Routes>

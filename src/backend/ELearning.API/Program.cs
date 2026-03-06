@@ -28,6 +28,7 @@ builder.Services.AddSwaggerConfiguration();
 
 var app = builder.Build();
 
+app.UseStaticFiles();
 
 app.UseExceptionHandling();
 app.UseRequestLogging();

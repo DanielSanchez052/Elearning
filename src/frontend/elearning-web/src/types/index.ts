@@ -16,3 +16,5 @@ export interface UploadResultDto {
   fileSizeBytes: number;
   contentType: string;
 }
+export * from './course.types';
+export * from './user.types';

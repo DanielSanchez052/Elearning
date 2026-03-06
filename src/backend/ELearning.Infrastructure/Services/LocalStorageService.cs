@@ -30,10 +30,10 @@ public sealed class LocalStorageService : IStorageService
     public LocalStorageService(IWebHostEnvironment env, ILogger<LocalStorageService> logger)
     {
         _logger = logger;
-        _baseUploadPath = Path.Combine(env.WebRootPath, "uploads");
+        _baseUploadPath = Path.Combine(env.ContentRootPath, "wwwroot", "uploads");
         // En desarrollo la URL base es el propio servidor
         // En producción esto vendría de configuración apuntando al CDN o bucket
-        _baseUrl = "http://localhost:5000/uploads";
+        _baseUrl = "http://localhost:5277/uploads";
     }
 
     public async Task<string> UploadAsync(Stream stream, string fileName, string folder, string contentType, CancellationToken ct = default)

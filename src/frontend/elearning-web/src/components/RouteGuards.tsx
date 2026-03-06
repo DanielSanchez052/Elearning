@@ -28,5 +28,6 @@ export function RoleRoute({ allowedRoles }: RoleRouteProps) {
 // ── Ruta pública — redirige al dashboard si ya está autenticado ───────────────
 export function PublicRoute() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  console.log('PublicRoute - isLoggedIn:', isLoggedIn);
   return isLoggedIn ? <Navigate to="/dashboard" replace /> : <Outlet />;
 }

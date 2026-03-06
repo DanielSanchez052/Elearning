@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useCourseCatalog } from '@/hooks/useCourses';
+import { Link } from 'react-router-dom'; import AdminAccessButton from '@/components/AdminAccessButton'; import { useCourseCatalog } from '@/hooks/useCourses';
 import type { CourseSummaryDto } from '@/types/course.types';
 
 export default function CatalogPage() {
@@ -27,7 +26,7 @@ export default function CatalogPage() {
       {/* Header */}
       <div className="border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
-          <div>
+          <div className="flex-1">
             <h1 className="text-lg font-semibold text-white">Catálogo de cursos</h1>
             {data && (
               <p className="text-xs text-zinc-500 mt-0.5">
@@ -36,35 +35,38 @@ export default function CatalogPage() {
             )}
           </div>
 
-          {/* Búsqueda */}
-          <form onSubmit={handleSearch} className="flex items-center gap-2">
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar cursos..."
-                className="pl-9 pr-4 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white placeholder-zinc-600 text-sm focus:outline-none focus:border-indigo-500/60 transition-all w-64"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
-            >
-              Buscar
-            </button>
-            {query && (
+          {/* Búsqueda y Admin Button */}
+          <div className="flex items-center gap-3">
+            <form onSubmit={handleSearch} className="flex items-center gap-2">
+              <div className="relative">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar cursos..."
+                  className="pl-9 pr-4 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white placeholder-zinc-600 text-sm focus:outline-none focus:border-indigo-500/60 transition-all w-64"
+                />
+              </div>
               <button
-                type="button"
-                onClick={() => { setSearch(''); setQuery(''); setPage(1); }}
-                className="px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 text-sm transition-colors"
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
               >
-                ✕
+                Buscar
               </button>
-            )}
-          </form>
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => { setSearch(''); setQuery(''); setPage(1); }}
+                  className="px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 text-sm transition-colors"
+                >
+                  ✕
+                </button>
+              )}
+            </form>
+            <AdminAccessButton />
+          </div>
         </div>
       </div>
 
@@ -141,8 +143,8 @@ export default function CatalogPage() {
                           key={p}
                           onClick={() => setPage(p as number)}
                           className={`w-9 h-9 rounded-xl text-sm font-medium transition-colors ${page === p
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]'
                             }`}
                         >
                           {p}
