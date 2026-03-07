@@ -24,6 +24,7 @@ export {
   useCreateLesson,
   useUpdateLesson,
   useDeleteLesson,
+  useReorderLessons,
 } from './courses';
 
 // Agregador de query keys para compatibilidad

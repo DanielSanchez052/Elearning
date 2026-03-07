@@ -1,5 +1,11 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { coursesApi, type CreateCourseRequest, type GetAdminCoursesParams, type UpdateCourseRequest } from '@/api/admin/courses';
+import {
+  coursesApi,
+  type CreateCourseRequest,
+  type GetAdminCoursesParams,
+  type UpdateCourseRequest,
+  type ReorderLessonsRequest
+} from '@/api/admin/courses';
 import { courseKeys } from '@/hooks/useCourses';
 
 // ── Query keys ────────────────────────────────────────────────────────────────
@@ -92,5 +98,20 @@ export function useDeleteLesson(courseId: string) {
     mutationFn: (lessonId: string) =>
       coursesApi.deleteLesson(courseId, lessonId),
     onSuccess: () => qc.invalidateQueries({ queryKey: courseKeys.detail(courseId) }),
+  });
+}
+
+export function useReorderLessons(courseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: ReorderLessonsRequest) =>
+      coursesApi.reorderLessons(courseId, data),
+    // Optimistic update: no invalidamos en onSuccess para no causar
+    // un refetch que interrumpa el drag. El orden local ya fue actualizado
+    // antes de llamar a la API (ver CourseFormPage).
+    // Solo sincronizamos si hay error (onError invalida para resetear).
+    onError: () => {
+      qc.invalidateQueries({ queryKey: courseKeys.detail(courseId) });
+    },
   });
 }

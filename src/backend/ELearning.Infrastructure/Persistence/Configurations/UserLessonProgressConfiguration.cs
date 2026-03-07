@@ -15,6 +15,14 @@ public class UserLessonProgressConfiguration : IEntityTypeConfiguration<UserLess
         builder.Property(p => p.Id)
             .HasColumnName("id");
 
+        builder.Property(p => p.EnrollmentId)
+            .IsRequired()
+            .HasColumnName("enrollment_id");
+
+        builder.Property(p => p.LessonId)
+            .IsRequired()
+            .HasColumnName("lesson_id");
+
         builder.Property(p => p.IsCompleted)
             .IsRequired()
             .HasDefaultValue(false)
@@ -23,33 +31,23 @@ public class UserLessonProgressConfiguration : IEntityTypeConfiguration<UserLess
         builder.Property(p => p.CompletedAt)
             .HasColumnName("completed_at");
 
-        builder.Property(p => p.QuizScore)
-            .HasPrecision(5, 2)
-            .HasColumnName("quiz_score");
-
-        builder.Property(p => p.AttemptsUsed)
+        builder.Property(p => p.LastAccessedAt)
             .IsRequired()
-            .HasDefaultValue(0)
-            .HasColumnName("attempts_used");
+            .HasColumnName("last_accessed_at");
 
-        builder.HasIndex(p => p.EnrollmentId);
+        // Un enrollment no puede tener dos registros para la misma lección
+        builder.HasIndex(p => new { p.EnrollmentId, p.LessonId })
+            .IsUnique()
+            .HasDatabaseName("IX_UserLessonProgress_EnrollmentId_LessonId");
 
-        builder.HasIndex(p => p.LessonId);
-
-        builder.HasOne(p => p.Enrollment)
-            .WithMany(e => e.LessonProgress)
-            .HasForeignKey(p => p.EnrollmentId)
-            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(p => p.LessonId)
+            .HasDatabaseName("IX_UserLessonProgress_LessonId");
 
         builder.HasOne(p => p.Lesson)
             .WithMany(l => l.UserProgress)
             .HasForeignKey(p => p.LessonId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(p => new { p.EnrollmentId, p.LessonId })
-            .IsUnique();
-
-        builder.HasCheckConstraint("chk_ulp_score", 
-            "quiz_score IS NULL OR (quiz_score BETWEEN 0 AND 100)");
+        // La relación con Enrollment está configurada desde CourseEnrollmentConfiguration
     }
 }

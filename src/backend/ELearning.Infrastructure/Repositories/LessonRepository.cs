@@ -63,22 +63,51 @@ public sealed class LessonRepository : ILessonRepository
         await _db.SaveChangesAsync(ct);
     }
 
-    public async Task UpdateOrdersAsync(
-        IEnumerable<(Guid LessonId, int NewOrder)> orders,
-        CancellationToken ct = default)
+    public async Task UpdateOrdersAsync(IEnumerable<(Guid LessonId, int NewOrder)> orders, CancellationToken ct = default)
     {
-        // Cargar todas las lecciones a actualizar en una sola query
-        var ids = orders.Select(o => o.LessonId).ToList();
+        var orderList = orders.ToList();
+        if (orderList.Count == 0)
+            return;
 
-        var lessons = await _db.Lessons
-            .Where(l => ids.Contains(l.Id))
-            .ToListAsync(ct);
+        // Usar el execution strategy de la base de datos para manejar reintentos
+        // esto es necesario con PostgreSQL que usa NpgsqlRetryingExecutionStrategy
+        var strategy = _db.Database.CreateExecutionStrategy();
 
-        var orderMap = orders.ToDictionary(o => o.LessonId, o => o.NewOrder);
+        await strategy.ExecuteAsync(async () =>
+        {
+            using var transaction = await _db.Database.BeginTransactionAsync(ct);
+            try
+            {
+                // Paso 1: Asignar valores temporales negativos y distintos para evitar conflictos
+                // Usamos -1000, -1001, -1002... para que no colisionen con valores finales positivos
+                var tempValue = -1000;
+                foreach (var (lessonId, _) in orderList)
+                {
+                    await _db.Lessons
+                        .Where(l => l.Id == lessonId)
+                        .ExecuteUpdateAsync(
+                            s => s.SetProperty(l => l.OrderIndex, tempValue),
+                            ct);
+                    tempValue--;
+                }
 
-        foreach (var lesson in lessons)
-            lesson.UpdateOrder(orderMap[lesson.Id]);
+                // Paso 2: Asignar los valores finales del nuevo orden
+                foreach (var (lessonId, newOrder) in orderList)
+                {
+                    await _db.Lessons
+                        .Where(l => l.Id == lessonId)
+                        .ExecuteUpdateAsync(
+                            s => s.SetProperty(l => l.OrderIndex, newOrder),
+                            ct);
+                }
 
-        await _db.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+        });
     }
 }

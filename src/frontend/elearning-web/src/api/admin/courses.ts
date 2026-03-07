@@ -35,6 +35,15 @@ export interface AssignCountriesRequest {
   countryIds: number[];
 }
 
+export interface LessonOrderItem {
+  lessonId: string;
+  newOrder: number;
+}
+
+export interface ReorderLessonsRequest {
+  orders: LessonOrderItem[];
+}
+
 // ── Params ────────────────────────────────────────────────────────────────────
 
 export interface GetAdminCoursesParams {
@@ -77,6 +86,9 @@ export const coursesApi = {
   deleteLesson: (courseId: string, lessonId: string) =>
     axios.delete(`/courses/${courseId}/lessons/${lessonId}`),
 
+  reorderLessons: (courseId: string, data: ReorderLessonsRequest) =>
+    axios.patch(`/courses/${courseId}/lessons/reorder`, data),
+
   // Media uploads
   uploadThumbnail: (file: File, onProgress?: (pct: number) => void) => {
     const form = new FormData();
@@ -94,7 +106,7 @@ export const coursesApi = {
     form.append('file', file);
     return axios.post<UploadResultDto>('/media/videos', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 0, // sin timeout para archivos grandes
+      timeout: 0,
       onUploadProgress: (e) => {
         if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total));
       },

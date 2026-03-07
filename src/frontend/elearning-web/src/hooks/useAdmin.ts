@@ -26,4 +26,5 @@ export {
   useCreateLesson,
   useUpdateLesson,
   useDeleteLesson,
+  useReorderLessons
 } from './admin';

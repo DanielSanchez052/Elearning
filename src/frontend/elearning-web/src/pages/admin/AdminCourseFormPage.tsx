@@ -1,9 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+
+// dnd-kit
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
+
 import { useCourseDetail } from '@/hooks/useCourses';
+import { useAdminCountries } from '@/hooks/useAdmin';
 import {
   useCreateCourse,
   useUpdateCourse,
@@ -11,9 +35,9 @@ import {
   useCreateLesson,
   useUpdateLesson,
   useDeleteLesson,
-  useAdminCountries
+  useReorderLessons,
 } from '@/hooks/useAdmin';
-import { coursesApi } from '@/api/admin';
+import { coursesApi } from '@/api/admin/courses';
 // import { useAuthStore } from '../../store/authStore';
 import Drawer from '@/components/ui/Drawer';
 import FileUploadField from '@/components/admin/FileUploadField';
@@ -39,17 +63,15 @@ type LessonFormData = z.infer<typeof lessonSchema>;
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function AdminCourseFormPage() {
+export default function CourseFormPage() {
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
   const navigate = useNavigate();
   // const user = useAuthStore((s) => s.user);
-  // const isSuperAdmin = user?.role === 'superadmin';
 
   const { data: course, isLoading } = useCourseDetail(id ?? '');
   const { data: countries } = useAdminCountries();
 
-  // Thumbnail URL — manejado fuera de RHF por el uploader
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [selectedCountries, setSelectedCountries] = useState<number[]>([]);
   const [saveError, setSaveError] = useState('');
@@ -58,11 +80,16 @@ export default function AdminCourseFormPage() {
     lesson: LessonDto | null;
   }>({ open: false, lesson: null });
 
+  // Local lesson list for optimistic drag & drop ordering
+  const [localLessons, setLocalLessons] = useState<LessonDto[]>([]);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
   const createCourse = useCreateCourse();
   const updateCourse = useUpdateCourse(id ?? '');
   const assignCountries = useAssignCountries(id ?? '');
+  const reorderLessons = useReorderLessons(id ?? '');
 
-  const { register, handleSubmit, reset, watch, formState: { errors, isDirty } } =
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors, isDirty } } =
     useForm<CourseFormData>({
       resolver: zodResolver(courseSchema),
       defaultValues: { isGlobal: false },
@@ -70,7 +97,7 @@ export default function AdminCourseFormPage() {
 
   const isGlobal = watch('isGlobal');
 
-  // Cargar datos existentes al editar
+  // Sync course data on load/update
   useEffect(() => {
     if (course) {
       reset({
@@ -80,8 +107,52 @@ export default function AdminCourseFormPage() {
       });
       setThumbnailUrl(course.thumbnailUrl ?? '');
       setSelectedCountries(course.countries.map((c) => c.id));
+
+      // Only init localLessons if not mid-drag
+      if (!activeDragId) {
+        setLocalLessons(
+          [...course.lessons].sort((a, b) => a.orderIndex - b.orderIndex)
+        );
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [course, reset]);
+
+  // dnd-kit sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 }, // prevent accidental drags
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id));
+  }, []);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+
+    if (!over || active.id === over.id) return;
+
+    setLocalLessons((prev) => {
+      const oldIndex = prev.findIndex((l) => l.id === active.id);
+      const newIndex = prev.findIndex((l) => l.id === over.id);
+      const reordered = arrayMove(prev, oldIndex, newIndex);
+
+      // Fire API call with new order (1-based)
+      const orders = reordered.map((l, i) => ({
+        lessonId: l.id,
+        newOrder: i + 1,
+      }));
+      reorderLessons.mutate({ orders });
+
+      return reordered;
+    });
+  }, [reorderLessons]);
 
   const onSubmit = async (data: CourseFormData) => {
     setSaveError('');
@@ -101,7 +172,6 @@ export default function AdminCourseFormPage() {
         courseId = await createCourse.mutateAsync(payload);
       }
 
-      // Asignar países si no es global
       if (!data.isGlobal && selectedCountries.length > 0 && courseId) {
         await assignCountries.mutateAsync(selectedCountries);
       }
@@ -113,6 +183,10 @@ export default function AdminCourseFormPage() {
   };
 
   const isPending = createCourse.isPending || updateCourse.isPending;
+
+  const activeDragLesson = activeDragId
+    ? localLessons.find((l) => l.id === activeDragId)
+    : null;
 
   if (isEditing && isLoading) return <CourseFormSkeleton />;
 
@@ -229,12 +303,9 @@ export default function AdminCourseFormPage() {
                 <button
                   key={String(value)}
                   type="button"
-                  onClick={() => {
-                    // const syntheticEvent = { target: { value: String(value) } };
-                    register('isGlobal').onChange({
-                      target: { name: 'isGlobal', value, type: 'checkbox', checked: value }
-                    });
-                  }}
+                  onClick={() =>
+                    setValue('isGlobal', value, { shouldDirty: true })
+                  }
                   className={`flex items-start gap-3 p-4 rounded-xl border text-left transition-all ${isGlobal === value
                     ? 'bg-indigo-600/15 border-indigo-500/40'
                     : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]'
@@ -254,7 +325,7 @@ export default function AdminCourseFormPage() {
             </div>
           </div>
 
-          {/* Asignación de países — solo si no es global */}
+          {/* Asignación de países */}
           {!isGlobal && countries && (
             <div>
               <label className="block text-sm font-medium text-zinc-300 mb-2">
@@ -299,7 +370,7 @@ export default function AdminCourseFormPage() {
           </div>
         )}
 
-        {/* ── Sección 2: Lecciones — solo en edición ── */}
+        {/* ── Sección 2: Lecciones con drag & drop ── */}
         {isEditing && course && (
           <section className="bg-[#111118] border border-white/[0.06] rounded-2xl p-6 space-y-5">
             <div className="flex items-center justify-between">
@@ -308,7 +379,10 @@ export default function AdminCourseFormPage() {
                   Lecciones
                 </h2>
                 <p className="text-xs text-zinc-600 mt-0.5">
-                  {course.lessons.length} {course.lessons.length === 1 ? 'lección' : 'lecciones'}
+                  {localLessons.length} {localLessons.length === 1 ? 'lección' : 'lecciones'}
+                  {localLessons.length > 1 && (
+                    <span className="ml-2 text-zinc-700">· Arrastra para reordenar</span>
+                  )}
                 </p>
               </div>
               <button
@@ -323,7 +397,7 @@ export default function AdminCourseFormPage() {
               </button>
             </div>
 
-            {course.lessons.length === 0 ? (
+            {localLessons.length === 0 ? (
               <div className="text-center py-10 rounded-xl border border-dashed border-white/[0.08]">
                 <p className="text-zinc-600 text-sm">No hay lecciones aún.</p>
                 <button
@@ -335,24 +409,62 @@ export default function AdminCourseFormPage() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-2">
-                {course.lessons
-                  .slice()
-                  .sort((a, b) => a.orderIndex - b.orderIndex)
-                  .map((lesson) => (
-                    <LessonRow
-                      key={lesson.id}
-                      lesson={lesson}
-                      onEdit={() => setLessonDrawer({ open: true, lesson })}
-                      courseId={id!}
-                    />
-                  ))}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={localLessons.map((l) => l.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {localLessons.map((lesson, index) => (
+                      <SortableLessonRow
+                        key={lesson.id}
+                        lesson={lesson}
+                        index={index}
+                        onEdit={() => setLessonDrawer({ open: true, lesson })}
+                        courseId={id!}
+                        isDragging={activeDragId === lesson.id}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+
+                {/* Drag overlay — renders the floating ghost item */}
+                <DragOverlay dropAnimation={{
+                  duration: 150,
+                  easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+                }}>
+                  {activeDragLesson && (
+                    <LessonRowGhost lesson={activeDragLesson} />
+                  )}
+                </DragOverlay>
+              </DndContext>
+            )}
+
+            {/* Reorder saving indicator */}
+            {reorderLessons.isPending && (
+              <div className="flex items-center gap-2 text-xs text-zinc-600">
+                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Guardando orden...
               </div>
+            )}
+            {reorderLessons.isError && (
+              <p className="text-xs text-red-400">
+                Error al guardar el orden. El orden se revirtió.
+              </p>
             )}
           </section>
         )}
 
-        {/* Nota si es creación — lecciones después */}
+        {/* Nota si es creación */}
         {!isEditing && (
           <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-indigo-500/5 border border-indigo-500/20">
             <svg className="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -383,102 +495,210 @@ export default function AdminCourseFormPage() {
   );
 }
 
-// ── Lesson Row ────────────────────────────────────────────────────────────────
+// ── Sortable Lesson Row ───────────────────────────────────────────────────────
 
-function LessonRow({
+function SortableLessonRow({
   lesson,
+  index,
   onEdit,
   courseId,
+  isDragging,
 }: {
   lesson: LessonDto;
+  index: number;
   onEdit: () => void;
   courseId: string;
+  isDragging: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isSorting,
+  } = useSortable({ id: lesson.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: isSorting ? transition : undefined,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 0 : 'auto',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <LessonRowContent
+        lesson={lesson}
+        index={index}
+        onEdit={onEdit}
+        courseId={courseId}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
+  );
+}
+
+// ── Ghost overlay (floating item during drag) ─────────────────────────────────
+
+function LessonRowGhost({ lesson }: { lesson: LessonDto }) {
+  return (
+    <div className="shadow-2xl shadow-black/50 scale-[1.02]">
+      <LessonRowContent
+        lesson={lesson}
+        index={0}
+        onEdit={() => { }}
+        courseId=""
+        isDragOverlay
+      />
+    </div>
+  );
+}
+
+// ── Shared Lesson Row Content ─────────────────────────────────────────────────
+
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  video: (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  pdf: (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  ),
+  quiz: (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+};
+
+const TYPE_COLORS: Record<string, string> = {
+  video: 'text-indigo-400 bg-indigo-500/10',
+  pdf: 'text-amber-400  bg-amber-500/10',
+  quiz: 'text-emerald-400 bg-emerald-500/10',
+};
+
+function LessonRowContent({
+  lesson,
+  index,
+  onEdit,
+  courseId,
+  dragHandleProps,
+  isDragOverlay,
+}: {
+  lesson: LessonDto;
+  index: number;
+  onEdit: () => void;
+  courseId: string;
+  dragHandleProps?: React.HTMLAttributes<HTMLElement>;
+  isDragOverlay?: boolean;
 }) {
   const deleteLesson = useDeleteLesson(courseId);
   const [confirmDelete, setConfirm] = useState(false);
 
-  const typeIcons: Record<string, React.ReactNode> = {
-    video: (
-      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    pdf: (
-      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
-    quiz: (
-      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  };
-
-  const typeColors: Record<string, string> = {
-    video: 'text-indigo-400 bg-indigo-500/10',
-    pdf: 'text-amber-400 bg-amber-500/10',
-    quiz: 'text-emerald-400 bg-emerald-500/10',
-  };
-
   return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.06] group hover:border-white/[0.10] transition-all">
-      {/* Orden */}
-      <span className="w-6 h-6 rounded-md bg-white/[0.04] flex items-center justify-center text-xs text-zinc-600 flex-shrink-0">
-        {lesson.orderIndex}
+    <div className={`
+      flex items-center gap-3 px-4 py-3 rounded-xl border group transition-all
+      ${isDragOverlay
+        ? 'bg-[#1a1a28] border-indigo-500/30 cursor-grabbing'
+        : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.10] cursor-default'
+      }
+    `}>
+
+      {/* Drag handle */}
+      <button
+        type="button"
+        {...dragHandleProps}
+        className={`
+          flex-shrink-0 p-1 rounded-md text-zinc-700
+          hover:text-zinc-400 hover:bg-white/[0.06]
+          focus:outline-none focus:ring-1 focus:ring-indigo-500/50
+          transition-all cursor-grab active:cursor-grabbing
+          ${isDragOverlay ? 'cursor-grabbing text-zinc-500' : ''}
+        `}
+        aria-label="Arrastrar para reordenar"
+        title="Arrastrar para reordenar"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M4 8h16M4 16h16" />
+        </svg>
+      </button>
+
+      {/* Index badge */}
+      <span className="w-6 h-6 rounded-md bg-white/[0.04] flex items-center justify-center text-xs text-zinc-600 flex-shrink-0 tabular-nums">
+        {index + 1}
       </span>
 
-      {/* Tipo */}
-      <span className={`p-1.5 rounded-lg flex-shrink-0 ${typeColors[lesson.type]}`}>
-        {typeIcons[lesson.type]}
+      {/* Type badge */}
+      <span className={`p-1.5 rounded-lg flex-shrink-0 ${TYPE_COLORS[lesson.type] ?? 'text-zinc-400 bg-white/[0.06]'}`}>
+        {TYPE_ICONS[lesson.type]}
       </span>
 
-      {/* Título */}
+      {/* Title */}
       <span className="flex-1 text-sm text-zinc-300 truncate">{lesson.title}</span>
 
-      {/* Required badge */}
+      {/* Required */}
       {lesson.isRequired && (
         <span className="text-xs text-zinc-600 hidden sm:block">Requerida</span>
       )}
 
-      {/* Acciones */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={onEdit}
-          className="p-1.5 rounded-lg hover:bg-white/[0.08] text-zinc-500 hover:text-white transition-all"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </button>
-        {!confirmDelete ? (
+      {/* Actions — hidden on drag overlay */}
+      {!isDragOverlay && (
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
-            onClick={() => setConfirm(true)}
-            className="p-1.5 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition-all"
+            type="button"
+            onClick={onEdit}
+            className="p-1.5 rounded-lg hover:bg-white/[0.08] text-zinc-500 hover:text-white transition-all"
+            aria-label="Editar lección"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
           </button>
-        ) : (
-          <div className="flex items-center gap-1">
+
+          {!confirmDelete ? (
             <button
-              onClick={() => deleteLesson.mutate(lesson.id)}
-              disabled={deleteLesson.isPending}
-              className="px-2 py-1 rounded-lg bg-red-600 text-white text-xs disabled:opacity-50"
+              type="button"
+              onClick={() => setConfirm(true)}
+              className="p-1.5 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition-all"
+              aria-label="Eliminar lección"
             >
-              {deleteLesson.isPending ? '...' : 'Confirmar'}
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
             </button>
-            <button
-              onClick={() => setConfirm(false)}
-              className="px-2 py-1 rounded-lg bg-white/[0.04] text-zinc-400 text-xs"
-            >
-              Cancelar
-            </button>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => deleteLesson.mutate(lesson.id)}
+                disabled={deleteLesson.isPending}
+                className="px-2 py-1 rounded-lg bg-red-600 text-white text-xs disabled:opacity-50"
+              >
+                {deleteLesson.isPending ? '...' : 'Confirmar'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirm(false)}
+                className="px-2 py-1 rounded-lg bg-white/[0.04] text-zinc-400 text-xs"
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -612,7 +832,7 @@ function LessonForm({
         </div>
       )}
 
-      {/* Required */}
+      {/* Required toggle */}
       <label className="flex items-center gap-3 cursor-pointer group">
         <div className="relative">
           <input {...register('isRequired')} type="checkbox" className="sr-only peer" />

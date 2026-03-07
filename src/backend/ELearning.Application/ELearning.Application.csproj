@@ -18,4 +18,8 @@
     <ProjectReference Include="..\ELearning.Domain\ELearning.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Features\Lessons\DTOs\" />
+  </ItemGroup>
+
 </Project>
