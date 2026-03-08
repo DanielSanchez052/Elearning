@@ -17,6 +17,7 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminCoursesPage from './pages/admin/AdminCoursesPage';
 import AdminCountriesPage from './pages/admin/AdminCountriesPage';
 import AdminCourseFormPage from './pages/admin/AdminCourseFormPage';
+import { AdminQuizzesPage } from './pages/admin/AdminQuizzesPage';
 // import UnauthorizedPage    from './pages/UnauthorizedPage';
 
 const queryClient = new QueryClient({
@@ -60,6 +61,8 @@ export default function App() {
                 <Route path="/admin/courses" element={<AdminCoursesPage />} />
                 <Route path="/admin/courses/new" element={<AdminCourseFormPage />} />
                 <Route path="/admin/courses/:id/edit" element={<AdminCourseFormPage />} />
+                <Route path="/admin/courses/:courseId/quizzes" element={<AdminQuizzesPage />} />
+                <Route path="/admin/courses/:courseId/lessons/:lessonId/quizzes" element={<AdminQuizzesPage />} />
               </Route>
             </Route>
 

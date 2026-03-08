@@ -1,4 +1,45 @@
 namespace ELearning.Application.Features.Quizzes.DTOs;
-public class QuizQuestionDto { public Guid Id { get; set; } public string QuestionText { get; set; } = ""; public decimal PassScore { get; set; } public int MaxAttempts { get; set; } public List<QuizOptionDto> Options { get; set; } = new(); }
-public class QuizOptionDto { public Guid Id { get; set; } public string OptionText { get; set; } = ""; }
-public class SubmitQuizDto { public Guid LessonId { get; set; } public List<Guid> SelectedOptionIds { get; set; } = new(); }
+
+public sealed record QuizQuestionDto(
+    Guid Id,
+    string QuestionText,
+    int Type,
+    bool IsRequired,
+    decimal PassScore,
+    int MaxAttempts,
+    int OrderIndex,
+    IReadOnlyList<QuizOptionDto> Options,
+    Guid? LessonId,
+    Guid? CourseId
+);
+
+public sealed record QuizOptionDto(
+    Guid Id,
+    string OptionText,
+    int OrderIndex
+);
+
+public sealed record QuizResultDto(
+    decimal Score,
+    bool IsPassed,
+    decimal PassScore,
+    int TotalQuestions,
+    int CorrectAnswers,
+    int AttemptNumber,
+    int MaxAttempts,
+    string Feedback,
+    DateTime CompletedAt
+);
+
+public sealed record QuizAttemptDto(
+    int AttemptNumber,
+    decimal Score,
+    bool IsPassed,
+    DateTime CompletedAt
+);
+
+public sealed record SubmitQuizRequestDto(
+    Guid? LessonId,
+    Guid? CourseId,
+    IReadOnlyList<Guid> SelectedOptionIds
+);

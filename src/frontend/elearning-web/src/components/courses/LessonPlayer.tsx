@@ -167,8 +167,6 @@ export default function LessonPlayer({
 // ── PDF Viewer ────────────────────────────────────────────────────────────────
 
 function PdfViewer({ url }: { url: string }) {
-  const [numPages, setNumPages] = useState<number>(0);
-  const [pageNum, setPageNum] = useState(1);
   const [loading, setLoading] = useState(true);
 
   // Usamos iframe nativo para el MVP — no requiere dependencias adicionales.

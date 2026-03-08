@@ -1,9 +1,9 @@
 import { useParams } from 'react-router-dom';
-import { useCourseById } from '../../hooks/useCourses';
+import { useCourseDetail } from '../../hooks/useCourses';
 
 export const CourseDetail = () => {
   const { courseId } = useParams<{ courseId: string }>();
-  const { data: course, isLoading } = useCourseById(courseId!);
+  const { data: course, isLoading } = useCourseDetail(courseId ?? '');
 
   if (isLoading) return <div>Cargando...</div>;
 

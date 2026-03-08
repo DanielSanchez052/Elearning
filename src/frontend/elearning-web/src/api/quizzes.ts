@@ -1,12 +1,27 @@
 import axios from '../lib/axios';
+import type { SubmitQuizRequest, QuizQuestion, QuizResultDto, QuizAttemptDto } from '../types/quiz.types';
 
 export const quizzesApi = {
-  getQuizByLesson: (lessonId: string) =>
-    axios.get(`/quizzes?lessonId=${lessonId}`),
+  // Read endpoints (student)
+  getLessonQuizzes: (lessonId: string) =>
+    axios.get<QuizQuestion[]>(`/quizzes/lessons/${lessonId}`),
 
-  createQuizQuestion: (data: any) =>
-    axios.post('/quizzes/questions', data),
+  getCourseExam: (courseId: string) =>
+    axios.get<QuizQuestion[]>(`/quizzes/courses/${courseId}/exam`),
 
-  submitQuizAnswer: (quizId: string, answers: any) =>
-    axios.post(`/quizzes/${quizId}/submit`, { answers }),
+  // Submit endpoints
+  submitLessonQuiz: (lessonId: string, data: SubmitQuizRequest) =>
+    axios.post<QuizResultDto>(`/quizzes/lessons/${lessonId}/submit`, data),
+
+  submitCourseExam: (courseId: string, data: SubmitQuizRequest) =>
+    axios.post<QuizResultDto>(`/quizzes/courses/${courseId}/exam/submit`, data),
+
+  // Results endpoints
+  getLessonResults: (lessonId: string) =>
+    axios.get<QuizAttemptDto[]>(`/quizzes/lessons/${lessonId}/results`),
+
+  getCourseExamResults: (courseId: string) =>
+    axios.get<QuizAttemptDto[]>(
+      `/quizzes/courses/${courseId}/exam/results`
+    ),
 };

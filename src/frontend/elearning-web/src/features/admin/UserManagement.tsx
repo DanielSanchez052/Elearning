@@ -4,7 +4,7 @@ import { adminApi } from '../../api/admin';
 export const UserManagement = () => {
   const { data: users, isLoading } = useQuery({
     queryKey: ['admin-users'],
-    queryFn: () => adminApi.getUsers(),
+    queryFn: () => adminApi.getUsers().then((r) => r.data.items),
   });
 
   if (isLoading) return <div>Cargando usuarios...</div>;

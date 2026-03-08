@@ -1,7 +1,7 @@
 import { useAuthStore } from '../../store/authStore';
 
 export const Navbar = () => {
-  const { user, logout } = useAuthStore();
+  const { user, clearAuth } = useAuthStore();
 
   return (
     <nav className="flex justify-between items-center p-4 bg-white shadow">
@@ -11,7 +11,7 @@ export const Navbar = () => {
           <>
             <span>{user.fullName}</span>
             <button
-              onClick={logout}
+              onClick={clearAuth}
               className="px-4 py-2 bg-red-500 text-white rounded"
             >
               Logout

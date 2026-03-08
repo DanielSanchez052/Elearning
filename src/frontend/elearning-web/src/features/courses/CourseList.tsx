@@ -1,7 +1,8 @@
-import { useCourses } from '../../hooks/useCourses';
+import { useCourseCatalog } from '../../hooks/useCourses';
 
 export const CourseList = () => {
-  const { data: courses, isLoading, error } = useCourses();
+  const { data, isLoading, error } = useCourseCatalog();
+  const courses = data?.items ?? [];
 
   if (isLoading) return <div>Cargando cursos...</div>;
   if (error) return <div>Error cargando cursos</div>;

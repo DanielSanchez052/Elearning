@@ -14,7 +14,7 @@ public class Lesson
     public DateTime CreatedAt { get; private set; }
 
     public Course Course { get; private set; } = null!;
-    public QuizQuestion? QuizQuestion { get; private set; }
+    public ICollection<QuizQuestion> QuizQuestions { get; private set; } = new List<QuizQuestion>();
     public ICollection<UserLessonProgress> UserProgress { get; private set; } = new List<UserLessonProgress>();
 
     private Lesson() { }
@@ -44,10 +44,5 @@ public class Lesson
     public void UpdateOrder(int newOrderIndex)
     {
         OrderIndex = newOrderIndex;
-    }
-
-    public void SetQuizQuestion(QuizQuestion quizQuestion)
-    {
-        QuizQuestion = quizQuestion;
     }
 }

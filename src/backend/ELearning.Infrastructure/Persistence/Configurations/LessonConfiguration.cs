@@ -53,5 +53,8 @@ public class LessonConfiguration : IEntityTypeConfiguration<Lesson>
             .WithMany(c => c.Lessons)
             .HasForeignKey(l => l.CourseId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Relación con Quiz (multiple preguntas por lección)
+        // Se configura en QuizQuestionConfiguration
     }
 }

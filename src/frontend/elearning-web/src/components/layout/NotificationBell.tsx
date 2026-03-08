@@ -2,7 +2,7 @@ import { useNotifications } from '../../hooks/useNotifications';
 
 export const NotificationBell = () => {
   const { data: notifications } = useNotifications();
-  const unreadCount = notifications?.filter((n: any) => !n.read).length || 0;
+  const unreadCount = notifications?.filter((n) => !n.read).length || 0;
 
   return (
     <div className="relative">

@@ -1,41 +1,83 @@
-export interface Quiz {
-  id: string;
-  lessonId: string;
-  questions: QuizQuestion[];
-  passingScore: number;
-}
+// Quiz Types - Backend Structure
+export const QuizType = {
+  PerLesson: 0,
+  CourseExam: 1,
+} as const;
+
+export type QuizType = typeof QuizType[keyof typeof QuizType];
 
 export interface QuizQuestion {
   id: string;
-  quizId: string;
-  text: string;
-  type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER';
+  questionText: string;
+  type: QuizType;
+  isRequired: boolean;
+  passScore: number;
+  maxAttempts: number;
+  orderIndex: number;
+  lessonId?: string | null;
+  courseId?: string | null;
   options: QuizOption[];
-  correctOptionId?: string;
-  order: number;
 }
 
 export interface QuizOption {
   id: string;
-  questionId: string;
-  text: string;
-  isCorrect: boolean;
-  order: number;
+  questionId?: string;
+  optionText: string;
+  isCorrect?: boolean; // No viene en respuestas GET (seguridad)
+  orderIndex: number;
 }
 
-export interface QuizResult {
-  id: string;
-  userId: string;
-  quizId: string;
+// Requests
+export interface CreateQuizQuestionRequest {
+  lessonId?: string | null;
+  courseId?: string | null;
+  type: QuizType;
+  questionText: string;
+  passScore: number;
+  maxAttempts: number;
+  isRequired: boolean;
+}
+
+export interface UpdateQuizQuestionRequest {
+  questionText: string;
+  passScore: number;
+  maxAttempts: number;
+  isRequired: boolean;
+}
+
+export interface CreateQuizOptionRequest {
+  optionText: string;
+  isCorrect: boolean;
+  orderIndex: number;
+}
+
+export interface UpdateQuizOptionRequest {
+  optionText: string;
+  isCorrect: boolean;
+}
+
+// Responses
+export interface QuizResultDto {
   score: number;
-  passed: boolean;
-  submittedAt: string;
-  answers: QuizAnswer[];
+  isPassed: boolean;
+  passScore: number;
+  totalQuestions: number;
+  correctAnswers: number;
+  attemptNumber: number;
+  maxAttempts: number;
+  feedback: string;
+  completedAt: string;
 }
 
-export interface QuizAnswer {
-  questionId: string;
-  selectedOptionId?: string;
-  selectedText?: string;
-  isCorrect: boolean;
+export interface QuizAttemptDto {
+  attemptNumber: number;
+  score: number;
+  isPassed: boolean;
+  completedAt: string;
+}
+
+export interface SubmitQuizRequest {
+  lessonId?: string | null;
+  courseId?: string | null;
+  selectedOptionIds: string[];
 }

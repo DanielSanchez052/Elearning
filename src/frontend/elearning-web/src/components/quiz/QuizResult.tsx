@@ -32,6 +32,9 @@ export const QuizResult = ({
       <p className="text-xl mb-6">
         Puntuación: <span className="font-bold">{percentage}%</span>
       </p>
+      <p className="text-sm text-gray-500 mb-4">
+        Puntaje mínimo requerido: {passingScore}%
+      </p>
 
       <div className="mb-6 max-w-xs mx-auto">
         <p className="text-gray-600 mb-2">
