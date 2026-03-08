@@ -1,17 +1,15 @@
-﻿using ELearning.Application.Common.Abstractions;
-using ELearning.Application.Common.Validators;
+using ELearning.Application.Common.Abstractions;
 using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 
-namespace ELearning.Application.Features.Admin.Commands;
+namespace ELearning.Application.Features.Users.Commands;
 
 public sealed record ChangeUserRoleCommand(
-    Guid TargetUserId,   // usuario al que se le cambia el rol
-    string NewRole,        // rol como string — se valida en el validator
-    Guid RequesterId,    // quien hace la operación (extraído del JWT)
-    string RequesterRole   // rol del que hace la operación (extraído del JWT)
+    Guid TargetUserId,
+    string NewRole,
+    Guid RequesterId,
+    string RequesterRole
 ) : ICommand;
-
 
 public sealed class ChangeUserRoleHandler : ICommandHandler<ChangeUserRoleCommand>
 {
@@ -25,13 +23,10 @@ public sealed class ChangeUserRoleHandler : ICommandHandler<ChangeUserRoleComman
     public async Task<Result> HandleAsync(ChangeUserRoleCommand cmd, CancellationToken ct = default)
     {
         var newRole = Enum.Parse<UserRole>(cmd.NewRole, ignoreCase: true);
-
         var requesterRole = Enum.Parse<UserRole>(cmd.RequesterRole, ignoreCase: true);
 
-        if (requesterRole == UserRole.Admin &&
-            newRole is not (UserRole.Student or UserRole.Instructor))
-            return Result.Forbidden(
-                "Un Admin solo puede asignar los roles Student e Instructor.");
+        if (requesterRole == UserRole.Admin && newRole is not (UserRole.Student or UserRole.Instructor))
+            return Result.Forbidden("Un Admin solo puede asignar los roles Student e Instructor.");
 
         var target = await _users.GetByIdTrackedAsync(cmd.TargetUserId, ct);
         if (target is null)

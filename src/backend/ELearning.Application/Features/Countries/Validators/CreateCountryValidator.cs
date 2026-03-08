@@ -1,7 +1,7 @@
-﻿using ELearning.Application.Common.Validators;
-using ELearning.Application.Features.Admin.Commands;
+using ELearning.Application.Common.Validators;
+using ELearning.Application.Features.Countries.Commands;
 
-namespace ELearning.Application.Features.Admin.Validators;
+namespace ELearning.Application.Features.Countries.Validators;
 
 public sealed class CreateCountryValidator : IValidator<CreateCountryCommand>
 {

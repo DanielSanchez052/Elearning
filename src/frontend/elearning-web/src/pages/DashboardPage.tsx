@@ -1,12 +1,13 @@
 import { useAuthStore } from '@/store/authStore';
-import AdminAccessButton from '@/components/AdminAccessButton';
+import AppHeader from '@/components/layout/AppHeader';
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0f] to-[#1a1a2e] p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0f] to-[#1a1a2e]">
+      <AppHeader />
+      <div className="max-w-7xl mx-auto p-8">
         {/* Header */}
         <div className="mb-12 flex items-start justify-between">
           <div>
@@ -17,7 +18,6 @@ export default function DashboardPage() {
               Tu panel de control y espacio personalizado
             </p>
           </div>
-          <AdminAccessButton />
         </div>
 
         {/* Main Content - Placeholder */}

@@ -1,7 +1,7 @@
-﻿using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Common.Abstractions;
 using ELearning.Domain.Interfaces.Repositories;
 
-namespace ELearning.Application.Features.Admin.Commands;
+namespace ELearning.Application.Features.Countries.Commands;
 
 public sealed record ToggleCountryStatusCommand(
     int CountryId

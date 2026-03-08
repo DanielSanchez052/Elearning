@@ -1,7 +1,7 @@
-﻿using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Common.Abstractions;
 using ELearning.Domain.Interfaces.Repositories;
 
-namespace ELearning.Application.Features.Admin.Commands;
+namespace ELearning.Application.Features.Users.Commands;
 
 public sealed record ChangeUserCountryCommand(
     Guid TargetUserId,

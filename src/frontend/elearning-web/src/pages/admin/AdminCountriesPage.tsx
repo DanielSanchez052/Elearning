@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAdminCountries, useCreateCountry, useToggleCountryStatus } from '@/hooks/useAdmin';
+import { useAdminCountries, useCreateCountry, useToggleCountryStatus } from '@/hooks/admin/countries';
 import Drawer from '@/components/ui/Drawer';
 import { getApiErrorMessage } from '../../lib/axios';
 import type { Country } from '@/types/user.types';

@@ -41,6 +41,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<ICacheService, CacheService>();
         services.AddScoped<IPasswordHasherService, PasswordHasherService>();
         services.AddScoped<IJwtService, JwtService>();
+        services.AddScoped<ICertificatePdfService, QuestPdfCertificateService>();
         return services;
     }
 }

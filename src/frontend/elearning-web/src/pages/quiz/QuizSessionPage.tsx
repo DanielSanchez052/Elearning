@@ -7,7 +7,7 @@ import {
   useLessonResults,
   useSubmitCourseExam,
   useSubmitLessonQuiz,
-} from '@/hooks/admin/quizzes';
+} from '@/hooks/quizzes';
 import { useMarkLessonComplete } from '@/hooks/useEnrollments';
 import type { QuizQuestion, QuizResultDto } from '@/types/quiz.types';
 import { useQuizSessionStore } from '@/store/quizSessionStore';

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import AdminAccessButton from '@/components/AdminAccessButton';
+import AppHeader from '@/components/layout/AppHeader';
 import { useCourseDetail } from '@/hooks/useCourses';
-import { useCourseExam, useCourseExamResults } from '@/hooks/admin/quizzes';
+import { useCourseExam, useCourseExamResults } from '@/hooks/quizzes';
 import { useCourseProgress, useEnrollInCourse } from '@/hooks/useEnrollments';
 import type { LessonDto } from '@/types/course.types';
 import LessonPlayer from '@/components/courses/LessonPlayer';
@@ -56,16 +56,17 @@ export default function CourseDetailPage() {
     );
   }
 
-  const videoLessons = course.lessons.filter((l) => l.type === 'video');
-  const pdfLessons = course.lessons.filter((l) => l.type === 'pdf');
-  const quizLessons = course.lessons.filter((l) => l.type === 'quiz');
+  const orderedLessons = [...course.lessons].sort((a, b) => a.orderIndex - b.orderIndex);
+  const quizLessons = orderedLessons.filter((l) => l.type === 'quiz');
   const completedLessonIds = progress?.lessons
     .filter((l) => l.isCompleted)
     .map((l) => l.lessonId) ?? [];
+  const completedSet = new Set(completedLessonIds);
 
   return (
     <>
       <div className="min-h-screen bg-[#0a0a0f] text-white">
+        <AppHeader />
 
         {/* Breadcrumb */}
         <div className="border-b border-white/[0.06]">
@@ -75,7 +76,6 @@ export default function CourseDetailPage() {
               <span>/</span>
               <span className="text-zinc-300 truncate max-w-xs">{course.title}</span>
             </div>
-            <AdminAccessButton />
           </div>
         </div>
 
@@ -213,46 +213,119 @@ export default function CourseDetailPage() {
             </div>
           ) : (
             <div className="space-y-8">
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+                    Ruta del curso
+                  </h2>
+                  <span className="text-xs text-zinc-500">Ordenada por secuencia pedagógica</span>
+                </div>
 
-              {/* Videos */}
-              {videoLessons.length > 0 && (
-                <LessonSection
-                  courseId={course.id}
-                  canAccess={canAccessLearning}
-                  title="Videos"
-                  icon="video"
-                  lessons={videoLessons}
-                  onSelect={setActiveLesson}
-                />
-              )}
+                <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f16] p-3 space-y-2">
+                  {orderedLessons.map((lesson, index) => {
+                    const isQuiz = lesson.type === 'quiz';
+                    const isCompleted = completedSet.has(lesson.id);
+                    const missingRequiredBefore = orderedLessons
+                      .filter((l) => l.isRequired && l.orderIndex < lesson.orderIndex)
+                      .some((l) => !completedSet.has(l.id));
 
-              {/* PDFs */}
-              {pdfLessons.length > 0 && (
-                <LessonSection
-                  courseId={course.id}
-                  canAccess={canAccessLearning}
-                  title="Material de lectura"
-                  icon="pdf"
-                  lessons={pdfLessons}
-                  onSelect={setActiveLesson}
-                />
-              )}
+                    const lockedByEnrollment = !canAccessLearning;
+                    const lockedByPrereq = canAccessLearning && isQuiz && missingRequiredBefore;
+                    const isLocked = lockedByEnrollment || lockedByPrereq;
 
-              {/* Quizzes */}
-              {quizLessons.length > 0 && (
-                <LessonSection
-                  courseId={course.id}
-                  canAccess={canAccessLearning}
-                  title="Evaluaciones"
-                  icon="quiz"
-                  lessons={quizLessons}
-                  onSelect={setActiveLesson}
-                />
-              )}
+                    const rowClass = isLocked
+                      ? 'border-white/[0.06] bg-white/[0.01] opacity-65'
+                      : isCompleted
+                        ? 'border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/10'
+                        : 'border-white/[0.06] bg-[#111118] hover:border-indigo-500/30 hover:bg-indigo-500/5';
+
+                    const content = (
+                      <>
+                        <span className={`w-8 h-8 rounded-lg border flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
+                          isCompleted
+                            ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
+                            : 'border-white/[0.08] bg-white/[0.03] text-zinc-400'
+                        }`}>
+                          {index + 1}
+                        </span>
+
+                        <span className="text-zinc-400 flex-shrink-0">{getLessonIcon(lesson.type)}</span>
+
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium ${isCompleted ? 'text-emerald-200' : 'text-zinc-200'}`}>
+                            {lesson.title}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                            <span className="text-zinc-500 capitalize">{lesson.type}</span>
+                            {lesson.isRequired && (
+                              <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-amber-300">
+                                Requerida
+                              </span>
+                            )}
+                            {isCompleted && (
+                              <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-emerald-300">
+                                Completada
+                              </span>
+                            )}
+                            {lockedByPrereq && (
+                              <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-indigo-300">
+                                Completa requeridas previas
+                              </span>
+                            )}
+                            {lockedByEnrollment && (
+                              <span className="rounded-full border border-zinc-500/30 bg-zinc-500/10 px-2 py-0.5 text-zinc-300">
+                                Inscripción requerida
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <span className="text-xs text-zinc-500 flex-shrink-0">
+                          {isLocked
+                            ? 'Bloqueada'
+                            : isQuiz
+                              ? 'Iniciar evaluación'
+                              : 'Abrir lección'}
+                        </span>
+                      </>
+                    );
+
+                    if (isQuiz) {
+                      return isLocked ? (
+                        <div
+                          key={lesson.id}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${rowClass}`}
+                        >
+                          {content}
+                        </div>
+                      ) : (
+                        <Link
+                          key={lesson.id}
+                          to={`/courses/${course.id}/lessons/${lesson.id}/quiz`}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${rowClass}`}
+                        >
+                          {content}
+                        </Link>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={lesson.id}
+                        onClick={() => !isLocked && setActiveLesson(lesson)}
+                        disabled={isLocked}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left ${rowClass}`}
+                      >
+                        {content}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               {canAccessLearning && quizLessons.length > 0 && (
-                <p className="-mt-6 text-xs text-zinc-500">
-                  Nota: algunas evaluaciones de lección se desbloquean al completar primero las lecciones requeridas previas.
+                <p className="-mt-4 text-xs text-zinc-500">
+                  Nota: las evaluaciones respetan el orden del curso y pueden requerir completar lecciones previas.
                 </p>
               )}
 
@@ -321,121 +394,28 @@ export default function CourseDetailPage() {
   );
 }
 
-// ── Lesson Section ────────────────────────────────────────────────────────────
-
-interface LessonSectionProps {
-  courseId: string;
-  canAccess: boolean;
-  title: string;
-  icon: 'video' | 'pdf' | 'quiz';
-  lessons: LessonDto[];
-  onSelect: (lesson: LessonDto) => void;
-}
-
-function LessonSection({ courseId, canAccess, title, icon, lessons, onSelect }: LessonSectionProps) {
-  const iconMap = {
-    video: (
+function getLessonIcon(type: LessonDto['type']) {
+  if (type === 'video') {
+    return (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
-    ),
-    pdf: (
+    );
+  }
+
+  if (type === 'pdf') {
+    return (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
-    ),
-    quiz: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  };
+    );
+  }
 
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-zinc-400">{iconMap[icon]}</span>
-        <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">{title}</h2>
-        <span className="text-xs text-zinc-600">({lessons.length})</span>
-      </div>
-
-      <div className="space-y-2">
-        {lessons.map((lesson, index) => (
-          lesson.type === 'quiz' && canAccess ? (
-            <Link
-              key={lesson.id}
-              to={`/courses/${courseId}/lessons/${lesson.id}/quiz`}
-              className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-[#111118] border border-indigo-500/20 hover:border-indigo-500/40 hover:bg-indigo-500/10 transition-all text-left group"
-            >
-              <span className="w-7 h-7 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-xs text-indigo-300 flex-shrink-0 transition-colors">
-                {index + 1}
-              </span>
-
-              <span className="flex-1 text-sm text-zinc-200 group-hover:text-white transition-colors">
-                {lesson.title}
-              </span>
-
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {lesson.isRequired && (
-                  <span className="text-xs text-zinc-500">Requerida</span>
-                )}
-                <span className="text-xs text-indigo-300">Iniciar</span>
-                <svg className="w-4 h-4 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-          ) : lesson.type === 'quiz' ? (
-            <div
-              key={lesson.id}
-              className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-[#111118] border border-white/[0.06] opacity-60"
-            >
-              <span className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-xs text-zinc-500 flex-shrink-0">
-                {index + 1}
-              </span>
-
-              <span className="flex-1 text-sm text-zinc-400">{lesson.title}</span>
-
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {lesson.isRequired && (
-                  <span className="text-xs text-zinc-600">Requerida</span>
-                )}
-                <span className="text-xs text-amber-400/80">Inscripción requerida</span>
-              </div>
-            </div>
-          ) : (
-            <button
-              key={lesson.id}
-              onClick={() => onSelect(lesson)}
-              disabled={!canAccess}
-              className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-[#111118] border border-white/[0.06] hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all text-left group"
-            >
-              <span className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-xs text-zinc-500 flex-shrink-0 group-hover:border-indigo-500/20 transition-colors">
-                {index + 1}
-              </span>
-
-              <span className="flex-1 text-sm text-zinc-300 group-hover:text-white transition-colors">
-                {lesson.title}
-              </span>
-
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {lesson.isRequired && (
-                  <span className="text-xs text-zinc-600">Requerida</span>
-                )}
-                {canAccess ? (
-                  <svg className="w-4 h-4 text-zinc-600 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                ) : (
-                  <span className="text-xs text-amber-400/80">Inscripción requerida</span>
-                )}
-              </div>
-            </button>
-          )
-        ))}
-      </div>
-    </div>
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
   );
 }
 

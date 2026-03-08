@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom'; import AdminAccessButton from '@/components/AdminAccessButton'; import { useCourseCatalog } from '@/hooks/useCourses';
+import { Link } from 'react-router-dom';
+import { useCourseCatalog } from '@/hooks/useCourses';
+import AppHeader from '@/components/layout/AppHeader';
 import type { CourseSummaryDto } from '@/types/course.types';
 
 export default function CatalogPage() {
@@ -22,9 +24,10 @@ export default function CatalogPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
+      <AppHeader />
 
       {/* Header */}
-      <div className="border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b border-white/[0.06] bg-[#0a0a0f]/80">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-white">Catálogo de cursos</h1>
@@ -35,7 +38,7 @@ export default function CatalogPage() {
             )}
           </div>
 
-          {/* Búsqueda y Admin Button */}
+          {/* Búsqueda */}
           <div className="flex items-center gap-3">
             <form onSubmit={handleSearch} className="flex items-center gap-2">
               <div className="relative">
@@ -65,7 +68,6 @@ export default function CatalogPage() {
                 </button>
               )}
             </form>
-            <AdminAccessButton />
           </div>
         </div>
       </div>

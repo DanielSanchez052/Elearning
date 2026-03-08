@@ -28,26 +28,21 @@ export {
 } from './courses';
 
 export {
-  useLessonQuizzes,
-  useCourseExam,
-  useSubmitLessonQuiz,
-  useSubmitCourseExam,
-  useLessonResults,
-  useCourseExamResults,
   useCreateQuizQuestion,
   useUpdateQuizQuestion,
   useDeleteQuizQuestion,
   useCreateQuizOption,
   useUpdateQuizOption,
   useDeleteQuizOption,
-  quizzesKeys,
 } from './quizzes';
+
+export { quizzesKeys } from '@/hooks/quizzes';
 
 // Agregador de query keys para compatibilidad
 import { countriesKeys } from './countries';
 import { usersKeys } from './users';
 import { coursesKeys } from './courses';
-import { quizzesKeys } from './quizzes';
+import { quizzesKeys } from '@/hooks/quizzes';
 
 export const adminKeys = {
   ...countriesKeys,

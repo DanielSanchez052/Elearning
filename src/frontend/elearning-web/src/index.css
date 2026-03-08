@@ -121,4 +121,20 @@
   body {
     @apply bg-background text-foreground;
     }
+
+  select {
+    color-scheme: dark;
+  }
+
+  select,
+  select option,
+  select optgroup {
+    background-color: #111118;
+    color: #e4e4e7;
+  }
+
+  select:disabled,
+  select:disabled option {
+    color: #71717a;
+  }
 }

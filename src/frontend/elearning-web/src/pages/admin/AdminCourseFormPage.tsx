@@ -27,7 +27,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
 
 import { useCourseDetail } from '@/hooks/useCourses';
-import { useAdminCountries } from '@/hooks/useAdmin';
+import { useAdminCountries } from '@/hooks/admin/countries';
 import {
   useCreateCourse,
   useUpdateCourse,
@@ -36,7 +36,7 @@ import {
   useUpdateLesson,
   useDeleteLesson,
   useReorderLessons,
-} from '@/hooks/useAdmin';
+} from '@/hooks/admin/courses';
 import { coursesApi } from '@/api/admin/courses';
 // import { useAuthStore } from '../../store/authStore';
 import Drawer from '@/components/ui/Drawer';

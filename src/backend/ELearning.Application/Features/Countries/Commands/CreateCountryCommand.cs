@@ -1,8 +1,8 @@
-﻿using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Common.Abstractions;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Interfaces.Repositories;
 
-namespace ELearning.Application.Features.Admin.Commands;
+namespace ELearning.Application.Features.Countries.Commands;
 
 public sealed record CreateCountryCommand(
     string Code,
@@ -34,4 +34,3 @@ public sealed class CreateCountryHandler : ICommandHandler<CreateCountryCommand,
         return Result.Success(country.Id);
     }
 }
-

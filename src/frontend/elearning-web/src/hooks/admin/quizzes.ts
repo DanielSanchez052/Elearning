@@ -1,117 +1,12 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { quizzesApi } from '@/api/quizzes';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { quizzesAdminApi } from '@/api/admin/quizzes';
+import { quizzesKeys } from '@/hooks/quizzes';
 import type {
   CreateQuizQuestionRequest,
   UpdateQuizQuestionRequest,
   CreateQuizOptionRequest,
   UpdateQuizOptionRequest,
 } from '@/types/quiz.types';
-
-// Query Keys
-export const quizzesKeys = {
-  all: ['quizzes'] as const,
-  lesson: (lessonId: string) => ['quizzes', 'lesson', lessonId] as const,
-  courseExam: (courseId: string) =>
-    ['quizzes', 'courseExam', courseId] as const,
-  results: {
-    all: ['quizzes', 'results'] as const,
-    lesson: (lessonId: string) =>
-      ['quizzes', 'results', 'lesson', lessonId] as const,
-    courseExam: (courseId: string) =>
-      ['quizzes', 'results', 'courseExam', courseId] as const,
-  },
-};
-
-// ────── Student Hooks (Read / Submit) ──────────────────────────────────
-
-/** Get all quiz questions for a lesson */
-export function useLessonQuizzes(lessonId: string, enabled = true) {
-  return useQuery({
-    queryKey: quizzesKeys.lesson(lessonId),
-    queryFn: () => quizzesApi.getLessonQuizzes(lessonId).then((r) => r.data),
-    enabled,
-  });
-}
-
-/** Get course final exam questions */
-export function useCourseExam(courseId: string, enabled = true) {
-  return useQuery({
-    queryKey: quizzesKeys.courseExam(courseId),
-    queryFn: () => quizzesApi.getCourseExam(courseId).then((r) => r.data),
-    enabled,
-  });
-}
-
-/** Submit lesson quiz answers */
-export function useSubmitLessonQuiz() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (payload: {
-      lessonId: string;
-      selectedOptionIds: string[];
-    }) =>
-      quizzesApi.submitLessonQuiz(payload.lessonId, {
-        lessonId: payload.lessonId,
-        courseId: null,
-        selectedOptionIds: payload.selectedOptionIds,
-      }),
-    onSuccess: (_, payload) => {
-      queryClient.invalidateQueries({
-        queryKey: quizzesKeys.lesson(payload.lessonId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: quizzesKeys.results.lesson(payload.lessonId),
-      });
-    },
-  });
-}
-
-/** Submit course exam answers */
-export function useSubmitCourseExam() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (payload: {
-      courseId: string;
-      selectedOptionIds: string[];
-    }) =>
-      quizzesApi.submitCourseExam(payload.courseId, {
-        lessonId: null,
-        courseId: payload.courseId,
-        selectedOptionIds: payload.selectedOptionIds,
-      }),
-    onSuccess: (_, payload) => {
-      queryClient.invalidateQueries({
-        queryKey: quizzesKeys.courseExam(payload.courseId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: quizzesKeys.results.courseExam(payload.courseId),
-      });
-    },
-  });
-}
-
-/** Get lesson quiz results (student's attempts) */
-export function useLessonResults(lessonId: string, enabled = true) {
-  return useQuery({
-    queryKey: quizzesKeys.results.lesson(lessonId),
-    queryFn: () =>
-      quizzesApi.getLessonResults(lessonId).then((r) => r.data),
-    enabled,
-  });
-}
-
-/** Get course exam results (student's attempts) */
-export function useCourseExamResults(courseId: string, enabled = true) {
-  return useQuery({
-    queryKey: quizzesKeys.results.courseExam(courseId),
-    queryFn: () =>
-      quizzesApi.getCourseExamResults(courseId).then((r) => r.data),
-    enabled,
-  });
-}
 
 // ────── Admin Hooks (CRUD) ──────────────────────────────────────────────
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAdminCourses, useToggleCourseStatus, useDeleteCourse, useAdminCountries } from '@/hooks/useAdmin';
+import { useAdminCourses, useToggleCourseStatus, useDeleteCourse } from '@/hooks/admin/courses';
+import { useAdminCountries } from '@/hooks/admin/countries';
 import { useAuthStore } from '../../store/authStore';
 import Drawer from '@/components/ui/Drawer';
 import { getApiErrorMessage } from '../../lib/axios';

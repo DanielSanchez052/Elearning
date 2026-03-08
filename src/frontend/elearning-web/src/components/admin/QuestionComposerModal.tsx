@@ -6,6 +6,7 @@ import { QuizType, type QuizQuestion } from '@/types/quiz.types';
 
 const formSchema = z.object({
   type: z.enum([String(QuizType.PerLesson), String(QuizType.CourseExam)]),
+  lessonId: z.string().optional(),
   questionText: z
     .string()
     .min(10, 'La pregunta debe tener al menos 10 caracteres'),
@@ -50,6 +51,12 @@ export interface QuestionComposerSubmit {
 interface QuestionComposerModalProps {
   lessonId?: string;
   courseId?: string;
+  lessonOptions?: Array<{
+    id: string;
+    title: string;
+    orderIndex: number;
+    type?: string;
+  }>;
   mode?: 'create' | 'edit';
   initialQuestion?: QuizQuestion;
   onClose: () => void;
@@ -98,6 +105,7 @@ function mapQuestionToOptions(question?: QuizQuestion): OptionDraft[] {
 export function QuestionComposerModal({
   lessonId,
   courseId,
+  lessonOptions = [],
   mode = 'create',
   initialQuestion,
   onClose,
@@ -114,12 +122,14 @@ export function QuestionComposerModal({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialQuestion
       ? {
           type: String(initialQuestion.type),
+          lessonId: initialQuestion.lessonId ?? '',
           questionText: initialQuestion.questionText,
           passScore: initialQuestion.passScore,
           maxAttempts: initialQuestion.maxAttempts,
@@ -127,6 +137,7 @@ export function QuestionComposerModal({
         }
       : {
           type: lessonId ? String(QuizType.PerLesson) : String(QuizType.CourseExam),
+          lessonId: lessonId ?? '',
           questionText: '',
           passScore: 60,
           maxAttempts: 3,
@@ -139,6 +150,7 @@ export function QuestionComposerModal({
       initialQuestion
         ? {
             type: String(initialQuestion.type),
+            lessonId: initialQuestion.lessonId ?? '',
             questionText: initialQuestion.questionText,
             passScore: initialQuestion.passScore,
             maxAttempts: initialQuestion.maxAttempts,
@@ -146,6 +158,7 @@ export function QuestionComposerModal({
           }
         : {
             type: lessonId ? String(QuizType.PerLesson) : String(QuizType.CourseExam),
+            lessonId: lessonId ?? '',
             questionText: '',
             passScore: 60,
             maxAttempts: 3,
@@ -169,6 +182,9 @@ export function QuestionComposerModal({
 
   const canRemoveOption = options.length > 3;
   const hasValidOptions = filledOptions.length >= 3 && correctCount === 1;
+  const selectedType = watch('type');
+  const isPerLessonType = selectedType === String(QuizType.PerLesson);
+  const needsLessonSelection = mode === 'create' && !lessonId && isPerLessonType;
 
   const addOption = () => {
     setOptions((prev) => [
@@ -209,6 +225,13 @@ export function QuestionComposerModal({
     setDidAttemptSubmit(true);
     setOptionsError('');
 
+    const chosenLessonId = lessonId ?? (parsed.lessonId?.trim() || null);
+
+    if (parsed.type === String(QuizType.PerLesson) && !chosenLessonId) {
+      setOptionsError('Debes seleccionar la lección para esta evaluación.');
+      return;
+    }
+
     if (filledOptions.length < 3) {
       setOptionsError('Debes completar al menos 3 opciones con texto.');
       return;
@@ -227,7 +250,7 @@ export function QuestionComposerModal({
         maxAttempts: parsed.maxAttempts,
         isRequired: parsed.isRequired,
         lessonId:
-          parsed.type === String(QuizType.PerLesson) ? (lessonId ?? null) : null,
+          parsed.type === String(QuizType.PerLesson) ? chosenLessonId : null,
         courseId:
           parsed.type === String(QuizType.CourseExam) ? (courseId ?? null) : null,
       },
@@ -272,7 +295,7 @@ export function QuestionComposerModal({
           className="space-y-6 px-6 py-5"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="md:col-span-2">
               <label className="mb-2 block text-sm font-medium text-white">Tipo de quiz</label>
               <select
@@ -292,6 +315,31 @@ export function QuestionComposerModal({
                 </p>
               )}
             </div>
+
+            {needsLessonSelection && (
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-white">Lección</label>
+                <select
+                  {...register('lessonId')}
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-white focus:border-indigo-500/60 focus:outline-none"
+                >
+                  <option value="">Selecciona una lección</option>
+                  {lessonOptions
+                    .slice()
+                    .sort((a, b) => a.orderIndex - b.orderIndex)
+                    .map((lessonOption) => (
+                      <option key={lessonOption.id} value={lessonOption.id}>
+                        #{lessonOption.orderIndex} - {lessonOption.title}
+                      </option>
+                    ))}
+                </select>
+                {lessonOptions.length === 0 && (
+                  <p className="mt-1 text-xs text-amber-400">
+                    Este curso no tiene lecciones disponibles para asociar esta evaluación.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="mb-2 block text-sm font-medium text-white">Puntaje minimo</label>

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { enrollmentsApi } from '@/api/enrollments';
-import { quizzesKeys } from '@/hooks/admin/quizzes';
+import { quizzesKeys } from '@/hooks/quizzes';
 
 export const enrollmentKeys = {
   all: ['enrollments'] as const,

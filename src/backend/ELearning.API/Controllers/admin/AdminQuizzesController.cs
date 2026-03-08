@@ -5,12 +5,12 @@ using ELearning.Application.Features.Quizzes.Commands;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ELearning.API.Controllers;
+namespace ELearning.API.Controllers.admin;
 
 [ApiController]
 [Route("api/admin/quizzes")]
 [Authorize(Roles = "admin,superadmin,instructor")]
-public class QuizzesAdminController(
+public class AdminQuizzesController(
     ICommandHandler<CreateQuizQuestionCommand, Guid> createQuestionHandler,
     ICommandHandler<UpdateQuizQuestionCommand> updateQuestionHandler,
     ICommandHandler<DeleteQuizQuestionCommand> deleteQuestionHandler,

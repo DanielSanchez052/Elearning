@@ -1,4 +1,4 @@
-﻿namespace ELearning.Application.Features.Admin.DTOs;
+namespace ELearning.Application.Features.Users.DTOs;
 
 public sealed record UserSummaryDto(
     Guid Id,

@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  useLessonQuizzes,
-  useCourseExam,
   useCreateQuizQuestion,
   useDeleteQuizQuestion,
   useUpdateQuizQuestion,
@@ -10,11 +8,13 @@ import {
   useDeleteQuizOption,
   useUpdateQuizOption,
 } from '@/hooks/admin/quizzes';
+import { useLessonQuizzes, useCourseExam } from '@/hooks/quizzes';
 import { ListQuestions } from '@/components/admin/ListQuestions';
 import {
   QuestionComposerModal,
   type QuestionComposerSubmit,
 } from '@/components/admin/QuestionComposerModal';
+import { useCourseDetail } from '@/hooks/useCourses';
 import type {
   CreateQuizOptionRequest,
   CreateQuizQuestionRequest,
@@ -39,6 +39,14 @@ export function AdminQuizzesPage() {
     currentModal: null,
     selectedQuestion: null,
   });
+
+  const courseDetail = useCourseDetail(courseId || '');
+  const lessonOptions = (courseDetail.data?.lessons || []).map((lesson) => ({
+    id: lesson.id,
+    title: lesson.title,
+    orderIndex: lesson.orderIndex,
+    type: lesson.type,
+  }));
 
   // Queries
   const lessonQuizzes = useLessonQuizzes(lessonId || '', !!lessonId);
@@ -210,9 +218,10 @@ export function AdminQuizzesPage() {
     updateOption.isPending ||
     deleteOption.isPending;
 
-  const pageTitle = lessonId
-    ? 'Preguntas de Lección'
-    : 'Examen Final del Curso';
+  const pageTitle = 'Gestión de Exámenes';
+  const pageContext = lessonId
+    ? 'Evaluación por lección'
+    : 'Examen final del curso';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0f] to-[#1a1a2e] p-6">
@@ -224,9 +233,7 @@ export function AdminQuizzesPage() {
               <h1 className="text-4xl font-bold text-white mb-2">
                 {pageTitle}
               </h1>
-              <p className="text-zinc-400">
-                Gestiona las preguntas y opciones del quiz
-              </p>
+              <p className="text-zinc-400">{pageContext}</p>
             </div>
             <button
               onClick={() => navigate(`/admin/courses/${courseId}`)}
@@ -274,6 +281,7 @@ export function AdminQuizzesPage() {
         <QuestionComposerModal
           lessonId={lessonId}
           courseId={courseId}
+          lessonOptions={lessonOptions}
           mode="create"
           onClose={closeModal}
           onSubmit={handleCreateQuestion}

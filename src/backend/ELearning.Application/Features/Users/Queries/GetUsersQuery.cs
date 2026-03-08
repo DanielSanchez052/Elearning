@@ -1,25 +1,19 @@
-﻿using ELearning.Application.Common.Abstractions;
-using ELearning.Application.Features.Admin.DTOs;
+using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Features.Users.DTOs;
 using ELearning.Domain.Interfaces.Repositories;
 
-namespace ELearning.Application.Features.Admin.Queries;
-
-
-// ══════════════════════════════════════════════════════════════════════════════
-// GET USERS (paginado con filtros)
-// ══════════════════════════════════════════════════════════════════════════════
+namespace ELearning.Application.Features.Users.Queries;
 
 public sealed record GetUsersQuery(
-    int? CountryId,        // null = todos los países (solo Super Admin lo usa así)
-    string? Role,            // null = todos los roles
-    string? Search,          // busca en nombre y email
-    bool? IsEmailVerified,  // null = todos
+    int? CountryId,
+    string? Role,
+    string? Search,
+    bool? IsEmailVerified,
     int Page = 1,
     int PageSize = 20
 ) : IQuery<PagedResult<UserSummaryDto>>;
 
-public sealed class GetUsersHandler
-    : IQueryHandler<GetUsersQuery, PagedResult<UserSummaryDto>>
+public sealed class GetUsersHandler : IQueryHandler<GetUsersQuery, PagedResult<UserSummaryDto>>
 {
     private readonly IUserRepository _users;
 
@@ -28,11 +22,8 @@ public sealed class GetUsersHandler
         _users = users;
     }
 
-    public async Task<Result<PagedResult<UserSummaryDto>>> HandleAsync(
-        GetUsersQuery query,
-        CancellationToken ct = default)
+    public async Task<Result<PagedResult<UserSummaryDto>>> HandleAsync(GetUsersQuery query, CancellationToken ct = default)
     {
-        // Clamp de page y pageSize para evitar valores absurdos
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, 1, 100);
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useAdminUsers, useChangeUserRole, useChangeUserCountry, useAdminCountries } from '@/hooks/useAdmin';
+import { useAdminUsers, useChangeUserRole, useChangeUserCountry } from '@/hooks/admin/users';
+import { useAdminCountries } from '@/hooks/admin/countries';
 import { useAuthStore } from '../../store/authStore';
 import Drawer from '@/components/ui/Drawer';
 import { getApiErrorMessage } from '../../lib/axios';

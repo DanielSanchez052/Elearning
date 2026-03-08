@@ -59,35 +59,35 @@ export interface GetAdminCoursesParams {
 
 export const coursesApi = {
   getAdminCourses: (params: GetAdminCoursesParams = {}) =>
-    axios.get<PagedResult<CourseSummaryDto>>('/courses/admin', { params }),
+    axios.get<PagedResult<CourseSummaryDto>>('/admin/courses', { params }),
 
   toggleCourseStatus: (id: string) =>
-    axios.patch(`/courses/${id}/toggle-status`),
+    axios.patch(`/admin/courses/${id}/toggle-status`),
 
   deleteCourse: (id: string) =>
-    axios.delete(`/courses/${id}`),
+    axios.delete(`/admin/courses/${id}`),
   // Courses
   createCourse: (data: CreateCourseRequest) =>
-    axios.post<{ value: string }>('/courses', data),
+    axios.post<{ value: string }>('/admin/courses', data),
 
   updateCourse: (id: string, data: UpdateCourseRequest) =>
-    axios.put(`/courses/${id}`, data),
+    axios.put(`/admin/courses/${id}`, data),
 
   assignCountries: (id: string, data: AssignCountriesRequest) =>
-    axios.put(`/courses/${id}/countries`, data),
+    axios.put(`/admin/courses/${id}/countries`, data),
 
   // Lessons
   createLesson: (courseId: string, data: CreateLessonRequest) =>
-    axios.post<{ value: string }>(`/courses/${courseId}/lessons`, data),
+    axios.post<{ value: string }>(`/admin/courses/${courseId}/lessons`, data),
 
   updateLesson: (courseId: string, lessonId: string, data: UpdateLessonRequest) =>
-    axios.put(`/courses/${courseId}/lessons/${lessonId}`, data),
+    axios.put(`/admin/courses/${courseId}/lessons/${lessonId}`, data),
 
   deleteLesson: (courseId: string, lessonId: string) =>
-    axios.delete(`/courses/${courseId}/lessons/${lessonId}`),
+    axios.delete(`/admin/courses/${courseId}/lessons/${lessonId}`),
 
   reorderLessons: (courseId: string, data: ReorderLessonsRequest) =>
-    axios.patch(`/courses/${courseId}/lessons/reorder`, data),
+    axios.patch(`/admin/courses/${courseId}/lessons/reorder`, data),
 
   // Media uploads
   uploadThumbnail: (file: File, onProgress?: (pct: number) => void) => {
