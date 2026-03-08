@@ -2,13 +2,44 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import AdminAccessButton from '@/components/AdminAccessButton';
 import { useCourseDetail } from '@/hooks/useCourses';
+import { useCourseExam, useCourseExamResults } from '@/hooks/admin/quizzes';
+import { useCourseProgress, useEnrollInCourse } from '@/hooks/useEnrollments';
 import type { LessonDto } from '@/types/course.types';
 import LessonPlayer from '@/components/courses/LessonPlayer';
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: course, isLoading, isError } = useCourseDetail(id ?? '');
+  const examQuery = useCourseExam(id ?? '', Boolean(id));
+  const courseProgressQuery = useCourseProgress(id ?? '', Boolean(id));
+  const examResultsQuery = useCourseExamResults(id ?? '', Boolean(id));
+  const enrollMutation = useEnrollInCourse();
   const [activeLesson, setActiveLesson] = useState<LessonDto | null>(null);
+
+  const progressStatus = (courseProgressQuery.error as any)?.response?.status;
+  const isNotEnrolled = courseProgressQuery.isError && progressStatus === 404;
+  const progress = courseProgressQuery.data;
+  const canAccessLearning = Boolean(progress);
+  const examStatus = (examQuery.error as any)?.response?.status;
+  const examErrorMessage =
+    (examQuery.error as any)?.response?.data?.message ||
+    (examQuery.error as any)?.response?.data?.error ||
+    '';
+  const examLockedByProgress = canAccessLearning && examStatus === 403;
+  const hasFinalExamConfigured =
+    (examQuery.data?.length ?? 0) > 0 || examLockedByProgress;
+  const examAttempts = examResultsQuery.data ?? [];
+  const passedFinalExam = examAttempts.some((attempt) => attempt.isPassed);
+  const passedAttempt = examAttempts.find((attempt) => attempt.isPassed) ?? null;
+
+  const handleEnroll = async () => {
+    if (!id) return;
+    try {
+      await enrollMutation.mutateAsync(id);
+    } catch {
+      // handled by mutation state
+    }
+  };
 
   if (isLoading) return <CourseDetailSkeleton />;
 
@@ -28,6 +59,9 @@ export default function CourseDetailPage() {
   const videoLessons = course.lessons.filter((l) => l.type === 'video');
   const pdfLessons = course.lessons.filter((l) => l.type === 'pdf');
   const quizLessons = course.lessons.filter((l) => l.type === 'quiz');
+  const completedLessonIds = progress?.lessons
+    .filter((l) => l.isCompleted)
+    .map((l) => l.lessonId) ?? [];
 
   return (
     <>
@@ -109,6 +143,69 @@ export default function CourseDetailPage() {
             </div>
           </div>
 
+          <div className="rounded-2xl border border-white/[0.08] bg-[#111118] p-5">
+            {courseProgressQuery.isLoading ? (
+              <p className="text-sm text-zinc-400">Cargando estado de inscripción...</p>
+            ) : canAccessLearning && progress ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-zinc-500">Tu progreso</p>
+                    <p className="text-sm text-zinc-300 mt-1">
+                      {progress.completedLessons} / {progress.requiredLessons} lecciones requeridas completadas
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
+                    Inscrito
+                  </span>
+                </div>
+
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/[0.08]">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                    style={{ width: `${Math.min(Math.max(progress.progressPercent, 0), 100)}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-zinc-500">
+                  <span>{progress.progressPercent}% completado</span>
+                  <span>Estado: {getEnrollmentStatusLabel(progress.status)}</span>
+                </div>
+
+                <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-xs text-zinc-400">
+                  {hasFinalExamConfigured
+                    ? progress.progressPercent >= 100
+                      ? 'Ya completaste las lecciones requeridas. El curso se completa al aprobar el examen final.'
+                      : 'Completa las lecciones requeridas para desbloquear el examen final del curso.'
+                    : 'Este curso no tiene examen final. Se completará al terminar las lecciones requeridas.'}
+                </div>
+              </div>
+            ) : isNotEnrolled ? (
+              <div className="space-y-3">
+                <p className="text-sm text-zinc-300">
+                  Inscríbete para desbloquear las lecciones, evaluaciones y el examen final.
+                </p>
+                <button
+                  onClick={handleEnroll}
+                  disabled={enrollMutation.isPending}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-60 transition"
+                >
+                  {enrollMutation.isPending ? 'Inscribiendo...' : 'Inscribirme al curso'}
+                </button>
+                {enrollMutation.isError && (
+                  <p className="text-xs text-red-400">
+                    {(enrollMutation.error as any)?.response?.data?.message ||
+                      'No se pudo completar la inscripción. Intenta nuevamente.'}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-400">
+                No se pudo verificar tu inscripción en este momento.
+              </p>
+            )}
+          </div>
+
           {/* Lecciones */}
           {course.lessons.length === 0 ? (
             <div className="text-center py-12 rounded-2xl bg-[#111118] border border-white/[0.06]">
@@ -120,6 +217,8 @@ export default function CourseDetailPage() {
               {/* Videos */}
               {videoLessons.length > 0 && (
                 <LessonSection
+                  courseId={course.id}
+                  canAccess={canAccessLearning}
                   title="Videos"
                   icon="video"
                   lessons={videoLessons}
@@ -130,6 +229,8 @@ export default function CourseDetailPage() {
               {/* PDFs */}
               {pdfLessons.length > 0 && (
                 <LessonSection
+                  courseId={course.id}
+                  canAccess={canAccessLearning}
                   title="Material de lectura"
                   icon="pdf"
                   lessons={pdfLessons}
@@ -140,11 +241,63 @@ export default function CourseDetailPage() {
               {/* Quizzes */}
               {quizLessons.length > 0 && (
                 <LessonSection
+                  courseId={course.id}
+                  canAccess={canAccessLearning}
                   title="Evaluaciones"
                   icon="quiz"
                   lessons={quizLessons}
                   onSelect={setActiveLesson}
                 />
+              )}
+
+              {canAccessLearning && quizLessons.length > 0 && (
+                <p className="-mt-6 text-xs text-zinc-500">
+                  Nota: algunas evaluaciones de lección se desbloquean al completar primero las lecciones requeridas previas.
+                </p>
+              )}
+
+              {hasFinalExamConfigured && (
+                <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-indigo-200 uppercase tracking-wider">
+                        Examen final del curso
+                      </h3>
+                      {passedFinalExam ? (
+                        <p className="text-xs text-emerald-300 mt-1">
+                          Examen aprobado{passedAttempt?.completedAt
+                            ? ` el ${new Date(passedAttempt.completedAt).toLocaleDateString()}`
+                            : ''}. El curso ya está completado.
+                        </p>
+                      ) : examLockedByProgress ? (
+                        <p className="text-xs text-indigo-300/80 mt-1">
+                          {examErrorMessage ||
+                            'Completa las lecciones requeridas para habilitar el examen final.'}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-indigo-300/80 mt-1">
+                          {examQuery.data?.length ?? 0} preguntas listas para evaluar tu progreso.
+                        </p>
+                      )}
+                    </div>
+                    <Link
+                      to={`/courses/${course.id}/exam`}
+                      className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                        canAccessLearning && !examLockedByProgress && !passedFinalExam
+                          ? 'bg-indigo-600 text-white hover:bg-indigo-500'
+                          : 'pointer-events-none bg-zinc-700 text-zinc-400'
+                      }`}
+                    >
+                      {canAccessLearning
+                        ? passedFinalExam
+                          ? 'Examen completado'
+                          : examLockedByProgress
+                          ? 'Completa requeridas para habilitar'
+                          : 'Iniciar examen'
+                        : 'Inscríbete para habilitar'}
+                    </Link>
+                  </div>
+                </div>
               )}
 
             </div>
@@ -155,9 +308,11 @@ export default function CourseDetailPage() {
       {/* Reproductor en pantalla completa */}
       {activeLesson && (
         <LessonPlayer
+          courseId={course.id}
           lesson={activeLesson}
           courseTitle={course.title}
           allLessons={course.lessons}
+          completedLessonIds={completedLessonIds}
           onClose={() => setActiveLesson(null)}
           onNavigate={setActiveLesson}
         />
@@ -169,13 +324,15 @@ export default function CourseDetailPage() {
 // ── Lesson Section ────────────────────────────────────────────────────────────
 
 interface LessonSectionProps {
+  courseId: string;
+  canAccess: boolean;
   title: string;
   icon: 'video' | 'pdf' | 'quiz';
   lessons: LessonDto[];
   onSelect: (lesson: LessonDto) => void;
 }
 
-function LessonSection({ title, icon, lessons, onSelect }: LessonSectionProps) {
+function LessonSection({ courseId, canAccess, title, icon, lessons, onSelect }: LessonSectionProps) {
   const iconMap = {
     video: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -205,36 +362,77 @@ function LessonSection({ title, icon, lessons, onSelect }: LessonSectionProps) {
 
       <div className="space-y-2">
         {lessons.map((lesson, index) => (
-          <button
-            key={lesson.id}
-            onClick={() => lesson.type !== 'quiz' ? onSelect(lesson) : undefined}
-            disabled={lesson.type === 'quiz'}
-            className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-[#111118] border border-white/[0.06] hover:border-indigo-500/30 hover:bg-indigo-500/5 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-left group"
-          >
-            {/* Número */}
-            <span className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-xs text-zinc-500 flex-shrink-0 group-hover:border-indigo-500/20 transition-colors">
-              {index + 1}
-            </span>
+          lesson.type === 'quiz' && canAccess ? (
+            <Link
+              key={lesson.id}
+              to={`/courses/${courseId}/lessons/${lesson.id}/quiz`}
+              className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-[#111118] border border-indigo-500/20 hover:border-indigo-500/40 hover:bg-indigo-500/10 transition-all text-left group"
+            >
+              <span className="w-7 h-7 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-xs text-indigo-300 flex-shrink-0 transition-colors">
+                {index + 1}
+              </span>
 
-            {/* Título */}
-            <span className="flex-1 text-sm text-zinc-300 group-hover:text-white transition-colors">
-              {lesson.title}
-            </span>
+              <span className="flex-1 text-sm text-zinc-200 group-hover:text-white transition-colors">
+                {lesson.title}
+              </span>
 
-            {/* Badges */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {lesson.isRequired && (
-                <span className="text-xs text-zinc-600">Requerida</span>
-              )}
-              {lesson.type === 'quiz' ? (
-                <span className="text-xs text-amber-500/70">Próximamente</span>
-              ) : (
-                <svg className="w-4 h-4 text-zinc-600 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {lesson.isRequired && (
+                  <span className="text-xs text-zinc-500">Requerida</span>
+                )}
+                <span className="text-xs text-indigo-300">Iniciar</span>
+                <svg className="w-4 h-4 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              )}
+              </div>
+            </Link>
+          ) : lesson.type === 'quiz' ? (
+            <div
+              key={lesson.id}
+              className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-[#111118] border border-white/[0.06] opacity-60"
+            >
+              <span className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-xs text-zinc-500 flex-shrink-0">
+                {index + 1}
+              </span>
+
+              <span className="flex-1 text-sm text-zinc-400">{lesson.title}</span>
+
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {lesson.isRequired && (
+                  <span className="text-xs text-zinc-600">Requerida</span>
+                )}
+                <span className="text-xs text-amber-400/80">Inscripción requerida</span>
+              </div>
             </div>
-          </button>
+          ) : (
+            <button
+              key={lesson.id}
+              onClick={() => onSelect(lesson)}
+              disabled={!canAccess}
+              className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-[#111118] border border-white/[0.06] hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all text-left group"
+            >
+              <span className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-xs text-zinc-500 flex-shrink-0 group-hover:border-indigo-500/20 transition-colors">
+                {index + 1}
+              </span>
+
+              <span className="flex-1 text-sm text-zinc-300 group-hover:text-white transition-colors">
+                {lesson.title}
+              </span>
+
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {lesson.isRequired && (
+                  <span className="text-xs text-zinc-600">Requerida</span>
+                )}
+                {canAccess ? (
+                  <svg className="w-4 h-4 text-zinc-600 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                ) : (
+                  <span className="text-xs text-amber-400/80">Inscripción requerida</span>
+                )}
+              </div>
+            </button>
+          )
         ))}
       </div>
     </div>
@@ -264,4 +462,11 @@ function CourseDetailSkeleton() {
       </div>
     </div>
   );
+}
+
+function getEnrollmentStatusLabel(status: unknown) {
+  if (status === 0 || status === 'Active') return 'Activo';
+  if (status === 1 || status === 'Completed') return 'Completado';
+  if (status === 2 || status === 'Abandoned') return 'Abandonado';
+  return 'Activo';
 }

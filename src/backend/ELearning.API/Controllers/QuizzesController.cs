@@ -25,7 +25,8 @@ public class QuizzesController(
     [HttpGet("lessons/{lessonId:guid}")]
     public async Task<IActionResult> GetLessonQuizzes(Guid lessonId, CancellationToken ct)
     {
-        var result = await getLessonQuizzesHandler.HandleAsync(new GetLessonQuizzesQuery(lessonId), ct);
+        var userId = User.GetUserId();
+        var result = await getLessonQuizzesHandler.HandleAsync(new GetLessonQuizzesQuery(userId, lessonId), ct);
         return this.ToActionResult(result);
     }
 
@@ -35,7 +36,8 @@ public class QuizzesController(
     [HttpGet("courses/{courseId:guid}/exam")]
     public async Task<IActionResult> GetCourseExam(Guid courseId, CancellationToken ct)
     {
-        var result = await getCourseExamHandler.HandleAsync(new GetCourseExamQuery(courseId), ct);
+        var userId = User.GetUserId();
+        var result = await getCourseExamHandler.HandleAsync(new GetCourseExamQuery(userId, courseId), ct);
         return this.ToActionResult(result);
     }
 

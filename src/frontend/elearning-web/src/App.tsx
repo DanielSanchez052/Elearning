@@ -10,6 +10,7 @@ import VerifyEmailPage from './pages/auth/VerifyEmailPage';
 import DashboardPage from './pages/DashboardPage';
 import CatalogPage from './pages/courses/CatalogPage';
 import CourseDetailPage from './pages/courses/CourseDetailPage';
+import QuizSessionPage from './pages/quiz/QuizSessionPage';
 
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -54,6 +55,8 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/courses" element={<CatalogPage />} />
             <Route path="/courses/:id" element={<CourseDetailPage />} />
+            <Route path="/courses/:id/lessons/:lessonId/quiz" element={<QuizSessionPage />} />
+            <Route path="/courses/:id/exam" element={<QuizSessionPage />} />
 
             {/* ── Solo instructores, admins y super_admin ─────────────────── */}
             <Route element={<RoleRoute allowedRoles={['instructor', 'admin', 'superadmin']} />}>

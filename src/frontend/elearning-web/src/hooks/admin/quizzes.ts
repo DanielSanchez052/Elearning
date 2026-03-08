@@ -94,20 +94,22 @@ export function useSubmitCourseExam() {
 }
 
 /** Get lesson quiz results (student's attempts) */
-export function useLessonResults(lessonId: string) {
+export function useLessonResults(lessonId: string, enabled = true) {
   return useQuery({
     queryKey: quizzesKeys.results.lesson(lessonId),
     queryFn: () =>
       quizzesApi.getLessonResults(lessonId).then((r) => r.data),
+    enabled,
   });
 }
 
 /** Get course exam results (student's attempts) */
-export function useCourseExamResults(courseId: string) {
+export function useCourseExamResults(courseId: string, enabled = true) {
   return useQuery({
     queryKey: quizzesKeys.results.courseExam(courseId),
     queryFn: () =>
       quizzesApi.getCourseExamResults(courseId).then((r) => r.data),
+    enabled,
   });
 }
 

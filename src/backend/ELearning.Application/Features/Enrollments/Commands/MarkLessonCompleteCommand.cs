@@ -17,12 +17,12 @@ public record MarkLessonCompleteCommand(
 public class MarkLessonCompleteHandler : ICommandHandler<MarkLessonCompleteCommand, MarkLessonCompleteResult>
 {
     private readonly IEnrollmentRepository _enrollments;
-    private readonly ICourseRepository     _courses;
+    private readonly IQuizRepository _quizzes;
 
-    public MarkLessonCompleteHandler(IEnrollmentRepository enrollments, ICourseRepository courses)
+    public MarkLessonCompleteHandler(IEnrollmentRepository enrollments, IQuizRepository quizzes)
     {
         _enrollments = enrollments;
-        _courses     = courses;
+        _quizzes = quizzes;
     }
 
     public async Task<Result<MarkLessonCompleteResult>> HandleAsync(
@@ -76,12 +76,19 @@ public class MarkLessonCompleteHandler : ICommandHandler<MarkLessonCompleteComma
             .Select(l => l.Id)
             .ToList();
 
-        bool courseCompleted = enrollment.TryComplete(requiredLessonIds);
-
-        await _enrollments.SaveChangesAsync(ct);
-
         var completedRequired = allProgress
             .Count(p => p.IsCompleted && requiredLessonIds.Contains(p.LessonId));
+
+        var hasFinalExam = (await _quizzes.GetQuestionsByCourseAsync(command.CourseId, ct)).Count > 0;
+        var allRequiredLessonsCompleted = completedRequired >= requiredLessonIds.Count;
+
+        bool courseCompleted = false;
+        if (allRequiredLessonsCompleted && !hasFinalExam)
+        {
+            courseCompleted = enrollment.TryComplete(requiredLessonIds);
+        }
+
+        await _enrollments.SaveChangesAsync(ct);
 
         return new MarkLessonCompleteResult(
             LessonWasAlreadyComplete: wasAlreadyComplete,

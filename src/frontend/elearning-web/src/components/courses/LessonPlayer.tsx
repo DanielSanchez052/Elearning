@@ -1,22 +1,51 @@
 import { useEffect, useRef, useState } from 'react';
 import type { LessonDto } from '@/types/course.types';
+import { useMarkLessonComplete } from '@/hooks/useEnrollments';
 
 interface LessonPlayerProps {
+  courseId: string;
   lesson: LessonDto;
   courseTitle: string;
   allLessons: LessonDto[];
+  completedLessonIds?: string[];
   onClose: () => void;
   onNavigate: (lesson: LessonDto) => void;
 }
 
 export default function LessonPlayer({
+  courseId,
   lesson,
   courseTitle,
   allLessons,
+  completedLessonIds = [],
   onClose,
   onNavigate,
 }: LessonPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const markLessonComplete = useMarkLessonComplete();
+  const [completionFeedback, setCompletionFeedback] = useState('');
+
+  const isLessonAlreadyCompleted = completedLessonIds.includes(lesson.id);
+
+  const handleMarkComplete = async () => {
+    if (lesson.type === 'quiz' || isLessonAlreadyCompleted || markLessonComplete.isPending) {
+      return;
+    }
+
+    try {
+      await markLessonComplete.mutateAsync({
+        courseId,
+        lessonId: lesson.id,
+      });
+      setCompletionFeedback('Lección marcada como completada.');
+    } catch {
+      setCompletionFeedback('No se pudo marcar la lección. Intenta nuevamente.');
+    }
+  };
+
+  useEffect(() => {
+    setCompletionFeedback('');
+  }, [lesson.id]);
 
   // Cerrar con Escape
   useEffect(() => {
@@ -93,20 +122,53 @@ export default function LessonPlayer({
         {/* Contenido principal */}
         <div className="flex-1 flex items-center justify-center bg-black overflow-hidden">
           {lesson.type === 'video' && lesson.contentUrl ? (
-            <video
-              ref={videoRef}
-              controls
-              className="max-h-full max-w-full w-full"
-              style={{ maxHeight: 'calc(100vh - 56px)' }}
-            >
-              <source src={lesson.contentUrl} type="video/mp4" />
-              Tu navegador no soporta la reproducción de video.
-            </video>
+            <div className="w-full h-full flex flex-col">
+              <video
+                ref={videoRef}
+                controls
+                onEnded={handleMarkComplete}
+                className="max-h-full max-w-full w-full"
+                style={{ maxHeight: 'calc(100vh - 110px)' }}
+              >
+                <source src={lesson.contentUrl} type="video/mp4" />
+                Tu navegador no soporta la reproducción de video.
+              </video>
+
+              <div className="border-t border-white/[0.06] bg-[#0d0d14] px-4 py-3 flex items-center justify-between gap-3">
+                <p className="text-xs text-zinc-500">
+                  {isLessonAlreadyCompleted
+                    ? 'Esta lección ya fue completada.'
+                    : 'Al terminar el video se marca automáticamente como completada.'}
+                </p>
+                <button
+                  onClick={handleMarkComplete}
+                  disabled={isLessonAlreadyCompleted || markLessonComplete.isPending}
+                  className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50 transition"
+                >
+                  {isLessonAlreadyCompleted
+                    ? 'Completada'
+                    : markLessonComplete.isPending
+                      ? 'Guardando...'
+                      : 'Marcar completada'}
+                </button>
+              </div>
+            </div>
           ) : lesson.type === 'pdf' && lesson.contentUrl ? (
-            <PdfViewer url={lesson.contentUrl} />
+            <PdfViewer
+              url={lesson.contentUrl}
+              isCompleted={isLessonAlreadyCompleted}
+              isSaving={markLessonComplete.isPending}
+              onMarkComplete={handleMarkComplete}
+            />
           ) : (
             <div className="text-center text-zinc-500 text-sm">
               Contenido no disponible.
+            </div>
+          )}
+
+          {completionFeedback && (
+            <div className="absolute bottom-4 left-4 rounded-lg border border-white/[0.1] bg-[#111118]/90 px-3 py-2 text-xs text-zinc-300">
+              {completionFeedback}
             </div>
           )}
         </div>
@@ -166,7 +228,17 @@ export default function LessonPlayer({
 
 // ── PDF Viewer ────────────────────────────────────────────────────────────────
 
-function PdfViewer({ url }: { url: string }) {
+function PdfViewer({
+  url,
+  isCompleted,
+  isSaving,
+  onMarkComplete,
+}: {
+  url: string;
+  isCompleted: boolean;
+  isSaving: boolean;
+  onMarkComplete: () => void;
+}) {
   const [loading, setLoading] = useState(true);
 
   // Usamos iframe nativo para el MVP — no requiere dependencias adicionales.
@@ -184,6 +256,21 @@ function PdfViewer({ url }: { url: string }) {
           <div className="text-zinc-400 text-sm">Cargando PDF...</div>
         </div>
       )}
+
+      <div className="border-t border-white/[0.06] bg-[#0d0d14] px-4 py-3 flex items-center justify-between gap-3">
+        <p className="text-xs text-zinc-500">
+          {isCompleted
+            ? 'Esta lección ya fue completada.'
+            : 'Cuando termines de leer, marca la lección como completada.'}
+        </p>
+        <button
+          onClick={onMarkComplete}
+          disabled={isCompleted || isSaving}
+          className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50 transition"
+        >
+          {isCompleted ? 'Completada' : isSaving ? 'Guardando...' : 'Marcar completada'}
+        </button>
+      </div>
     </div>
   );
 }

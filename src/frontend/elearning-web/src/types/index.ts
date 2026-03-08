@@ -17,4 +17,5 @@ export interface UploadResultDto {
   contentType: string;
 }
 export * from './course.types';
+export * from './enrollment.types';
 export * from './user.types';
