@@ -23,7 +23,7 @@ public sealed class DownloadCertificatePdfHandler : IQueryHandler<DownloadCertif
         _certificatePdfService = certificatePdfService;
     }
 
-    public async Task<Result<CertificateFileDto>> HandleAsync(DownloadCertificatePdfQuery query, CancellationToken ct)
+    public async Task<Result<CertificateFileDto>> HandleAsync(DownloadCertificatePdfQuery query, CancellationToken ct = default)
     {
         if (query.UserId == Guid.Empty)
             return Result.ValidationFailure<CertificateFileDto>("UserId es requerido");

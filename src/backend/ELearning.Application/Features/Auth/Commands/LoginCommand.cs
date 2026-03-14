@@ -53,7 +53,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, LoginResponseDt
                 FullName: user.FullName,
                 Email: user.Email,
                 Role: user.Role.ToString().ToLowerInvariant(),
-                Country: user.Country.Name
+                Country: user.Country?.Name ?? string.Empty
             )
         );
 

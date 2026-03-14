@@ -15,7 +15,7 @@ public sealed class GetMyCertificatesHandler : IQueryHandler<GetMyCertificatesQu
         _enrollments = enrollments;
     }
 
-    public async Task<Result<List<CertificateDto>>> HandleAsync(GetMyCertificatesQuery query, CancellationToken ct)
+    public async Task<Result<List<CertificateDto>>> HandleAsync(GetMyCertificatesQuery query, CancellationToken ct = default)
     {
         if (query.UserId == Guid.Empty)
             return Result.ValidationFailure<List<CertificateDto>>("UserId es requerido");

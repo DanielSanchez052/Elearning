@@ -3,9 +3,6 @@ using ELearning.Application.Features.Certificates.Queries;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Interfaces.Repositories;
 using Moq;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace ELearning.Tests.Unit.Aplication.Features.Certificates;
 

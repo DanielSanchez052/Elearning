@@ -1,6 +1,6 @@
 ﻿namespace ELearning.Application.Features.Media.constants;
 
-internal static class MediaLimits
+public static class MediaLimits
 {
     public const long VideoMaxBytes = 500L * 1024 * 1024; // 500 MB
     public const long DocumentMaxBytes = 25L * 1024 * 1024; // 25 MB
