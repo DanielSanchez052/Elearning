@@ -28,8 +28,7 @@ public class MarkLessonCompleteHandler : ICommandHandler<MarkLessonCompleteComma
     public async Task<Result<MarkLessonCompleteResult>> HandleAsync(
         MarkLessonCompleteCommand command, CancellationToken ct = default)
     {
-        var enrollment = await _enrollments.GetByUserAndCourseAsync(command.UserId, command.CourseId, ct)
-            ?? throw new NotFoundException("Enrollment not found for this user and course.");
+        var enrollment = await _enrollments.GetByUserAndCourseAsync(command.UserId, command.CourseId, ct);
 
         if(enrollment is null)
         {
