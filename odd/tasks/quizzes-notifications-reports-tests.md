@@ -32,7 +32,7 @@ Runner: `dotnet test ELearning.Tests/ELearning.Tests.csproj`
 ## Tasks
 - [x] 1. Quizzes admin CRUD handler tests (6 classes) — delegated writer
 - [x] 2. SubmitQuizHandler tests (scoring logic) — delegated writer
-- [ ] 3. Quizzes query handler tests (3 classes) — delegated writer
+- [x] 3. Quizzes query handler tests (3 classes) — delegated writer
 - [ ] 4. Notifications handler tests (4 classes) — delegated writer
 - [ ] 5. Reports handler tests (2 classes) — delegated writer
 
@@ -69,3 +69,25 @@ Runner: `dotnet test ELearning.Tests/ELearning.Tests.csproj`
   because the required-lesson gating check (step before question retrieval) already forbids reaching the
   scoring step unless every required lesson is completed, so `TryComplete`'s `IsSubsetOf` check can never fail
   by the time it's called.
+
+### Task 3 — Quizzes query handler tests (done)
+- Created 3 test files under `ELearning.Tests/Unit/Aplication/Features/Quizzes/`:
+  `GetLessonQuizzesHandlerTests.cs`, `GetCourseExamHandlerTests.cs`, `GetUserQuizResultsHandlerTests.cs`.
+- 25 new `[Fact]` tests added, covering: empty-id validation failures (UserId/LessonId/CourseId), not-found
+  (lesson), forbidden paths (not enrolled, inactive enrollment, missing required lesson — both the
+  "before current lesson" gating in `GetLessonQuizzesHandler` and the "all required lessons" gating in
+  `GetCourseExamHandler`), the case where prerequisite gating is satisfied and the call proceeds,
+  empty-result cases (no quiz/no attempts yet → empty list, not an error, confirmed by reading each handler:
+  neither checks for an empty collection), branch selection in `GetUserQuizResultsHandler` (LessonId takes
+  priority over CourseId when both are supplied; a `Guid.Empty` LessonId with a `CourseId` present falls back
+  to the course-exam-attempts branch), and full field-by-field DTO mapping for the happy path of all three
+  handlers, including option re-ordering by `OrderIndex` regardless of insertion order.
+- `dotnet test ELearning.Tests/ELearning.Tests.csproj --filter "FullyQualifiedName~Quizzes"` →
+  `Correctas! - Con error: 0, Superado: 120, Omitido: 0, Total: 120, Duración: 210 ms` — full Quizzes feature
+  (tasks 1+2+3 combined) green on first run.
+- No production bugs found. Security-relevant check specifically requested by scope: confirmed
+  `QuizOptionDto` (`ELearning.Application/Features/Quizzes/DTOs/QuizOptionDto.cs`) only carries
+  `Id, OptionText, OrderIndex` — it has no `IsCorrect` property at all, so `GetLessonQuizzesHandler` and
+  `GetCourseExamHandler` cannot leak which option is correct to the student-facing response even by mistake;
+  this was verified both by reading the DTO/handler mapping code and by an explicit reflection assertion in
+  the new tests (`GetType().GetProperty("IsCorrect")` is null on the returned option DTOs).
