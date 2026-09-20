@@ -112,3 +112,21 @@ Runner: `dotnet test ELearning.Tests/ELearning.Tests.csproj`
   `ELearning.Application/Features/Reports/Queries/ReportQueries.cs` both unconditionally
   `throw new NotImplementedException();`. Same situation as Task 4 — reclassified as missing feature, not
   started, no commit made.
+
+## Closure (2026-09-20)
+User decision on tasks 4-5: leave as-is for now. Notifications/Reports stay documented as missing-feature
+gaps (not test gaps) rather than getting placeholder tests. Scope for this feature ends at Task 3.
+
+Full-suite verification: `dotnet test ELearning.Tests/ELearning.Tests.csproj` →
+`Con error: 1, Superado: 524, Omitido: 0, Total: 525`. The single failure
+(`GetCourseProgressHandlerTests.HandleAsync_WithEnrollment_MapsToDtoCorrectly`, in
+`Enrollments/GetCourseProgressHandlerTests.cs`) is pre-existing, untracked, unrelated to this feature's scope
+(flaky `DateTime.UtcNow` exact-equality assertion between two separately captured timestamps) — not touched
+or fixed here.
+
+Commits on `test/quizzes-notifications-reports-coverage`: `92e6907`, `08189b0`, `eee0a873`, `2e205d8`.
+Net result: Quizzes feature now has 120 tests (was 0 handler tests, only 40 validator tests). Branch not
+pushed; no PR opened.
+
+**Next step**: user's call — push/PR this branch, decide on Notifications/Reports implementation, or fix the
+pre-existing flaky Enrollments test.
