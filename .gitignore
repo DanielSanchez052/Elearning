@@ -73,3 +73,5 @@ yarn-error.log
 # Temporary files
 *.tmp
 *.temp
+# Local Pi runtime state
+.atl/
