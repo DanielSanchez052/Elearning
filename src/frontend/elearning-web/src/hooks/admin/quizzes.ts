@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { quizzesAdminApi } from '@/api/admin/quizzes';
 import { quizzesKeys } from '@/hooks/quizzes';
 import type {
@@ -7,6 +7,28 @@ import type {
   CreateQuizOptionRequest,
   UpdateQuizOptionRequest,
 } from '@/types/quiz.types';
+
+// ────── Admin Hooks (Read) ───────────────────────────────────────────────
+
+/** List quiz questions for a lesson (admin — no enrollment gating, includes isCorrect) */
+export function useAdminLessonQuizzes(lessonId: string, enabled = true) {
+  return useQuery({
+    queryKey: quizzesKeys.lesson(lessonId),
+    queryFn: () =>
+      quizzesAdminApi.getLessonQuizzes(lessonId).then((r) => r.data),
+    enabled,
+  });
+}
+
+/** List course exam questions (admin — no enrollment gating, includes isCorrect) */
+export function useAdminCourseExam(courseId: string, enabled = true) {
+  return useQuery({
+    queryKey: quizzesKeys.courseExam(courseId),
+    queryFn: () =>
+      quizzesAdminApi.getCourseExam(courseId).then((r) => r.data),
+    enabled,
+  });
+}
 
 // ────── Admin Hooks (CRUD) ──────────────────────────────────────────────
 

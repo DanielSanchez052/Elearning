@@ -7,8 +7,9 @@ import {
   useCreateQuizOption,
   useDeleteQuizOption,
   useUpdateQuizOption,
+  useAdminLessonQuizzes,
+  useAdminCourseExam,
 } from '@/hooks/admin/quizzes';
-import { useLessonQuizzes, useCourseExam } from '@/hooks/quizzes';
 import { ListQuestions } from '@/components/admin/ListQuestions';
 import {
   QuestionComposerModal,
@@ -49,8 +50,8 @@ export function AdminQuizzesPage() {
   }));
 
   // Queries
-  const lessonQuizzes = useLessonQuizzes(lessonId || '', !!lessonId);
-  const courseExam = useCourseExam(courseId || '', !!courseId && !lessonId);
+  const lessonQuizzes = useAdminLessonQuizzes(lessonId || '', !!lessonId);
+  const courseExam = useAdminCourseExam(courseId || '', !!courseId && !lessonId);
 
   const questions = lessonId ? lessonQuizzes.data || [] : courseExam.data || [];
   const isLoadingQuestions = lessonQuizzes.isLoading || courseExam.isLoading;

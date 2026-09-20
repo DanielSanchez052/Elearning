@@ -27,6 +27,16 @@ export interface QuizOption {
   orderIndex: number;
 }
 
+// Admin-only response shapes — the admin listing endpoints DO include
+// isCorrect (content-authoring staff, not students), unlike QuizQuestion/QuizOption above.
+export interface QuizOptionAdmin extends Omit<QuizOption, 'isCorrect'> {
+  isCorrect: boolean;
+}
+
+export interface QuizQuestionAdmin extends Omit<QuizQuestion, 'options'> {
+  options: QuizOptionAdmin[];
+}
+
 // Requests
 export interface CreateQuizQuestionRequest {
   lessonId?: string | null;
