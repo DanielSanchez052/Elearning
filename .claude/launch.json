@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "src/frontend/elearning-web", "run", "dev", "--", "--host"],
       "port": 5173
+    },
+    {
+      "name": "elearning-backend",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/backend/ELearning.API", "--launch-profile", "http"],
+      "port": 5277
     }
   ]
 }
