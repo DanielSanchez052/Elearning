@@ -33,8 +33,8 @@ Runner: `dotnet test ELearning.Tests/ELearning.Tests.csproj`
 - [x] 1. Quizzes admin CRUD handler tests (6 classes) — delegated writer
 - [x] 2. SubmitQuizHandler tests (scoring logic) — delegated writer
 - [x] 3. Quizzes query handler tests (3 classes) — delegated writer
-- [ ] 4. Notifications handler tests (4 classes) — delegated writer
-- [ ] 5. Reports handler tests (2 classes) — delegated writer
+- [ ] 4. Notifications handler tests (4 classes) — BLOCKED: reopened as a missing-feature gap, not a test gap (see Progress). Awaiting user decision.
+- [ ] 5. Reports handler tests (2 classes) — BLOCKED: same situation as task 4 (see Progress).
 
 ## Progress
 (updated per task as completed, with commit hash and dotnet test result)
@@ -91,3 +91,24 @@ Runner: `dotnet test ELearning.Tests/ELearning.Tests.csproj`
   `GetCourseExamHandler` cannot leak which option is correct to the student-facing response even by mistake;
   this was verified both by reading the DTO/handler mapping code and by an explicit reflection assertion in
   the new tests (`GetType().GetProperty("IsCorrect")` is null on the returned option DTOs).
+
+### Task 4 — Notifications handler tests (BLOCKED, not started)
+- All 4 handlers (`GetMyNotificationsHandler`, `GetUnreadNotificationsCountHandler`,
+  `MarkAllNotificationsAsReadHandler`, `MarkNotificationAsReadHandler`) unconditionally
+  `throw new NotImplementedException();` — no constructor, no dependencies, no logic.
+- `INotificationRepository` is an empty interface (zero members). `NotificationRepository` is an empty
+  implementation. `NotificationsController` is an empty controller (no actions). DI registration exists
+  (`AddScoped<INotificationRepository, NotificationRepository>()`) and `NotificationHub.cs` exists, but
+  nothing wires a real request to these handlers.
+- Reclassified: this is a **missing feature**, not a test-coverage gap. Writing
+  `Assert.ThrowsAsync<NotImplementedException>()` tests would falsely mark the checklist item done and lock in
+  the stub as a "passing contract." No test files written, no commit made.
+- Decision needed from user: implement the feature first (then test it for real, including the
+  ownership/authorization check on `MarkNotificationAsReadHandler` — cannot verify it exists until it's built),
+  or explicitly accept throw-only placeholder tests for now, or drop this task from scope.
+
+### Task 5 — Reports handler tests (BLOCKED, not started)
+- Verified directly: `GetDashboardHandler` and `GetLeaderboardHandler` in
+  `ELearning.Application/Features/Reports/Queries/ReportQueries.cs` both unconditionally
+  `throw new NotImplementedException();`. Same situation as Task 4 — reclassified as missing feature, not
+  started, no commit made.
