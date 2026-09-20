@@ -1253,3 +1253,84 @@ el monorepo y la solución .NET desde cero:
 *Con este documento y la estructura definida, el siguiente paso es
 ejecutar los comandos de la Sección 6 y crear las entidades del Domain
 (Tarea 0.4).*
+
+---
+
+## Módulo de Evaluaciones (Quizzes) — Decisión de diseño
+
+> Nota: el resto de este documento es el blueprint original, escrito antes de
+> implementar (por ejemplo, planea Next.js; el frontend real terminó en
+> React + Vite). Esta sección documenta una decisión de arquitectura real,
+> verificada contra el código implementado — no un plan.
+
+### Problema
+
+¿El modelo de quizzes acepta solo exámenes por lección, o también un examen
+general de curso? ¿Los quizzes son siempre obligatorios, o pueden ser
+opcionales?
+
+### Decisión: modelo combinado (`QuizType` + `IsRequired`)
+
+Se evaluaron 4 opciones (solo por lección / examen general / opcionalidad /
+combinada) y se adoptó la **combinada**, implementada en
+`QuizQuestion` (`ELearning.Domain/Entities/Quiz.cs`):
+
+```csharp
+public enum QuizType
+{
+    PerLesson = 0,   // Quiz asociado a una lección específica
+    CourseExam = 1   // Examen final del curso completo
+}
+
+public class QuizQuestion
+{
+    public QuizType Type { get; }
+    public Guid? LessonId { get; }   // NOT NULL si Type = PerLesson
+    public Guid? CourseId { get; }   // NOT NULL si Type = CourseExam
+    public bool IsRequired { get; }  // true por defecto
+    public decimal PassScore { get; }
+    public int MaxAttempts { get; }
+    // ...
+}
+```
+
+**Por qué esta opción y no una más simple:**
+- Un examen "solo por lección" no permite un examen final que certifique el
+  curso completo — necesario para el flujo real de certificación (ver
+  `SubmitQuizHandler`, que marca el curso completo vía `TryComplete` cuando
+  se aprueba el `CourseExam`).
+- La opcionalidad (`IsRequired`) permite quizzes de refuerzo que no bloquean
+  el avance, junto con quizzes obligatorios que sí lo hacen — coherente con
+  plataformas de referencia (Udemy, Coursera).
+- El costo de complejidad adicional (una FK condicional en vez de una fija)
+  se paga una sola vez en el modelo; cambiarlo después de tener datos habría
+  sido una migración más cara.
+
+### Reglas de negocio derivadas (en `SubmitQuizHandler`)
+
+- Un examen de lección exige que el usuario esté inscrito y con progreso
+  activo en el curso de esa lección.
+- Un examen de curso (`CourseExam`) exige que **todas** las lecciones
+  requeridas estén completadas antes de habilitarlo.
+- Los intentos se limitan por `MaxAttempts`; una vez aprobado, no se permiten
+  más intentos.
+- Aprobar el `CourseExam` dispara `enrollment.TryComplete(...)`, marcando el
+  curso como completado para ese usuario.
+
+### Endpoints reales (verificado contra el código, no contra el plan original)
+
+| Endpoint | Rol | Uso |
+|---|---|---|
+| `GET /api/quizzes/lessons/{lessonId}` | Alumno inscripto | Preguntas de una lección (sin `IsCorrect`) |
+| `GET /api/quizzes/courses/{courseId}/exam` | Alumno inscripto | Preguntas del examen final (sin `IsCorrect`) |
+| `POST /api/quizzes/submit` | Alumno inscripto | Envía respuestas, calcula puntaje |
+| `GET /api/admin/quizzes/lessons/{lessonId}` | admin/superadmin/instructor | Gestión de preguntas (con `IsCorrect`) — sin requisito de inscripción |
+| `GET /api/admin/quizzes/courses/{courseId}/exam` | admin/superadmin/instructor | Ídem, para el examen final |
+| `POST/PUT/DELETE /api/admin/quizzes/questions[...]` | admin/superadmin/instructor | CRUD de preguntas y opciones |
+
+Los DTOs de alumno (`QuizQuestionDto`/`QuizOptionDto`) nunca incluyen
+`IsCorrect`, por diseño anti-trampa. Los endpoints de administración usan
+DTOs separados (`QuizQuestionAdminDto`/`QuizOptionAdminDto`) que sí lo
+incluyen, y no dependen de inscripción — son dos modelos de lectura
+distintos para dos audiencias distintas, no una reutilización del mismo
+endpoint con permisos condicionales.
