@@ -2,8 +2,11 @@ import axios from '../lib/axios';
 
 export interface NotificationDto {
   id: string;
+  title: string;
   message: string;
-  read: boolean;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
 }
 
 export const notificationsApi = {
