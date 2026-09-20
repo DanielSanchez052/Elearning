@@ -31,7 +31,7 @@ Runner: `dotnet test ELearning.Tests/ELearning.Tests.csproj`
 
 ## Tasks
 - [x] 1. Quizzes admin CRUD handler tests (6 classes) — delegated writer
-- [ ] 2. SubmitQuizHandler tests (scoring logic) — delegated writer
+- [x] 2. SubmitQuizHandler tests (scoring logic) — delegated writer
 - [ ] 3. Quizzes query handler tests (3 classes) — delegated writer
 - [ ] 4. Notifications handler tests (4 classes) — delegated writer
 - [ ] 5. Reports handler tests (2 classes) — delegated writer
@@ -48,3 +48,24 @@ Runner: `dotnet test ELearning.Tests/ELearning.Tests.csproj`
 - `dotnet test ELearning.Tests/ELearning.Tests.csproj --filter "FullyQualifiedName~Quizzes"` →
   `Correctas! - Con error: 0, Superado: 67, Omitido: 0, Total: 67` (27 new + 40 pre-existing validator tests), all green on first run.
 - No production bugs found; all 6 handlers behave as documented by their own inline validation.
+
+### Task 2 — SubmitQuizHandler tests (done)
+- Created `ELearning.Tests/Unit/Aplication/Features/Quizzes/SubmitQuizHandlerTests.cs` covering: basic
+  validation (empty UserId, null/empty SelectedOptionIds, missing LessonId+CourseId), lesson-context and
+  course-context not-found/forbidden paths, inactive enrollment, lesson prerequisite gating (missing required
+  lesson before target lesson) and final-exam gating (missing any required lesson), no-questions-found,
+  answer-count mismatch, attempt-limit logic (first attempt, already-passed, max-attempts-reached, attempts
+  remaining/increment), invalid selected option (not found / wrong question), scoring (partial, all-correct,
+  and score-exactly-equals-passScore boundary), the `TryComplete` side effect on the final exam
+  (pass → enrollment completed; fail → not completed), repository interaction verification
+  (`CreateAttemptAsync` once per question, `CreateResultAsync`/`SaveChangesAsync` once each), and full
+  `QuizResultDto` field verification.
+- 35 new `[Fact]` tests added (used fixture helper methods instead of `[Theory]`/`[InlineData]` — each branch
+  needed distinct mock wiring, so parameterizing added more complexity than it removed).
+- `dotnet test ELearning.Tests/ELearning.Tests.csproj --filter "FullyQualifiedName~SubmitQuiz"` →
+  `Correctas! - Con error: 0, Superado: 35, Omitido: 0, Total: 35, Duración: 238 ms`, all green on first run.
+- No production bugs found. Confirmed the score-equals-passScore boundary passes (`score >= passScore`), and
+  confirmed `TryComplete` on the final-exam path is unconditionally successful whenever `isPassed` is true —
+  because the required-lesson gating check (step before question retrieval) already forbids reaching the
+  scoring step unless every required lesson is completed, so `TryComplete`'s `IsSubsetOf` check can never fail
+  by the time it's called.
