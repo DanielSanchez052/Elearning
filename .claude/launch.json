@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "elearning-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "src/frontend/elearning-web", "run", "dev", "--", "--host"],
+      "port": 5173
+    }
+  ]
+}
