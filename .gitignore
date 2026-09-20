@@ -8,6 +8,7 @@ obj/
 *.suo
 *.cache
 *.log
+uploads/
 
 # NuGet
 *.nupkg
