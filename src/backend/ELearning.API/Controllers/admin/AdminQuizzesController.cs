@@ -2,6 +2,8 @@ using ELearning.API.Extensions;
 using ELearning.API.Models;
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Quizzes.Commands;
+using ELearning.Application.Features.Quizzes.DTOs;
+using ELearning.Application.Features.Quizzes.Queries;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,10 +18,32 @@ public class AdminQuizzesController(
     ICommandHandler<DeleteQuizQuestionCommand> deleteQuestionHandler,
     ICommandHandler<CreateQuizOptionCommand, Guid> createOptionHandler,
     ICommandHandler<UpdateQuizOptionCommand> updateOptionHandler,
-    ICommandHandler<DeleteQuizOptionCommand> deleteOptionHandler
+    ICommandHandler<DeleteQuizOptionCommand> deleteOptionHandler,
+    IQueryHandler<GetLessonQuizQuestionsAdminQuery, IReadOnlyList<QuizQuestionAdminDto>> getLessonQuizQuestionsHandler,
+    IQueryHandler<GetCourseExamQuestionsAdminQuery, IReadOnlyList<QuizQuestionAdminDto>> getCourseExamQuestionsHandler
 ) : ControllerBase
 {
     // ── Questions ──────────────────────────────────────────────────────────────
+
+    // GET /api/admin/quizzes/lessons/{lessonId}
+    // Listar preguntas de una lección (sin gating de inscripción — solo staff autorizado)
+    [HttpGet("lessons/{lessonId:guid}")]
+    public async Task<IActionResult> GetLessonQuizQuestions(Guid lessonId, CancellationToken ct)
+    {
+        var query = new GetLessonQuizQuestionsAdminQuery(lessonId);
+        var result = await getLessonQuizQuestionsHandler.HandleAsync(query, ct);
+        return this.ToActionResult(result);
+    }
+
+    // GET /api/admin/quizzes/courses/{courseId}/exam
+    // Listar preguntas del examen final de un curso (sin gating de inscripción — solo staff autorizado)
+    [HttpGet("courses/{courseId:guid}/exam")]
+    public async Task<IActionResult> GetCourseExamQuestions(Guid courseId, CancellationToken ct)
+    {
+        var query = new GetCourseExamQuestionsAdminQuery(courseId);
+        var result = await getCourseExamQuestionsHandler.HandleAsync(query, ct);
+        return this.ToActionResult(result);
+    }
 
     // POST /api/admin/quizzes/questions
     // Crear pregunta de quiz (por lección o examen de curso)

@@ -3,11 +3,19 @@ import type {
   CreateQuizQuestionRequest,
   UpdateQuizQuestionRequest,
   CreateQuizOptionRequest,
-  UpdateQuizOptionRequest
+  UpdateQuizOptionRequest,
+  QuizQuestionAdmin
 } from '@/types/quiz.types';
 
 // Questions
 export const quizzesAdminApi = {
+  // Read endpoints (admin — no enrollment gating, includes isCorrect)
+  getLessonQuizzes: (lessonId: string) =>
+    axios.get<QuizQuestionAdmin[]>(`/admin/quizzes/lessons/${lessonId}`),
+
+  getCourseExam: (courseId: string) =>
+    axios.get<QuizQuestionAdmin[]>(`/admin/quizzes/courses/${courseId}/exam`),
+
   // Questions Management
   createQuestion: (data: CreateQuizQuestionRequest) =>
     axios.post<{ value: string }>('/admin/quizzes/questions', data),
