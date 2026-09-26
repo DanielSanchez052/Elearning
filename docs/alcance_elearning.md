@@ -147,9 +147,12 @@ específica. No se pueden revocar una vez obtenidas.
   Curso Completado    El usuario finaliza un curso Una medalla por cada
                       al 100%                      curso completado
 
-  Velocista           El usuario completa un curso El tiempo límite se
-                      en menos de X tiempo         define por curso en su
-                      configurado                  configuración
+  Velocista           El usuario completa un curso Tiempo límite definido
+                      en menos de 10 minutos       (2026-09-26): 10 min,
+                      (valor global inicial)       global para todos los
+                                                   cursos. Configurable por
+                                                   curso queda como mejora
+                                                   futura si hace falta.
   -----------------------------------------------------------------------
 
 *Nota: las variantes exactas de cada medalla (ej. rachas de login,
@@ -177,8 +180,8 @@ activos en la plataforma × 100**
 -   El nivel se muestra visualmente en el perfil del usuario como un
     indicador de progreso.
 
--   Los rangos de nivel (ej. Bronce / Plata / Oro según porcentaje)
-    quedan pendientes de definición en la fase de diseño.
+-   Rangos de nivel definidos (2026-09-26): **Bronce** ≤ 50%, **Plata**
+    ≤ 90%, **Oro** > 90%.
 
 **3.5 Módulo de Notificaciones**
 
