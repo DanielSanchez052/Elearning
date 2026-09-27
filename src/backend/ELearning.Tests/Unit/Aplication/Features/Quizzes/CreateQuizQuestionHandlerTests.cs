@@ -114,4 +114,31 @@ public class CreateQuizQuestionHandlerTests
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
         _quizzesMock.Verify(r => r.CreateQuestionAsync(It.IsAny<QuizQuestion>(), default), Times.Never);
     }
+
+    // The validator only checks that exactly one FK is present, not that it matches Type —
+    // so Type=PerLesson with LessonId=null but a (mismatched) CourseId provided reaches the
+    // handler. LessonId == Guid.Empty doesn't catch null, so cmd.LessonId.Value used to throw.
+    [Fact]
+    public async Task HandleAsync_PerLesson_NullLessonId_ReturnsValidationFailureInsteadOfThrowing()
+    {
+        var result = await _handler.HandleAsync(new CreateQuizQuestionCommand(
+            null, Guid.NewGuid(), (int)QuizType.PerLesson, "Pregunta", 60m, 3, true));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Validation, result.ErrorType);
+        _lessonsMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), default), Times.Never);
+        _quizzesMock.Verify(r => r.CreateQuestionAsync(It.IsAny<QuizQuestion>(), default), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_CourseExam_NullCourseId_ReturnsValidationFailureInsteadOfThrowing()
+    {
+        var result = await _handler.HandleAsync(new CreateQuizQuestionCommand(
+            Guid.NewGuid(), null, (int)QuizType.CourseExam, "Pregunta", 60m, 3, true));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Validation, result.ErrorType);
+        _coursesMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), default), Times.Never);
+        _quizzesMock.Verify(r => r.CreateQuestionAsync(It.IsAny<QuizQuestion>(), default), Times.Never);
+    }
 }

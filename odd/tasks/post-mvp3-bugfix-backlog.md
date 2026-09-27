@@ -37,7 +37,7 @@ Route: direct inline (4 single-file, already-understood edits) or one bundled wr
 - [x] **T5** (R-int-002, most impactful) `BadgeAwardService.cs:~90-110` — isolate each proposal's `PublishAsync` in its own try/catch inside the award loop (log+continue instead of aborting the whole batch), and make sure the final `SaveChangesAsync` for staged notifications always runs even if one proposal's publish failed for another badge. New tests: partial-failure mid-batch still awards+saves the other proposals.
 - [x] **T6** (R-int-003) `LoginCommand.cs:64-72` — wrap the `OnUserLoggedInAsync` call with a linked `CancellationTokenSource` timeout (~2s) so a slow badge store can't add unbounded latency to login. New test: badge call exceeding the timeout doesn't fail login and doesn't block past the bound.
 - [x] **T7** (R3-003) `StartCourseExamCommand.cs:83-107` + `QuizRepository.TryAddExamSessionAsync` — distinguish which unique index a `23505` violation hit (inspect Postgres constraint name) so a stale-attempt-index collision doesn't return `Conflict` forever; re-derive the next attempt number and retry once instead. Unit-testable by mocking the constraint name.
-- [ ] **T8** (smoke-test bug) `CreateQuizQuestionCommand.cs:40-43,63-66` — `cmd.LessonId == Guid.Empty` doesn't catch `null`; fix to return a proper 400 validation error instead of throwing → 500.
+- [x] **T8** (smoke-test bug) `CreateQuizQuestionCommand.cs:40-43,63-66` — `cmd.LessonId == Guid.Empty` doesn't catch `null`; fix to return a proper 400 validation error instead of throwing → 500.
 - [ ] **T9** (smoke-test bug) `AdminQuizzesController.CreateQuestion` / `QuizzesController.SubmitCourseExam` — investigate the unbound-request-body → `NullReferenceException` → 500 path (root cause not investigated yet) and add proper model-binding validation.
 
 Route: delegated writer (each touches backend handler + repository/controller + tests — 2+ non-trivial files per task).
@@ -233,3 +233,31 @@ Full suite after the fix:
 Correctas! - Con error:     0, Superado:   638, Omitido:     0, Total:   638, Duración: 2 s - ELearning.Tests.dll (net10.0)
 ```
 (635 pre-existing + 3 new tests, 0 regressions.)
+
+### T8 (smoke-test bug) — done
+Confirmed and found the precise trigger: `CreateQuizQuestionValidator` already validates
+"exactly one of LessonId/CourseId is present", but not that it's the *right* one for
+the declared `Type`. So `Type=PerLesson` with `LessonId=null` but a (mismatched)
+`CourseId` provided passes validation and reaches the handler — where
+`cmd.LessonId == Guid.Empty` is `false` for `null`, so `cmd.LessonId.Value` throws
+`InvalidOperationException` → unhandled → 500. Same shape for `CourseExam`/`CourseId`.
+Fix: `cmd.LessonId is null || cmd.LessonId == Guid.Empty` (and the `CourseId`
+equivalent) in `CreateQuizQuestionCommand.cs`.
+
+RED (bug reproduced, fix stashed first via `git stash` to get a genuine failure):
+```
+Con error ...HandleAsync_CourseExam_NullCourseId_ReturnsValidationFailureInsteadOfThrowing
+  System.InvalidOperationException : Nullable object must have a value.
+Con error ...HandleAsync_PerLesson_NullLessonId_ReturnsValidationFailureInsteadOfThrowing
+  System.InvalidOperationException : Nullable object must have a value.
+Con error! - Con error:     2, Superado:     5, Omitido:     0, Total:     7
+```
+
+GREEN (fix reapplied via `git stash pop`):
+```
+Correctas! - Con error:     0, Superado:     7, Omitido:     0, Total:     7, Duración: 122 ms
+```
+
+Full suite: **640/640** (638 pre-existing + 2 new tests, 0 regressions). Not fixed:
+the validator's deeper gap (accepting a mismatched FK for the declared `Type`) —
+out of scope for this specific finding, left as-is.
