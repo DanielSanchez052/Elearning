@@ -152,6 +152,19 @@ public sealed class SubmitQuizHandler : ICommandHandler<SubmitQuizCommand, QuizR
 
         var attemptNumber = (latestResult?.AttemptNumber ?? 0) + 1;
 
+        // 3b. SESIÓN DE EXAMEN (solo examen final del curso)
+        // Si el estudiante inició el intento con /exam/start, se toma su StartedAt para medir la duración.
+        // Sin sesión (clientes antiguos) el envío sigue funcionando igual que antes, con StartedAt = null.
+        ExamSession? examSession = null;
+        if (lessonContext is null)
+        {
+            examSession = await _quizzes.GetOpenExamSessionAsync(cmd.UserId, courseId, ct);
+
+            if (examSession is not null && examSession.AttemptNumber != attemptNumber)
+                return Result.Conflict<QuizResultDto>(
+                    "Tu sesión de examen no corresponde al intento actual. Vuelve a iniciar el examen.");
+        }
+
         // 4. CALCULAR SCORE
         int correctAnswers = 0;
         var questionsList = questions.ToList();
@@ -178,6 +191,7 @@ public sealed class SubmitQuizHandler : ICommandHandler<SubmitQuizCommand, QuizR
         decimal score = (decimal)(correctAnswers * 100) / questionsList.Count;
         decimal passScore = questionsList.First().PassScore;
         bool isPassed = score >= passScore;
+        bool courseCompleted = false;
 
         if (cmd.CourseId.HasValue && cmd.CourseId != Guid.Empty && isPassed)
         {
@@ -186,7 +200,7 @@ public sealed class SubmitQuizHandler : ICommandHandler<SubmitQuizCommand, QuizR
                 .Select(l => l.Id)
                 .ToList();
 
-            enrollment.TryComplete(requiredLessonIds);
+            courseCompleted = enrollment.TryComplete(requiredLessonIds);
         }
 
         // 5. CREAR RESULTADO
@@ -197,8 +211,12 @@ public sealed class SubmitQuizHandler : ICommandHandler<SubmitQuizCommand, QuizR
         }
         else
         {
-            result = UserQuizResult.Create(cmd.UserId, null, cmd.CourseId, attemptNumber, score, passScore);
+            result = UserQuizResult.Create(
+                cmd.UserId, null, cmd.CourseId, attemptNumber, score, passScore, examSession?.StartedAt);
         }
+
+        // La sesión está rastreada por el mismo contexto: se cierra en el mismo SaveChangesAsync.
+        examSession?.MarkSubmitted();
 
         await _quizzes.CreateResultAsync(result, ct);
         await _quizzes.SaveChangesAsync(ct);
@@ -215,7 +233,8 @@ public sealed class SubmitQuizHandler : ICommandHandler<SubmitQuizCommand, QuizR
             Feedback: isPassed 
                 ? $"¡Felicidades! Pasaste el quiz con {score:F1}%"
                 : $"No pasaste el quiz. Obtuviste {score:F1}% y necesitas {passScore}%. Intenta nuevamente.",
-            CompletedAt: DateTime.UtcNow
+            CompletedAt: DateTime.UtcNow,
+            CourseCompleted: courseCompleted
         );
 
         return resultDto;

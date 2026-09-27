@@ -9,5 +9,7 @@ public sealed record QuizResultDto(
     int AttemptNumber,
     int MaxAttempts,
     string Feedback,
-    DateTime CompletedAt
+    DateTime CompletedAt,
+    // True only when this submission moved the enrollment to Completed (passed final exam).
+    bool CourseCompleted = false
 );
