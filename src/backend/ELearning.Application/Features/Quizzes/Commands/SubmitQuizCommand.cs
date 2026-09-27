@@ -264,9 +264,10 @@ public sealed class SubmitQuizHandler : ICommandHandler<SubmitQuizCommand, QuizR
         {
             await award();
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Swallowed on purpose: the student's result is already persisted.
+            // Real cancellation is allowed to propagate, per IBadgeAwardService's contract.
         }
     }
 }
