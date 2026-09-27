@@ -44,6 +44,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<IBadgeAwardService, BadgeAwardService>();
         services.AddScoped<ILoginBadgeRule, FirstLoginRule>();
         services.AddScoped<ICourseCompletionBadgeRule, CourseCompletedRule>();
+        services.AddScoped<IExamPassedBadgeRule, SpeedsterRule>();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

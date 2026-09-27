@@ -17,11 +17,10 @@ public interface IBadgeAwardService
     Task<IReadOnlyList<AwardedBadgeDto>> OnCourseCompletedAsync(CourseEnrollment enrollment, CancellationToken ct = default);
 
     /// <summary>
-    /// TODO(Track A): wire SpeedsterRule once ExamSession/Duration land.
-    /// Track A hasn't shipped UserQuizResult.Duration yet, so there is
-    /// nothing to evaluate the 10-minute threshold against. This is a
-    /// documented no-op until Integration implements SpeedsterRule against
-    /// IExamPassedBadgeRule and wires it in here.
+    /// Evaluates the IExamPassedBadgeRule set (SpeedsterRule) against the
+    /// course-exam result the caller just persisted. The rules decide
+    /// eligibility (passed, first attempt, Duration under the threshold);
+    /// this method only awards idempotently.
     /// </summary>
     Task<IReadOnlyList<AwardedBadgeDto>> OnCourseExamPassedAsync(UserQuizResult result, CancellationToken ct = default);
 }

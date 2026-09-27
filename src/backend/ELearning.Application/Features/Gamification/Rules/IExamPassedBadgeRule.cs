@@ -3,13 +3,10 @@ using ELearning.Domain.Entities;
 namespace ELearning.Application.Features.Gamification.Rules;
 
 /// <summary>
-/// Contract for the future Speedster rule (Track A / Integration): awards
-/// Speedster when a course-final-exam result was passed within the time
-/// threshold on the first attempt. No implementation exists yet — it needs
-/// UserQuizResult.Duration, which lands with Track A's ExamSession work.
-/// Not registered in DI and not referenced by BadgeAwardService yet;
-/// OnCourseExamPassedAsync is a documented no-op stub until Integration
-/// wires SpeedsterRule through this contract.
+/// Evaluated by BadgeAwardService.OnCourseExamPassedAsync. Pure function: takes
+/// the just-created course-exam result (which carries CourseId, AttemptNumber,
+/// IsPassed and Duration), proposes zero or more badges. Does not check whether
+/// the badge was already awarded — that's the service's job.
 /// </summary>
 public interface IExamPassedBadgeRule
 {

@@ -10,15 +10,18 @@ public sealed class BadgeAwardService : IBadgeAwardService
     private readonly IBadgeRepository _badges;
     private readonly IReadOnlyList<ILoginBadgeRule> _loginRules;
     private readonly IReadOnlyList<ICourseCompletionBadgeRule> _courseCompletionRules;
+    private readonly IReadOnlyList<IExamPassedBadgeRule> _examPassedRules;
 
     public BadgeAwardService(
         IBadgeRepository badges,
         IEnumerable<ILoginBadgeRule> loginRules,
-        IEnumerable<ICourseCompletionBadgeRule> courseCompletionRules)
+        IEnumerable<ICourseCompletionBadgeRule> courseCompletionRules,
+        IEnumerable<IExamPassedBadgeRule> examPassedRules)
     {
         _badges = badges;
         _loginRules = loginRules.ToList();
         _courseCompletionRules = courseCompletionRules.ToList();
+        _examPassedRules = examPassedRules.ToList();
     }
 
     public Task<IReadOnlyList<AwardedBadgeDto>> OnUserLoggedInAsync(User user, CancellationToken ct = default)
@@ -35,8 +38,8 @@ public sealed class BadgeAwardService : IBadgeAwardService
 
     public Task<IReadOnlyList<AwardedBadgeDto>> OnCourseExamPassedAsync(UserQuizResult result, CancellationToken ct = default)
     {
-        // TODO(Track A): wire SpeedsterRule once ExamSession/Duration land.
-        return Task.FromResult<IReadOnlyList<AwardedBadgeDto>>(Array.Empty<AwardedBadgeDto>());
+        var proposals = _examPassedRules.SelectMany(rule => rule.Evaluate(result));
+        return AwardAsync(result.UserId, proposals, ct);
     }
 
     private async Task<IReadOnlyList<AwardedBadgeDto>> AwardAsync(

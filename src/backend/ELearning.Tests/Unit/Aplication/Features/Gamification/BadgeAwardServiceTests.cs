@@ -16,7 +16,8 @@ public class BadgeAwardServiceTests
         _service = new BadgeAwardService(
             _badgesMock.Object,
             new ILoginBadgeRule[] { new FirstLoginRule() },
-            new ICourseCompletionBadgeRule[] { new CourseCompletedRule() });
+            new ICourseCompletionBadgeRule[] { new CourseCompletedRule() },
+            new IExamPassedBadgeRule[] { new SpeedsterRule() });
 
     private static User BuildUser() => User.Create("Test", "test@test.com", "hash", countryId: 1);
 
@@ -121,22 +122,66 @@ public class BadgeAwardServiceTests
         _badgesMock.Verify(r => r.TryAddAsync(It.IsAny<UserBadge>(), default), Times.Never);
     }
 
-    // ── OnCourseExamPassedAsync (Track A stub) ──────────────────────────────
+    // ── OnCourseExamPassedAsync ──────────────────────────────────────────────
 
-    [Fact]
-    public async Task OnCourseExamPassedAsync_IsANoOpStub_ReturnsEmptyWithoutTouchingTheRepository()
-    {
-        var result = UserQuizResult.Create(
+    private static UserQuizResult BuildCourseExamResult(DateTime? startedAt, int attemptNumber = 1) =>
+        UserQuizResult.Create(
             userId: Guid.NewGuid(),
             lessonId: null,
             courseId: Guid.NewGuid(),
-            attemptNumber: 1,
+            attemptNumber: attemptNumber,
             score: 100m,
-            passScore: 70m);
+            passScore: 70m,
+            startedAt: startedAt);
+
+    [Fact]
+    public async Task OnCourseExamPassedAsync_FastFirstAttempt_AwardsSpeedsterScopedToCourse()
+    {
+        var result = BuildCourseExamResult(DateTime.UtcNow.AddMinutes(-5));
+        var badge = GamificationTestHelpers.BuildBadge(3, BadgeCode.Speedster, "Velocista");
+
+        _badgesMock.Setup(r => r.GetByCodeAsync(BadgeCode.Speedster, default)).ReturnsAsync(badge);
+        _badgesMock
+            .Setup(r => r.HasBadgeAsync(result.UserId, badge.Id, result.CourseId, default))
+            .ReturnsAsync(false);
+        _badgesMock.Setup(r => r.TryAddAsync(It.IsAny<UserBadge>(), default)).ReturnsAsync(true);
+
+        var awarded = await _service.OnCourseExamPassedAsync(result);
+
+        var dto = Assert.Single(awarded);
+        Assert.Equal(BadgeCode.Speedster.ToString(), dto.Code);
+        Assert.Equal(result.CourseId, dto.CourseId);
+        _badgesMock.Verify(r => r.TryAddAsync(
+            It.Is<UserBadge>(ub => ub.UserId == result.UserId && ub.BadgeId == badge.Id && ub.CourseId == result.CourseId),
+            default), Times.Once);
+    }
+
+    [Fact]
+    public async Task OnCourseExamPassedAsync_ResultNotEligible_ReturnsEmptyWithoutTouchingTheRepository()
+    {
+        // No StartedAt → unknown duration → SpeedsterRule proposes nothing.
+        var result = BuildCourseExamResult(startedAt: null);
 
         var awarded = await _service.OnCourseExamPassedAsync(result);
 
         Assert.Empty(awarded);
         _badgesMock.Verify(r => r.GetByCodeAsync(It.IsAny<BadgeCode>(), default), Times.Never);
+    }
+
+    [Fact]
+    public async Task OnCourseExamPassedAsync_AlreadyHasSpeedsterForCourse_DoesNotAttemptInsert()
+    {
+        var result = BuildCourseExamResult(DateTime.UtcNow.AddMinutes(-5));
+        var badge = GamificationTestHelpers.BuildBadge(3, BadgeCode.Speedster);
+
+        _badgesMock.Setup(r => r.GetByCodeAsync(BadgeCode.Speedster, default)).ReturnsAsync(badge);
+        _badgesMock
+            .Setup(r => r.HasBadgeAsync(result.UserId, badge.Id, result.CourseId, default))
+            .ReturnsAsync(true);
+
+        var awarded = await _service.OnCourseExamPassedAsync(result);
+
+        Assert.Empty(awarded);
+        _badgesMock.Verify(r => r.TryAddAsync(It.IsAny<UserBadge>(), default), Times.Never);
     }
 }
