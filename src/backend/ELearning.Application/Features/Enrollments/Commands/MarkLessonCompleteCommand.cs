@@ -1,6 +1,7 @@
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Common.Exceptions;
 using ELearning.Application.Features.Enrollments.DTOs;
+using ELearning.Application.Features.Gamification.Services;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Interfaces.Repositories;
 
@@ -18,11 +19,16 @@ public class MarkLessonCompleteHandler : ICommandHandler<MarkLessonCompleteComma
 {
     private readonly IEnrollmentRepository _enrollments;
     private readonly IQuizRepository _quizzes;
+    private readonly IBadgeAwardService _badges;
 
-    public MarkLessonCompleteHandler(IEnrollmentRepository enrollments, IQuizRepository quizzes)
+    public MarkLessonCompleteHandler(
+        IEnrollmentRepository enrollments,
+        IQuizRepository quizzes,
+        IBadgeAwardService badges)
     {
         _enrollments = enrollments;
         _quizzes = quizzes;
+        _badges = badges;
     }
 
     public async Task<Result<MarkLessonCompleteResult>> HandleAsync(
@@ -88,6 +94,19 @@ public class MarkLessonCompleteHandler : ICommandHandler<MarkLessonCompleteComma
         }
 
         await _enrollments.SaveChangesAsync(ct);
+
+        // Best-effort, after the progress was saved: a badge failure never fails the lesson completion.
+        if (courseCompleted)
+        {
+            try
+            {
+                await _badges.OnCourseCompletedAsync(enrollment, ct);
+            }
+            catch (Exception)
+            {
+                // IBadgeAwardService logs its own failures; this only guards the lesson result.
+            }
+        }
 
         return new MarkLessonCompleteResult(
             LessonWasAlreadyComplete: wasAlreadyComplete,

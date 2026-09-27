@@ -1,5 +1,6 @@
 ﻿using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Auth.Commands;
+using ELearning.Application.Features.Gamification.Services;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Interfaces.Repositories;
 using ELearning.Domain.Interfaces.Services;
@@ -12,11 +13,12 @@ public class LoginHandlerTests
     private readonly Mock<IUserRepository> _usersMock = new();
     private readonly Mock<IPasswordHasherService> _hasherMock = new();
     private readonly Mock<IJwtService> _jwtMock = new();
+    private readonly Mock<IBadgeAwardService> _badgesMock = new();
     private readonly LoginHandler _handler;
 
     public LoginHandlerTests()
     {
-        _handler = new LoginHandler(_usersMock.Object, _hasherMock.Object, _jwtMock.Object);
+        _handler = new LoginHandler(_usersMock.Object, _hasherMock.Object, _jwtMock.Object, _badgesMock.Object);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -64,6 +66,7 @@ public class LoginHandlerTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Unauthorized, result.ErrorType);
+        VerifyLoginBadgeHookNeverCalled();
     }
 
     [Fact]
@@ -77,6 +80,7 @@ public class LoginHandlerTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Unauthorized, result.ErrorType);
+        VerifyLoginBadgeHookNeverCalled();
     }
 
     [Fact]
@@ -106,6 +110,7 @@ public class LoginHandlerTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Unauthorized, result.ErrorType);
+        VerifyLoginBadgeHookNeverCalled();
         Assert.Contains("verificar", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -136,4 +141,47 @@ public class LoginHandlerTests
         Assert.Equal(streakBefore + 1, user.LoginStreak);
         Assert.NotNull(user.LastLoginAt);
     }
+
+    // ── Badge awarding (best-effort, after save) ─────────────────────────────
+
+    [Fact]
+    public async Task HandleAsync_SuccessfulLogin_CallsLoginBadgeHookOnceAfterSaving()
+    {
+        var user = BuildVerifiedUser();
+        _usersMock.Setup(r => r.GetByEmailTrackedAsync("user@test.com", default)).ReturnsAsync(user);
+        _hasherMock.Setup(h => h.Verify(user.PasswordHash, "password123")).Returns(true);
+        SetupJwt(user);
+        var calls = new List<string>();
+        _usersMock.Setup(r => r.UpdateAsync(user, default)).Callback(() => calls.Add("save")).Returns(Task.CompletedTask);
+        _badgesMock
+            .Setup(b => b.OnUserLoggedInAsync(user, default))
+            .Callback(() => calls.Add("badge"))
+            .ReturnsAsync([]);
+
+        var result = await _handler.HandleAsync(new LoginCommand("user@test.com", "password123"));
+
+        Assert.True(result.IsSuccess);
+        _badgesMock.Verify(b => b.OnUserLoggedInAsync(user, default), Times.Once);
+        Assert.Equal(["save", "badge"], calls);
+    }
+
+    [Fact]
+    public async Task HandleAsync_SuccessfulLogin_BadgeServiceThrows_LoginStillSucceeds()
+    {
+        var user = BuildVerifiedUser();
+        _usersMock.Setup(r => r.GetByEmailTrackedAsync("user@test.com", default)).ReturnsAsync(user);
+        _hasherMock.Setup(h => h.Verify(user.PasswordHash, "password123")).Returns(true);
+        SetupJwt(user);
+        _badgesMock
+            .Setup(b => b.OnUserLoggedInAsync(It.IsAny<User>(), default))
+            .ThrowsAsync(new InvalidOperationException("badge store down"));
+
+        var result = await _handler.HandleAsync(new LoginCommand("user@test.com", "password123"));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("jwt-token-value", result.Value!.AccessToken);
+    }
+
+    private void VerifyLoginBadgeHookNeverCalled() =>
+        _badgesMock.Verify(b => b.OnUserLoggedInAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
 }

@@ -37,6 +37,9 @@ public class UserQuizResultConfiguration : IEntityTypeConfiguration<UserQuizResu
         builder.Property(u => u.CompletedAt)
             .HasColumnName("completed_at");
 
+        builder.Property(u => u.StartedAt)
+            .HasColumnName("started_at");
+
         // Relaciones
         builder.HasOne(u => u.User)
             .WithMany()

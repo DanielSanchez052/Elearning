@@ -17,6 +17,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<QuizOption> QuizOptions => Set<QuizOption>();
     public DbSet<UserQuizAttempt> UserQuizAttempts => Set<UserQuizAttempt>();
     public DbSet<UserQuizResult> UserQuizResults => Set<UserQuizResult>();
+    public DbSet<ExamSession> ExamSessions => Set<ExamSession>();
     public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
     public DbSet<UserLessonProgress> UserLessonProgress => Set<UserLessonProgress>();
     public DbSet<Badge> Badges => Set<Badge>();

@@ -1,6 +1,7 @@
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Auth.DTOs.AuthResponse;
 using ELearning.Application.Features.Auth.DTOs.User;
+using ELearning.Application.Features.Gamification.Services;
 using ELearning.Domain.Interfaces.Repositories;
 using ELearning.Domain.Interfaces.Services;
 
@@ -16,15 +17,18 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, LoginResponseDt
     private readonly IUserRepository _users;
     private readonly IPasswordHasherService _hasher;
     private readonly IJwtService _jwt;
+    private readonly IBadgeAwardService _badges;
 
     public LoginHandler(
         IUserRepository users,
         IPasswordHasherService hasher,
-        IJwtService jwt)
+        IJwtService jwt,
+        IBadgeAwardService badges)
     {
         _users = users;
         _hasher = hasher;
         _jwt = jwt;
+        _badges = badges;
     }
 
     public async Task<Result<LoginResponseDto>> HandleAsync(
@@ -56,6 +60,16 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, LoginResponseDt
                 Country: user.Country?.Name ?? string.Empty
             )
         );
+
+        // Best-effort, after the login was saved: a badge failure never fails the login.
+        try
+        {
+            await _badges.OnUserLoggedInAsync(user, ct);
+        }
+        catch (Exception)
+        {
+            // IBadgeAwardService logs its own failures; this only guards the login result.
+        }
 
         return Result.Success(response);
     }

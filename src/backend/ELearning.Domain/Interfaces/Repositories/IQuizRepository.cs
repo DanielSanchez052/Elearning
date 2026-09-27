@@ -66,6 +66,17 @@ public interface IQuizRepository
     /// <summary>Obtener todos los intentos de un usuario en examen de curso</summary>
     Task<IReadOnlyList<UserQuizResult>> GetCourseExamAttemptsAsync(Guid userId, Guid courseId, CancellationToken ct = default);
 
+    // ── Exam Sessions ──────────────────────────────────────────────────────────
+
+    /// <summary>Obtener la sesión de examen abierta (sin enviar) de un usuario en un curso</summary>
+    Task<ExamSession?> GetOpenExamSessionAsync(Guid userId, Guid courseId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Persistir una nueva sesión de examen (guarda cambios inmediatamente).
+    /// Devuelve false si otra solicitud abrió una sesión en paralelo (violación de índice único).
+    /// </summary>
+    Task<bool> TryAddExamSessionAsync(ExamSession session, CancellationToken ct = default);
+
     // ── Persistence ────────────────────────────────────────────────────────────
 
     /// <summary>Guardar cambios en la BD</summary>

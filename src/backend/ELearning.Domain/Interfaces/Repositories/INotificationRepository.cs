@@ -15,5 +15,12 @@ public interface INotificationRepository
 
     Task<IReadOnlyList<Notification>> GetUnreadByUserAsync(Guid userId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Agrega una nueva notificación al contexto (tracked, no persiste por sí sola).
+    /// El llamador es responsable de invocar SaveChangesAsync como parte de su
+    /// propia transacción.
+    /// </summary>
+    Task<Notification> AddAsync(Notification notification, CancellationToken ct = default);
+
     Task SaveChangesAsync(CancellationToken ct = default);
 }

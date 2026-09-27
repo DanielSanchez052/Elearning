@@ -16,7 +16,8 @@ public class QuizzesController(
     IQueryHandler<GetLessonQuizzesQuery, IReadOnlyList<QuizQuestionDto>> getLessonQuizzesHandler,
     IQueryHandler<GetCourseExamQuery, IReadOnlyList<QuizQuestionDto>> getCourseExamHandler,
     IQueryHandler<GetUserQuizResultsQuery, IReadOnlyList<QuizAttemptDto>> getUserResultsHandler,
-    ICommandHandler<SubmitQuizCommand, QuizResultDto> submitQuizHandler
+    ICommandHandler<SubmitQuizCommand, QuizResultDto> submitQuizHandler,
+    ICommandHandler<StartCourseExamCommand, StartCourseExamResultDto> startCourseExamHandler
 ) : ControllerBase
 {
     // ── GET /api/quizzes/lessons/{lessonId} ────────────────────────────────────
@@ -38,6 +39,18 @@ public class QuizzesController(
     {
         var userId = User.GetUserId();
         var result = await getCourseExamHandler.HandleAsync(new GetCourseExamQuery(userId, courseId), ct);
+        return this.ToActionResult(result);
+    }
+
+    // ── POST /api/quizzes/courses/{courseId}/exam/start ────────────────────────
+    // Iniciar (o reanudar) un intento del examen final: registra la hora de inicio
+    // en el servidor. Llamarlo de nuevo con una sesión abierta devuelve la misma sesión.
+
+    [HttpPost("courses/{courseId:guid}/exam/start")]
+    public async Task<IActionResult> StartCourseExam(Guid courseId, CancellationToken ct)
+    {
+        var userId = User.GetUserId();
+        var result = await startCourseExamHandler.HandleAsync(new StartCourseExamCommand(userId, courseId), ct);
         return this.ToActionResult(result);
     }
 

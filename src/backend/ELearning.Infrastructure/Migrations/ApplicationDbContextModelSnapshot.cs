@@ -58,6 +58,29 @@ namespace ELearning.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("badges", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "LoginFirst",
+                            Description = "Iniciaste sesión en la plataforma por primera vez.",
+                            Name = "Primer Inicio de Sesión"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "CourseDone",
+                            Description = "Completaste todas las lecciones requeridas de un curso.",
+                            Name = "Curso Completado"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "Speedster",
+                            Description = "Aprobaste el examen final de un curso en menos de 10 minutos, en tu primer intento.",
+                            Name = "Velocista"
+                        });
                 });
 
             modelBuilder.Entity("ELearning.Domain.Entities.Country", b =>
@@ -226,6 +249,49 @@ namespace ELearning.Infrastructure.Migrations
                         .HasDatabaseName("IX_CourseEnrollments_UserId_CourseId");
 
                     b.ToTable("course_enrollments", (string)null);
+                });
+
+            modelBuilder.Entity("ELearning.Domain.Entities.ExamSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempt_number");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("course_id");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("UserId", "CourseId")
+                        .IsUnique()
+                        .HasDatabaseName("idx_exam_session_one_open_per_user_course")
+                        .HasFilter("submitted_at IS NULL");
+
+                    b.HasIndex("UserId", "CourseId", "AttemptNumber")
+                        .IsUnique()
+                        .HasDatabaseName("idx_exam_session_user_course_attempt");
+
+                    b.ToTable("exam_sessions", (string)null);
                 });
 
             modelBuilder.Entity("ELearning.Domain.Entities.Lesson", b =>
@@ -519,6 +585,10 @@ namespace ELearning.Infrastructure.Migrations
                     b.Property<int>("BadgeId")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("CourseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("course_id");
+
                     b.Property<Dictionary<string, object>>("Metadata")
                         .HasColumnType("jsonb")
                         .HasColumnName("metadata");
@@ -536,10 +606,14 @@ namespace ELearning.Infrastructure.Migrations
 
                     b.HasIndex("BadgeId");
 
+                    b.HasIndex("CourseId");
+
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "BadgeId")
+                    b.HasIndex("UserId", "BadgeId", "CourseId")
                         .IsUnique();
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("UserId", "BadgeId", "CourseId"), false);
 
                     b.ToTable("user_badges", (string)null);
                 });
@@ -658,6 +732,10 @@ namespace ELearning.Infrastructure.Migrations
                         .HasColumnType("numeric(5,2)")
                         .HasColumnName("score");
 
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
@@ -730,6 +808,21 @@ namespace ELearning.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ELearning.Domain.Entities.ExamSession", b =>
+                {
+                    b.HasOne("ELearning.Domain.Entities.Course", null)
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ELearning.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ELearning.Domain.Entities.Lesson", b =>
                 {
                     b.HasOne("ELearning.Domain.Entities.Course", "Course")
@@ -799,6 +892,11 @@ namespace ELearning.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("ELearning.Domain.Entities.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ELearning.Domain.Entities.User", "User")
                         .WithMany("Badges")
                         .HasForeignKey("UserId")
@@ -806,6 +904,8 @@ namespace ELearning.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Badge");
+
+                    b.Navigation("Course");
 
                     b.Navigation("User");
                 });

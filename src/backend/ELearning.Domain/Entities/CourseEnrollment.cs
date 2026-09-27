@@ -33,10 +33,14 @@ public class CourseEnrollment
 
     /// <summary>
     /// Marks the enrollment as completed if all required lessons are done.
-    /// Returns false if there are still pending required lessons.
+    /// Returns false if there are still pending required lessons, or if the enrollment
+    /// was already completed (CompletedAt is never overwritten).
     /// </summary>
     public bool TryComplete(IEnumerable<Guid> requiredLessonIds)
     {
+        if (IsCompleted)
+            return false;
+
         var required = requiredLessonIds.ToHashSet();
         var completed = LessonProgress
             .Where(p => p.IsCompleted && required.Contains(p.LessonId))
