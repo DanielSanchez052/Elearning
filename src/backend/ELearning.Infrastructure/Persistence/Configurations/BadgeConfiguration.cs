@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ELearning.Domain.Entities;
+using ELearning.Domain.Enums;
 
 namespace ELearning.Infrastructure.Persistence.Configurations;
 
@@ -33,5 +34,34 @@ public class BadgeConfiguration : IEntityTypeConfiguration<Badge>
 
         builder.HasIndex(b => b.Code)
             .IsUnique();
+
+        // Locked design: exactly 3 badges (LoginFirst, CourseDone, Speedster).
+        // Fixed Ids so seeded rows are stable across environments/migrations.
+        builder.HasData(
+            new
+            {
+                Id = 1,
+                Code = BadgeCode.LoginFirst.ToString(),
+                Name = "Primer Inicio de Sesión",
+                Description = "Iniciaste sesión en la plataforma por primera vez.",
+                IconUrl = (string?)null
+            },
+            new
+            {
+                Id = 2,
+                Code = BadgeCode.CourseDone.ToString(),
+                Name = "Curso Completado",
+                Description = "Completaste todas las lecciones requeridas de un curso.",
+                IconUrl = (string?)null
+            },
+            new
+            {
+                Id = 3,
+                Code = BadgeCode.Speedster.ToString(),
+                Name = "Velocista",
+                Description = "Aprobaste el examen final de un curso en menos de 10 minutos, en tu primer intento.",
+                IconUrl = (string?)null
+            }
+        );
     }
 }

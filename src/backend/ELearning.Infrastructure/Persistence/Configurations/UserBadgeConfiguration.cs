@@ -24,6 +24,9 @@ public class UserBadgeConfiguration : IEntityTypeConfiguration<UserBadge>
             .HasColumnType("jsonb")
             .HasColumnName("metadata");
 
+        builder.Property(ub => ub.CourseId)
+            .HasColumnName("course_id");
+
         builder.HasIndex(ub => ub.UserId);
 
         builder.HasIndex(ub => ub.BadgeId);
@@ -38,7 +41,20 @@ public class UserBadgeConfiguration : IEntityTypeConfiguration<UserBadge>
             .HasForeignKey(ub => ub.BadgeId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(ub => new { ub.UserId, ub.BadgeId })
-            .IsUnique();
+        // Badges are never revoked; courses get deactivated, not deleted
+        // (same rationale as CourseEnrollmentConfiguration's Course FK).
+        builder.HasOne(ub => ub.Course)
+            .WithMany()
+            .HasForeignKey(ub => ub.CourseId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // A badge can be earned once per (user, badge, course) combination.
+        // CourseId is null for course-agnostic badges (LoginFirst), so the
+        // index must treat NULLs as equal to each other (Postgres 17
+        // "NULLS NOT DISTINCT") or two LoginFirst rows for the same user
+        // would both be allowed through.
+        builder.HasIndex(ub => new { ub.UserId, ub.BadgeId, ub.CourseId })
+            .IsUnique()
+            .AreNullsDistinct(false);
     }
 }
