@@ -48,7 +48,7 @@ export function useCreateCourse() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateCourseRequest) =>
-      coursesApi.createCourse(data).then((r) => r.data.value),
+      coursesApi.createCourse(data).then((r) => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: coursesKeys.all }),
   });
 }

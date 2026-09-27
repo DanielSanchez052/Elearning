@@ -173,10 +173,19 @@ export default function CourseFormPage() {
       }
 
       if (!data.isGlobal && selectedCountries.length > 0 && courseId) {
-        await assignCountries.mutateAsync(selectedCountries);
+        if (isEditing) {
+          await assignCountries.mutateAsync(selectedCountries);
+        } else {
+          // useAssignCountries binds its courseId at mount time (from the route
+          // param, empty for a brand-new course) — a just-created course's real
+          // id would still hit the stale empty one. Call the API directly here
+          // instead; the navigate() below remounts the edit page with fresh data,
+          // so no manual cache invalidation is needed for this one-off call.
+          await coursesApi.assignCountries(courseId, { countryIds: selectedCountries });
+        }
       }
 
-      navigate(`/courses/${courseId}/edit`);
+      navigate(`/admin/courses/${courseId}/edit`);
     } catch (e) {
       setSaveError(getApiErrorMessage(e));
     }

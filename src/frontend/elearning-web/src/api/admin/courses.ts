@@ -68,7 +68,7 @@ export const coursesApi = {
     axios.delete(`/admin/courses/${id}`),
   // Courses
   createCourse: (data: CreateCourseRequest) =>
-    axios.post<{ value: string }>('/admin/courses', data),
+    axios.post<string>('/admin/courses', data),
 
   updateCourse: (id: string, data: UpdateCourseRequest) =>
     axios.put(`/admin/courses/${id}`, data),
