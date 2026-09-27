@@ -37,12 +37,12 @@ Gives accurate quiz-duration data; useful even before badges exist (feeds future
 - [x] C3. Tests: `NotificationPublisherTests`. **Complexity: S.**
 
 ## Integration — depends on A + B + C all being done
-- [ ] I1. `SpeedsterRule` (needs Track A's `UserQuizResult.Duration` + Track B's rule infra): awards `Speedster` scoped to `CourseId` when `CourseId != null && IsPassed && Duration < 10min && AttemptNumber == 1`.
-- [ ] I2. Wire `BadgeAwardService` into the 3 handlers: `LoginHandler` → `OnUserLoggedInAsync` after successful login. `MarkLessonCompleteHandler` → `OnCourseCompletedAsync` when its (already-captured) `TryComplete` result is true. `SubmitQuizHandler` → `OnCourseCompletedAsync` (from the now-captured `TryComplete` bool) AND `OnCourseExamPassedAsync` (only for course-exam path). All calls best-effort, after the handler's own `SaveChangesAsync`, never fail the user's action.
-- [ ] I3. Wire `INotificationPublisher` into `BadgeAwardService` so every award also creates the in-app notification.
-- [ ] I4. Update the 3 handler test files to verify badge-service calls (`Times.Once`/`Times.Never` per branch) without re-testing rule logic itself.
-- [ ] I5. Frontend: wire `Profile.tsx`'s "Badges" section (currently the intentional static placeholder) to a new `useMyBadges()` hook + `api/badges.ts`, same pattern as the certificates/enrollments sections built earlier this session.
-- [ ] I6. Full backend suite green, `npx tsc -b --noEmit` clean, manual browser smoke test (log in as student, complete a course fast enough to trigger both badges, confirm they show in Profile and the notification bell).
+- [x] I1. `SpeedsterRule` (needs Track A's `UserQuizResult.Duration` + Track B's rule infra): awards `Speedster` scoped to `CourseId` when `CourseId != null && IsPassed && Duration < 10min && AttemptNumber == 1`.
+- [x] I2. Wire `BadgeAwardService` into the 3 handlers: `LoginHandler` → `OnUserLoggedInAsync` after successful login. `MarkLessonCompleteHandler` → `OnCourseCompletedAsync` when its (already-captured) `TryComplete` result is true. `SubmitQuizHandler` → `OnCourseCompletedAsync` (from the now-captured `TryComplete` bool) AND `OnCourseExamPassedAsync` (only for course-exam path). All calls best-effort, after the handler's own `SaveChangesAsync`, never fail the user's action.
+- [x] I3. Wire `INotificationPublisher` into `BadgeAwardService` so every award also creates the in-app notification.
+- [x] I4. Update the 3 handler test files to verify badge-service calls (`Times.Once`/`Times.Never` per branch) without re-testing rule logic itself.
+- [x] I5. Frontend: wire `Profile.tsx`'s "Badges" section (currently the intentional static placeholder) to a new `useMyBadges()` hook + `api/badges.ts`, same pattern as the certificates/enrollments sections built earlier this session.
+- [x] I6. Full backend suite green, `npx tsc -b --noEmit` clean, manual browser smoke test (log in as student, complete a course fast enough to trigger both badges, confirm they show in Profile and the notification bell).
 
 ## Docs (handled directly, not delegated — small doc edits)
 - [ ] Update `docs/arquitectura_elearning_v2.md`: record the monolith-not-microservice decision.
@@ -146,3 +146,49 @@ Deviations from the brief (with reasoning):
 Out of scope, confirmed untouched: `ExamSession`, `StartCourseExamCommand`, `SubmitQuizHandler`, notification publisher, `LoginHandler`/`MarkLessonCompleteHandler` wiring, `SpeedsterRule`.
 
 Next step: Integration as planned. Integration I1 reads `UserQuizResult.Duration` + `AttemptNumber == 1`; I2 reads the captured `courseCompleted` (Track A) and calls `IBadgeAwardService` (Track B) + `INotificationPublisher` (Track C).
+
+### Integration (branch `feature/mvp3-badges-integration`, not pushed, 2026-09-27)
+Route: direct inline (one worker for the whole track). TDD: strict (xUnit + Moq, `dotnet test ELearning.Tests/ELearning.Tests.csproj` from `src/backend`); frontend checked with `npx tsc -b --noEmit` + eslint (no frontend test runner).
+
+| Task | Commit | Tests (full suite) |
+|------|--------|--------------------|
+| I1 SpeedsterRule + real `OnCourseExamPassedAsync` | `443b44f` | 601 → 609 (+6 `SpeedsterRuleTests`, +3 service tests, −1 removed stub test) |
+| I2 + I4 handler wiring and handler tests (one commit: tests stay with the behavior) | `ec42938` | 609 → 622 (+2 Login, +2 MarkLessonComplete, +7 SubmitQuiz, +2 service best-effort) |
+| I3 badge-earned notification | `433ac10` | 622 → 628 (+6 service) |
+| I5 Profile badges | `7d8fb8c` | 628 (frontend) — tsc clean, eslint clean on touched files |
+| I6 verification + this entry | this commit | **628/628**, 0 failed |
+
+**Handler suites before → after** (all original tests unchanged in intent and still passing; failure-branch tests gained a `Times.Never` badge assertion):
+- `LoginHandlerTests` 7 → 9
+- `MarkLessonCompleteHandlerTests` 6 → 8
+- `SubmitQuizHandlerTests` 36 → 43
+- (`BadgeAwardServiceTests` 7 → 17, `SpeedsterRuleTests` new, 6)
+
+RED evidence: I1 and I3 were compile-RED (missing type / constructor). I2 had a behavioral RED as well: with the constructor parameters added but no calls, exactly the 6 "hook is called" / "service logs" tests failed. The 4 "badge service throws → action still succeeds" tests pass trivially without calls, so they were mutation-checked: making each guard rethrow fails all 4, then the guards were restored.
+
+**What was built**
+- `SpeedsterRule : IExamPassedBadgeRule` — `CourseId != null && IsPassed && AttemptNumber == 1 && Duration < 10 min` (strict `<`, unknown duration never qualifies). `SpeedsterRule.Threshold` is the single source for the 10 minutes (also used in the notification copy). Registered in `AddGamification()`.
+- `BadgeAwardService` takes `IEnumerable<IExamPassedBadgeRule>` exactly like the other two rule sets; `OnCourseExamPassedAsync` goes through the same idempotent `HasBadgeAsync`/`TryAddAsync` path.
+- Handlers call the service after their own save: `LoginHandler` always on success; `MarkLessonCompleteHandler` when `courseCompleted`; `SubmitQuizHandler` calls `OnCourseCompletedAsync` when `courseCompleted`, and `OnCourseExamPassedAsync(result)` (the `UserQuizResult` entity) when `lessonContext is null && isPassed` — the same course-exam test the handler already uses for the exam-session lookup. Each call has its own try/catch, so one failing hook never skips the other.
+- Notification copy (tú form, matching the codebase's user-facing messages): title `¡Medalla obtenida: {Badge.Name}!`, per-badge message; `referenceId` = the new `UserBadge.Id`.
+
+**Deviations / reconciliations between tracks**
+1. **Service did not swallow exceptions.** Track B's brief said failures would be "logged and swallowed", but `BadgeAwardService` had no try/catch and no logger. The handlers have no logger either, so the service now takes `ILogger<BadgeAwardService>`, logs any failure and returns an empty list (`OperationCanceledException` still propagates). The call sites keep their own guard as well, which also covers cancellation.
+2. **Not a single save.** The brief asked for one `SaveChangesAsync` covering both the `UserBadge` and the notification. `BadgeRepository.TryAddAsync` saves internally, because that save is how it detects the unique-index race (Postgres 23505). So the service publishes the notification only after `TryAddAsync` returned `true`, and then calls `IBadgeRepository.SaveChangesAsync` once for all staged notifications. Benefit: a lost race never produces a duplicate notification. Cost: if that second save fails, the badge exists without its notification (logged; still visible in Profile). Accepted under the locked design's best-effort rule.
+3. **`LoginCommand.cs` encoding.** The file is Windows-1252 (the `ñ`/`ó` in its two error messages are single bytes). Editing it with a UTF-8 tool silently turned them into U+FFFD, which would have changed the runtime messages. It was reverted and edited byte-safely; the diff touches only the new lines.
+4. Copy uses "Eres un Velocista" instead of the brief's example "Sos un Velocista", to match the tú form used everywhere else.
+
+**Migrations.** `badges` and `user_badges` were empty beforehand, so no seed or index collision was possible. `dotnet ef database update` applied `20260927000542_AddCourseScopeToUserBadgesAndSeedBadges` and `20260927003351_AddExamSessions` cleanly. Verified in Postgres: 3 badge rows (ids 1-3), `IX_user_badges_UserId_BadgeId_course_id ... NULLS NOT DISTINCT`, both `exam_sessions` unique indexes (one partial), and `user_quiz_results.started_at`.
+
+**Live smoke test** (API on :5277 via the `elearning-backend` launch config, using the `student@elearning.com` login from `ELearning.API.http`):
+- Login → 200; `GET /api/badges/me` returns `LoginFirst`; one `BadgeEarned` notification. A second login → 200, still one badge and one notification.
+- Excel Avanzado (student enrollment was Active, 0/2 required lessons, no exam): as admin, added one course-exam question with 2 options. Completing both required lessons returned `courseCompleted:false` (an exam now exists). `POST .../exam/start` returned attempt 1; the submit ~3 s later returned 100%, passed, `courseCompleted:true`. Badges are now `Speedster` + `CourseDone` scoped to Excel Avanzado (with `courseTitle`) plus `LoginFirst`, with 3 notifications and the expected Spanish copy.
+- **Dev data changed by the smoke test:** Excel Avanzado now has a course-exam question "Smoke test: which function sums a range?" (id `08525b97-…`), and the student's Excel enrollment is Completed with 3 badges. Delete the question if it shouldn't stay.
+- Not done: the visual Profile/notification-bell check in the browser, because navigation in the browser pane was denied. The frontend was checked with `tsc` and eslint; the API response shape matches `UserBadgeDto` (camelCase, `courseId`/`courseTitle` null for LoginFirst).
+
+**Review (RDD on).** `gentle-ai review assess --base-ref 072afe7 --committed-only`: I1 was medium/under_budget. From I2 on it is **high** (`hot_path`: auth, `LoginCommand.cs`), `review_due: true`. The native review was **not started**, because it needs the human consent envelope and the parent has to relay it. The candidate is `072afe7..HEAD`.
+
+**Follow-ups found during the smoke test (pre-existing, not changed here)**
+- [ ] `CreateQuizQuestionHandler` (`CreateQuizQuestionCommand.cs:40-43`, and the same pattern at `:63-66`): `cmd.LessonId == Guid.Empty` does not catch `null`, so `type: PerLesson` with `lessonId: null` throws `InvalidOperationException` → 500 instead of a 400 validation error.
+- [ ] `AdminQuizzesController.CreateQuestion` / `QuizzesController.SubmitCourseExam`: a body that fails to bind (seen with non-UTF-8 bytes sent from Git Bash curl) arrives as a `null` request, and the handler throws `NullReferenceException` → 500. Low priority, and the root cause was not investigated.
+- [ ] Frontend: nothing invalidates `badgeKeys.mine()` after a lesson completion or quiz submission. Profile refetches on mount only once the 60 s `staleTime` has passed, so a badge earned seconds before opening Profile can appear late. The notification bell is unaffected.
