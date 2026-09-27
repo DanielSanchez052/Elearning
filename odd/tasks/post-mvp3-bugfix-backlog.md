@@ -49,7 +49,7 @@ Route: delegated writer (each touches backend handler + repository/controller + 
 Route: delegated writer (frontend, no test runner — characterize via `tsc -b --noEmit` + eslint + manual check).
 
 ### Group 4 — new UI feature (highest complexity)
-- [ ] **T12** (new bug, notification bell) `NotificationBell.tsx` + new dropdown/panel component — wire `onClick` to open/close, render the notification list from `useNotifications()`, mark-as-read on click via `useMarkNotificationRead()`, close on outside-click/escape. Wire the two backend endpoints that exist but nothing calls yet: `GET /notifications/unread-count` (optional, `useNotifications()` already derives count client-side so this may not be needed) and `PUT /notifications/mark-all-read` (a "marcar todas como leídas" action in the panel).
+- [x] **T12** (new bug, notification bell) `NotificationBell.tsx` + new dropdown/panel component — wire `onClick` to open/close, render the notification list from `useNotifications()`, mark-as-read on click via `useMarkNotificationRead()`, close on outside-click/escape. Wire the two backend endpoints that exist but nothing calls yet: `GET /notifications/unread-count` (optional, `useNotifications()` already derives count client-side so this may not be needed) and `PUT /notifications/mark-all-read` (a "marcar todas como leídas" action in the panel).
 
 Route: delegated writer (new component + wiring existing hooks + AppHeader — 2+ non-trivial files, genuine new UI).
 
@@ -456,3 +456,81 @@ clean, no errors or warnings on any of the three files. Manually verified no
 import cycle: `useBadges.ts` imports only `@tanstack/react-query` and
 `@/api/badges`, so `useEnrollments.ts`/`quizzes.ts` importing from it doesn't
 loop back.
+
+### T12 (new bug, notification bell) — done
+Confirmed the bug: `NotificationBell.tsx`'s `<button>` had no `onClick` at
+all, and there was no dropdown/panel component anywhere in the codebase, even
+though the data layer (`useNotifications`, `useMarkNotificationRead`,
+`notificationsApi`) already existed and was fully unused. Clicking the bell
+did nothing.
+
+Component split: kept `NotificationBell.tsx` small (icon button + badge +
+open/close `useState`) and added a new sibling
+`src/components/layout/NotificationPanel.tsx` for the dropdown itself, mounted
+inside the existing `relative` wrapper div so it can be absolutely positioned
+under the bell (`AppHeader.tsx` needed zero changes — `<NotificationBell />`
+still takes no props). The panel:
+- closes on outside-click (`mousedown` + ref check) and on `Escape`
+  (`keydown`), both via plain `useEffect`/`document.addEventListener` — no new
+  dependency;
+- renders the list from `useNotifications()` with a loading state
+  ("Cargando notificaciones..."), an empty state ("No tienes notificaciones",
+  matching the "No hay certificados aún" tone from `Profile.tsx`), an indigo
+  dot + tinted background for unread items (existing dark zinc/indigo
+  palette: `bg-[#111118]`, `border-white/[0.08]`, `text-zinc-400`,
+  `bg-indigo-500/[0.06]`, `bg-indigo-400` dot), and a relative date formatter
+  (`Hace N min` / `Hace N h` / `Hace N d`, falling back to
+  `toLocaleDateString()` past a week — no date library in this repo, matches
+  the plain `toLocaleDateString()` precedent in `Profile.tsx`);
+- has a `max-h-96 overflow-y-auto` list so a long notification list scrolls
+  instead of growing the panel unbounded;
+- clicking an unread notification calls `useMarkNotificationRead()`.
+
+Data-layer fix required by the task: `useMarkNotificationRead` did not
+invalidate the `['notifications']` query on success, so a mark-as-read would
+never update the badge/list until the next 30s poll. Added
+`queryClient.invalidateQueries({ queryKey: ['notifications'] })` in its
+`onSuccess`, matching the `useEnrollments.ts`/`quizzes.ts` pattern.
+
+Mark-all-read: wired it. The backend already exposes a real, tested
+`PUT /notifications/mark-all-read` endpoint that nothing called, so added
+`markAllNotificationsRead()` to `api/notifications.ts` and a new
+`useMarkAllNotificationsRead()` hook next to `useMarkNotificationRead` in
+`useNotifications.ts` (same `useMutation` + invalidate-on-success pattern). It
+surfaces as a "Marcar todas como leídas" link in the panel header, shown only
+when at least one notification is unread. Did *not* wire
+`GET /notifications/unread-count` — the client-side derivation already used
+in `NotificationBell.tsx` (`notifications.filter(n => !n.isRead).length`) is
+correct and sufficient since `useNotifications()` is already polled every
+30s; adding a second endpoint call would just be an extra request returning
+data the client already has.
+
+Left untouched, out of scope per task: the dead `createNotification` in
+`api/notifications.ts` (pre-existing `any`-typed export, unused), and the
+orphaned SignalR hub (`NotificationHub.cs` / `Program.cs` `MapHub`) — this is
+a plain REST + 30s-polling dropdown, no real-time wiring, no new
+`@microsoft/signalr` dependency added.
+
+Characterization (no frontend test runner in this repo): `npx tsc -b
+--noEmit` from `src/frontend/elearning-web` — clean, no errors. `npx eslint`
+on the three touched/new files (`NotificationBell.tsx`, `NotificationPanel.tsx`,
+`useNotifications.ts`) — clean, no errors or warnings. `npx eslint` on
+`api/notifications.ts` reports one pre-existing `@typescript-eslint/no-explicit-any`
+on the untouched `createNotification: (data: any) =>` line (confirmed via
+`git diff` that only the new `markAllNotificationsRead` line was added to
+that file); not introduced by this change and left as-is per the task's
+explicit scope note.
+
+Visually verified live, not just statically: started both launch configs
+(`elearning-backend` on :5277, `elearning-frontend` on :5173) in the Browser
+pane, logged in as `student@elearning.com` / `Admin123*` (from
+`ELearning.API.http`), and drove the actual dashboard. Confirmed: the bell
+showed a real unread badge (1) from a seeded `BadgeEarned` notification;
+clicking it opened the panel with the notification, its message, a correct
+"Hace 15 min" relative timestamp, an unread dot, and the "Marcar todas como
+leídas" action; clicking the notification called mark-read and the panel/bell
+updated live (badge disappeared, unread dot and tint cleared, mark-all action
+hid itself) purely from the query-cache invalidation, no manual refresh;
+outside-click closed the panel; re-opening and pressing Escape closed it too.
+No console errors during any of this. Both dev servers were stopped
+afterward.

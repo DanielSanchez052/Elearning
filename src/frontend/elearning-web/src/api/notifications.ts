@@ -18,4 +18,6 @@ export const notificationsApi = {
 
   markNotificationRead: (notificationId: string) =>
     axios.put(`/notifications/${notificationId}/mark-read`),
+
+  markAllNotificationsRead: () => axios.put('/notifications/mark-all-read'),
 };
