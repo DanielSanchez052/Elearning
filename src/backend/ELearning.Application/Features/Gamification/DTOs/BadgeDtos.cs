@@ -14,3 +14,14 @@ public sealed record AwardedBadgeDto(
     Guid? CourseId,
     DateTime ObtainedAt
 );
+
+/// <summary>One of the calling user's earned badges, for GET /api/badges/me.</summary>
+public sealed record UserBadgeDto(
+    Guid Id,
+    string Code,
+    string Name,
+    string Description,
+    DateTime ObtainedAt,
+    Guid? CourseId,
+    string? CourseTitle
+);
