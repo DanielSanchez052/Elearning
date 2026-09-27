@@ -917,6 +917,46 @@ public class SubmitQuizHandlerTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task HandleAsync_CourseExam_SecondAttemptWithMatchingSession_StampsThatSession()
+    {
+        var userId = Guid.NewGuid();
+        var session = ExamSession.Start(userId, Guid.Empty, 2);
+        var (course, _, correct, _, createdResult) = SetupCourseExamSubmission(userId, session);
+        _quizzesMock
+            .Setup(r => r.GetLatestCourseExamResultAsync(userId, course.Id, default))
+            .ReturnsAsync(UserQuizResult.Create(userId, null, course.Id, 1, 10m, 70m)); // failed attempt 1
+
+        var result = await _handler.HandleAsync(
+            new SubmitQuizCommand(userId, null, course.Id, [correct.Id]));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value.AttemptNumber);
+        Assert.Equal(2, createdResult()!.AttemptNumber);
+        Assert.Equal(session.StartedAt, createdResult()!.StartedAt);
+        Assert.False(session.IsOpen);
+    }
+
+    [Fact]
+    public async Task HandleAsync_CourseExam_AlreadyPassedWithOpenSession_AttemptRulesStillWinAndSessionUntouched()
+    {
+        var userId = Guid.NewGuid();
+        var session = ExamSession.Start(userId, Guid.Empty, 2);
+        var (course, _, correct, _, _) = SetupCourseExamSubmission(userId, session);
+        _quizzesMock
+            .Setup(r => r.GetLatestCourseExamResultAsync(userId, course.Id, default))
+            .ReturnsAsync(UserQuizResult.Create(userId, null, course.Id, 1, 100m, 70m)); // passed attempt 1
+
+        var result = await _handler.HandleAsync(
+            new SubmitQuizCommand(userId, null, course.Id, [correct.Id]));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Validation, result.ErrorType);
+        Assert.Contains("Ya aprobaste", result.Error);
+        Assert.True(session.IsOpen);
+        _quizzesMock.Verify(r => r.SaveChangesAsync(default), Times.Never);
+    }
+
     // ── 16. Captured TryComplete outcome ─────────────────────────────────────
 
     [Fact]

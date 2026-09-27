@@ -270,6 +270,28 @@ public class StartCourseExamHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_OpenSecondAttemptSession_IsResumedWithoutCreatingAnother()
+    {
+        var userId = Guid.NewGuid();
+        var (course, _) = SetupEligibleStudent(userId);
+        _quizzesMock
+            .Setup(r => r.GetLatestCourseExamResultAsync(userId, course.Id, default))
+            .ReturnsAsync(UserQuizResult.Create(userId, null, course.Id, 1, 10m, 70m));
+        var openSecondAttempt = ExamSession.Start(userId, course.Id, 2);
+        UseInMemorySessionStore(openSecondAttempt);
+
+        var result = await _handler.HandleAsync(new StartCourseExamCommand(userId, course.Id));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(openSecondAttempt.Id, result.Value.SessionId);
+        Assert.Equal(openSecondAttempt.StartedAt, result.Value.StartedAt);
+        Assert.Equal(2, result.Value.AttemptNumber);
+        Assert.True(openSecondAttempt.IsOpen);
+        _quizzesMock.Verify(r => r.TryAddExamSessionAsync(It.IsAny<ExamSession>(), default), Times.Never);
+        _quizzesMock.Verify(r => r.SaveChangesAsync(default), Times.Never);
+    }
+
+    [Fact]
     public async Task HandleAsync_ResumedSession_ReturnsServerNowSoClientCanComputeElapsedTime()
     {
         var userId = Guid.NewGuid();

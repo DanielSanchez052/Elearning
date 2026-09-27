@@ -36,6 +36,15 @@ public class UserQuizResultEntityTests
     }
 
     [Fact]
+    public void Duration_WhenCompletedAtIsDefault_IsNull()
+    {
+        var result = UserQuizResult.Create(Guid.NewGuid(), null, Guid.NewGuid(), 1, 100m, 70m, DateTime.UtcNow);
+        Helpers.SetPrivate(result, nameof(UserQuizResult.CompletedAt), default(DateTime));
+
+        Assert.Null(result.Duration);
+    }
+
+    [Fact]
     public void Create_ExistingSixArgumentOverload_StillComputesIsPassed()
     {
         var passed = UserQuizResult.Create(Guid.NewGuid(), Guid.NewGuid(), null, 1, 70m, 70m);
