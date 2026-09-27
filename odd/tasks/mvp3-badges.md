@@ -48,6 +48,11 @@ Gives accurate quiz-duration data; useful even before badges exist (feeds future
 - [ ] Update `docs/arquitectura_elearning_v2.md`: record the monolith-not-microservice decision.
 - [ ] Update `docs/alcance_elearning.md` §3.4.1: replace the old wall-clock Velocista description with the exam-timing redefinition.
 
+## Follow-ups (non-blocking, from Gentle AI review of Track A — review-reliability lens, approved 2026-09-27)
+Neither finding opened a correction or blocks delivery. Tracked here to revisit later, not urgent.
+- [ ] **R3-001** — `QuizRepository.TryAddExamSessionAsync` (`src/backend/ELearning.Infrastructure/Repositories/QuizRepository.cs:169-184`): the concurrency guard (catch Postgres `23505` from the partial unique index, detach the rejected entity) has no automated test — only verified once manually via a rolled-back Postgres transaction. Existing handler tests mock this repository, so nothing proves the catch filter matches the real exception shape, that a detached entity isn't re-sent on a later `SaveChanges`, or that the filtered index really allows only one open session. Would need an integration test against a real Postgres instance (this repo has no integration test project yet).
+- [ ] **R3-002** — `QuizSessionPage.tsx:300-311`: since the course-exam page now loads questions only via the `POST .../exam/start` endpoint, a student who already passed or already used all attempts gets `StartCourseExamCommand`'s `ValidationFailure` and sees only an error message + "Volver al curso" — before this track, the page could still show the previous result/retry state via the read-only `GET`. Worth restoring: on a "ya aprobaste"/"sin intentos" error from start, fall back to showing the existing exam-results query instead of a bare error.
+
 ## Progress
 
 ### Track A — Exam timing (branch `feature/mvp3-exam-timing`, from `main`, not pushed)
