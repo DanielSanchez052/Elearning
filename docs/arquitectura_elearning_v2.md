@@ -1334,3 +1334,79 @@ DTOs separados (`QuizQuestionAdminDto`/`QuizOptionAdminDto`) que sí lo
 incluyen, y no dependen de inscripción — son dos modelos de lectura
 distintos para dos audiencias distintas, no una reutilización del mismo
 endpoint con permisos condicionales.
+
+---
+
+## Módulo de Gamificación (Medallas) — Decisión de diseño
+
+> Nota: el resto de este documento es el blueprint original, escrito antes
+> de implementar (la Sección 2 describe `ELearning.Gamification` como un
+> microservicio independiente). Esta sección documenta la decisión de
+> arquitectura real, verificada contra el código implementado — no un plan.
+
+### Problema
+
+¿El motor de medallas se construye como microservicio separado
+(`ELearning.Gamification`, tal como lo planteaba el blueprint original en
+la Sección 2 y en 3.2.5) o dentro del monolito?
+
+### Decisión: implementado dentro del monolito
+
+Se evaluó microservicio vs. monolito con apoyo de Opus 5 antes de escribir
+código (sesión de diseño 2026-09-26/27), y se optó por el monolito, en
+`ELearning.Application/Features/Gamification/`:
+
+```
+ELearning.Application/Features/Gamification/
+├── Rules/       IBadgeRule por trigger: ILoginBadgeRule,
+│                ICourseCompletionBadgeRule, IExamPassedBadgeRule
+├── Services/    IBadgeAwardService / BadgeAwardService
+├── Queries/     GetMyBadgesQuery
+└── DTOs/
+```
+
+Los handlers existentes (`LoginHandler`, `MarkLessonCompleteHandler`,
+`SubmitQuizHandler`) llaman a `IBadgeAwardService` después de su propio
+`SaveChangesAsync`, en vez de hacer una llamada HTTP a un servicio externo.
+
+**Por qué esta opción y no el microservicio planeado:**
+- El equipo real es de una sola persona; un microservicio separado agrega
+  infraestructura (deploy propio, versionado de contrato, latencia y
+  resiliencia de red) sin un beneficio real a esta escala.
+- Las reglas de medallas necesitan leer estado que ya vive en el monolito
+  (inscripciones, resultados de quiz, sesiones de examen); evaluarlas
+  in-process evita una segunda fuente de verdad y su sincronización.
+- Es reversible: las reglas quedan aisladas detrás de `IBadgeAwardService`
+  e interfaces por trigger, así que extraerlas a un servicio aparte más
+  adelante (si el volumen o el equipo crecen) no obliga a reescribir la
+  lógica de negocio, solo el borde de comunicación.
+
+### Alcance implementado vs. planeado
+
+Del alcance original de gamificación (medallas + Nivel Móvil, ver
+`alcance_elearning.md` §3.4), **solo las medallas están implementadas**:
+
+| Pieza | Estado |
+|---|---|
+| Medallas (`LoginFirst`, `CourseDone`, `Speedster`) | ✅ Implementado — otorgamiento automático, notificación in-app, visible en el Perfil |
+| Nivel Móvil (Bronce ≤50% / Plata ≤90% / Oro >90%) | ⏳ Pendiente — no existe endpoint ni query que calcule el porcentaje. Hay un componente de frontend sin usar (`MobileLevelIndicator.tsx`) de un diseño anterior que no coincide con el modelo actual (usa "level"/"puntos" en vez de %); debería descartarse o rehacerse cuando se implemente esta pieza |
+
+### Reglas de negocio derivadas (en `BadgeAwardService`)
+
+- Cada medalla se otorga como mucho una vez por usuario (`LoginFirst`) o
+  una vez por usuario+curso (`CourseDone`, `Speedster`), vía un índice
+  único `NULLS NOT DISTINCT` en `user_badges`.
+- El otorgamiento es best-effort: una falla en `BadgeAwardService` se
+  loguea y no interrumpe el login, la finalización de lección ni el envío
+  de examen (cada handler guarda su propio try/catch).
+- `Speedster` exige aprobar el examen del curso dentro de 10 minutos,
+  contados desde que se inicia el examen (`ExamSession`, nueva entidad)
+  hasta que se envía, y solo en el primer intento — ver la redefinición
+  final en `alcance_elearning.md` §3.4.1.
+
+### Endpoints reales (verificado contra el código, no contra el plan original)
+
+| Endpoint | Rol | Uso |
+|---|---|---|
+| `GET /api/badges/me` | Alumno autenticado | Lista las medallas obtenidas por el usuario actual |
+| `POST /api/quizzes/courses/{courseId}/exam/start` | Alumno inscripto | Inicia (o retoma) una sesión de examen cronometrada; necesaria para que `Speedster` mida el tiempo |

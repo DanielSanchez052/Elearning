@@ -147,17 +147,26 @@ específica. No se pueden revocar una vez obtenidas.
   Curso Completado    El usuario finaliza un curso Una medalla por cada
                       al 100%                      curso completado
 
-  Velocista           El usuario completa un curso Tiempo límite definido
-                      en menos de 10 minutos       (2026-09-26): 10 min,
-                      (valor global inicial)       global para todos los
-                                                   cursos. Configurable por
-                                                   curso queda como mejora
+  Velocista           El usuario aprueba el examen Redefinido
+                      del curso dentro del límite  (2026-09-27): antes era
+                      de tiempo, contado desde que "completar el curso",
+                      inicia el examen (no desde   ahora es "aprobar el
+                      que empieza el curso)         examen del curso".
+                                                   Aplica solo al primer
+                                                   intento. Se otorga una
+                                                   vez por curso. 10 min
+                                                   global inicial;
+                                                   configurable por curso
+                                                   queda como mejora
                                                    futura si hace falta.
   -----------------------------------------------------------------------
 
-*Nota: las variantes exactas de cada medalla (ej. rachas de login,
-número de medallas de completación) se definirán en detalle durante la
-fase de diseño.*
+*Nota (2026-09-27): la fase de diseño concluyó — no se agregaron variantes
+adicionales (rachas de login, medallas de completación escalonadas, etc.).
+Las 3 medallas finales son exactamente las de la tabla: Inicio de Sesión
+(`LoginFirst`), Curso Completado (`CourseDone`, una por curso) y Velocista
+(`Speedster`, una por curso). Implementadas y en producción (MVP3,
+PR #5).*
 
 **3.4.2 Nivel \'Móvil\'**
 
@@ -183,6 +192,12 @@ activos en la plataforma × 100**
 -   Rangos de nivel definidos (2026-09-26): **Bronce** ≤ 50%, **Plata**
     ≤ 90%, **Oro** > 90%.
 
+-   **Estado de implementación (2026-09-27): pendiente.** MVP3 solo
+    entregó el sistema de medallas (sección 3.4.1); el cálculo del
+    porcentaje, su endpoint y su visualización en el perfil todavía no
+    existen. Ver la decisión de arquitectura correspondiente en
+    `arquitectura_elearning_v2.md`.
+
 **3.5 Módulo de Notificaciones**
 
 El sistema enviará notificaciones a los usuarios por dos canales: dentro
@@ -202,6 +217,10 @@ de la plataforma (in-app) y por correo electrónico.
 
 *La frecuencia de los recordatorios (diaria, semanal, etc.) será
 configurable por el Admin.*
+
+*Nota (2026-09-27): MVP3 implementó, para la obtención de medallas, solo
+el canal in-app. El canal de email para este evento queda pendiente para
+una iteración futura.*
 
 **3.6 Módulo de Reportes y Estadísticas**
 
