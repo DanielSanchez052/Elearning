@@ -62,13 +62,18 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, LoginResponseDt
         );
 
         // Best-effort, after the login was saved: a badge failure never fails the login.
+        // Bounded so a slow badge store can't add unbounded latency to every login.
         try
         {
-            await _badges.OnUserLoggedInAsync(user, ct);
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+            await _badges.OnUserLoggedInAsync(user, linkedCts.Token);
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             // IBadgeAwardService logs its own failures; this only guards the login result.
+            // A pure timeout trip (ct itself not cancelled) is swallowed here too - best-effort.
+            // Real client cancellation (ct cancelled) is allowed to propagate, per contract.
         }
 
         return Result.Success(response);

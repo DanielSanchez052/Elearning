@@ -1,5 +1,6 @@
 ﻿using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Auth.Commands;
+using ELearning.Application.Features.Gamification.DTOs;
 using ELearning.Application.Features.Gamification.Services;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Interfaces.Repositories;
@@ -143,6 +144,10 @@ public class LoginHandlerTests
     }
 
     // ── Badge awarding (best-effort, after save) ─────────────────────────────
+    // The handler links the request's ct to a 2s timeout before calling the
+    // badge service, so mocks/verifies here match It.IsAny<CancellationToken>()
+    // instead of `default` — the token instance passed through is never the
+    // original one.
 
     [Fact]
     public async Task HandleAsync_SuccessfulLogin_CallsLoginBadgeHookOnceAfterSaving()
@@ -154,14 +159,14 @@ public class LoginHandlerTests
         var calls = new List<string>();
         _usersMock.Setup(r => r.UpdateAsync(user, default)).Callback(() => calls.Add("save")).Returns(Task.CompletedTask);
         _badgesMock
-            .Setup(b => b.OnUserLoggedInAsync(user, default))
+            .Setup(b => b.OnUserLoggedInAsync(user, It.IsAny<CancellationToken>()))
             .Callback(() => calls.Add("badge"))
             .ReturnsAsync([]);
 
         var result = await _handler.HandleAsync(new LoginCommand("user@test.com", "password123"));
 
         Assert.True(result.IsSuccess);
-        _badgesMock.Verify(b => b.OnUserLoggedInAsync(user, default), Times.Once);
+        _badgesMock.Verify(b => b.OnUserLoggedInAsync(user, It.IsAny<CancellationToken>()), Times.Once);
         Assert.Equal(["save", "badge"], calls);
     }
 
@@ -173,13 +178,56 @@ public class LoginHandlerTests
         _hasherMock.Setup(h => h.Verify(user.PasswordHash, "password123")).Returns(true);
         SetupJwt(user);
         _badgesMock
-            .Setup(b => b.OnUserLoggedInAsync(It.IsAny<User>(), default))
+            .Setup(b => b.OnUserLoggedInAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("badge store down"));
 
         var result = await _handler.HandleAsync(new LoginCommand("user@test.com", "password123"));
 
         Assert.True(result.IsSuccess);
         Assert.Equal("jwt-token-value", result.Value!.AccessToken);
+    }
+
+    [Fact]
+    public async Task HandleAsync_BadgeServiceTimesOut_LoginStillSucceeds()
+    {
+        var user = BuildVerifiedUser();
+        _usersMock.Setup(r => r.GetByEmailTrackedAsync("user@test.com", default)).ReturnsAsync(user);
+        _hasherMock.Setup(h => h.Verify(user.PasswordHash, "password123")).Returns(true);
+        SetupJwt(user);
+        _badgesMock
+            .Setup(b => b.OnUserLoggedInAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .Returns<User, CancellationToken>(async (_, ct) =>
+            {
+                // Simulates a badge store slower than the 2s bound: the linked
+                // token trips before this completes, never a real client cancel.
+                await Task.Delay(TimeSpan.FromSeconds(5), ct);
+                return (IReadOnlyList<AwardedBadgeDto>)Array.Empty<AwardedBadgeDto>();
+            });
+
+        var result = await _handler.HandleAsync(new LoginCommand("user@test.com", "password123"));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("jwt-token-value", result.Value!.AccessToken);
+    }
+
+    [Fact]
+    public async Task HandleAsync_RealClientCancellation_PropagatesInsteadOfSwallowing()
+    {
+        var user = BuildVerifiedUser();
+        using var cts = new CancellationTokenSource();
+        _usersMock.Setup(r => r.GetByEmailTrackedAsync("user@test.com", cts.Token)).ReturnsAsync(user);
+        _hasherMock.Setup(h => h.Verify(user.PasswordHash, "password123")).Returns(true);
+        SetupJwt(user);
+        _badgesMock
+            .Setup(b => b.OnUserLoggedInAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .Returns<User, CancellationToken>((_, _) =>
+            {
+                cts.Cancel(); // the real request ct itself gets cancelled mid-call
+                throw new OperationCanceledException(cts.Token);
+            });
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => _handler.HandleAsync(new LoginCommand("user@test.com", "password123"), cts.Token));
     }
 
     private void VerifyLoginBadgeHookNeverCalled() =>
