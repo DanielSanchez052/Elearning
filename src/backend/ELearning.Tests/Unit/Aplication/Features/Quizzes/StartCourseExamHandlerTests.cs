@@ -410,6 +410,27 @@ public class StartCourseExamHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_AttemptNumberCollisionAtAttemptLimit_ReturnsValidationFailureWithoutRetrying()
+    {
+        // The retry must not bypass the attempt limit: if attemptNumber + 1 would exceed
+        // maxAttempts, the handler must not open a session past the course's allowed attempts.
+        var userId = Guid.NewGuid();
+        var (course, _) = SetupEligibleStudent(userId, maxAttempts: 1); // attemptNumber = 1, 1+1 > 1
+        _quizzesMock
+            .Setup(r => r.GetOpenExamSessionAsync(userId, course.Id, default))
+            .ReturnsAsync((ExamSession?)null);
+        _quizzesMock
+            .Setup(r => r.TryAddExamSessionAsync(It.IsAny<ExamSession>(), default))
+            .ReturnsAsync(ExamSessionInsertResult.AttemptNumberCollision);
+
+        var result = await _handler.HandleAsync(new StartCourseExamCommand(userId, course.Id));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Validation, result.ErrorType);
+        _quizzesMock.Verify(r => r.TryAddExamSessionAsync(It.IsAny<ExamSession>(), default), Times.Once);
+    }
+
+    [Fact]
     public async Task HandleAsync_AttemptNumberCollisionThenOpenSessionRaceOnRetry_ReturnsResumedSession()
     {
         // Edge case: the retry (next attempt number) itself loses a genuine concurrent-open-session

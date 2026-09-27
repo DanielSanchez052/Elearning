@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import type { RefObject } from 'react';
 import {
   useNotifications,
   useMarkNotificationRead,
@@ -8,6 +9,8 @@ import type { NotificationDto } from '../../api/notifications';
 
 interface NotificationPanelProps {
   onClose: () => void;
+  /** Covers the bell button too, so clicking the bell isn't treated as "outside". */
+  containerRef: RefObject<HTMLDivElement | null>;
 }
 
 function formatNotificationDate(value: string) {
@@ -24,15 +27,14 @@ function formatNotificationDate(value: string) {
   return date.toLocaleDateString();
 }
 
-export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
-  const panelRef = useRef<HTMLDivElement>(null);
+export const NotificationPanel = ({ onClose, containerRef }: NotificationPanelProps) => {
   const { data: notifications, isLoading } = useNotifications();
   const markAsRead = useMarkNotificationRead();
   const markAllAsRead = useMarkAllNotificationsRead();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
@@ -48,7 +50,7 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose]);
+  }, [onClose, containerRef]);
 
   const hasUnread = (notifications ?? []).some((n) => !n.isRead);
 
@@ -59,10 +61,7 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
   };
 
   return (
-    <div
-      ref={panelRef}
-      className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] rounded-lg border border-white/[0.08] bg-[#111118] shadow-xl z-50"
-    >
+    <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] rounded-lg border border-white/[0.08] bg-[#111118] shadow-xl z-50">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.08]">
         <h3 className="text-sm font-semibold text-white">Notificaciones</h3>
         {hasUnread && (

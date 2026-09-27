@@ -53,25 +53,31 @@ Route: delegated writer (frontend, no test runner — characterize via `tsc -b -
 
 Route: delegated writer (new component + wiring existing hooks + AppHeader — 2+ non-trivial files, genuine new UI).
 
-## Follow-ups (non-blocking, from Gentle AI review of Group 1 + T5, approved)
-- [ ] **R4-001** — `LoginCommand.cs`: when the 2s badge timeout trips, nothing is logged. `LoginHandler` has no `ILogger` today (would need constructor injection + updating every existing test that constructs it), so a slow badge store silently and permanently stops awarding login badges with no operator signal. Worth fixing together with a broader look at whether `LoginHandler` should get a logger at all.
-- [ ] **R4-002** — `LoginCommand.cs` + `BadgeAwardService.cs`: if the login timeout trips *between* a `TryAddAsync` insert and the trailing `SaveChangesAsync` for its notification, the badge is saved but the notification is silently dropped (same root shape as R-int-002/T5, but reachable via the new timeout path specifically). Same fix family as T5, scoped to the timeout case.
-- [ ] **R4-003** — `LoginHandlerTests.cs`: the timeout is hardcoded (not injectable via `TimeProvider`/options), so the new timeout test spends ~2s of real wall-clock time per run and the bound can't be tuned without a code change.
-- [ ] **R3-timeout-bound-unproved** — `LoginHandlerTests.cs:191-211`: `HandleAsync_BadgeServiceTimesOut_LoginStillSucceeds` doesn't actually prove the 2s bound — the fake badge call would return the same result whether or not the timeout exists, since the test never asserts elapsed time or that the passed token was cancelled. Would need `TimeProvider` injection (ties into R4-003) or an elapsed-time assertion to be a real RED→GREEN proof.
-- [ ] **R3-log-assert-weakened** — `BadgeAwardServiceTests.cs`: the shared `VerifyErrorLogged` helper matches `It.IsAny<Exception>()`, slightly weaker than the old test's exact `InvalidOperationException` match. Low priority (the tests still assert the log fires the right number of times).
-- [x] **R2-001** — this doc, `Progress` section: was out of date when Gentle AI reviewed the Group-1+T5 candidate (T1-T4/T6 were unchecked with no notes even though they were in the same diff). Fixed as part of this same correction pass.
-- [ ] **R2-003** — `BadgeAwardServiceTests.cs` (T5's new partial-failure test): picks which of the 2 fake proposals' `PublishAsync` throws by matching the notification title text against `BuildNotificationCopy`'s wording, coupling the test to copy text that isn't shown in the test itself. Picking by `referenceId` or call order would be clearer and copy-change-proof.
+## Follow-ups (non-blocking, from all 3 Gentle AI reviews of this branch — all approved)
+Consolidated into one list (previously split across 2 sections that drifted out of
+sync with each other — that was itself a flagged finding, R2-backlog-doc-self-inconsistent
+/ R2-backlog-followup-count-mismatch, fixed by merging into this single section).
 
-## Follow-ups (non-blocking, from Gentle AI review of Group 1 + T5 + T7 + T8, approved)
-Two findings were fixed immediately in this same correction pass (see Progress below):
-attempt-limit bypass on the T7 retry, and the `BadgeAwardService` per-proposal publish
-filter being inconsistent with the other 3 cancellation-filter call sites. Remaining 9:
-- [ ] **R4-exam-conflict-unobservable** — `StartCourseExamCommand.cs:109-115`: neither the retry-collision branch nor the still-colliding-after-retry branch logs anything, so support has no server-side record (user/course/colliding attempt number) to investigate the underlying data inconsistency when a student hits the `Conflict`.
-- [ ] **R4-constraint-drift-silent-fallback** — `QuizRepository.cs:186-193`: the constraint-name `switch` only matches the two hardcoded index-name strings; any other name (e.g. after a future migration renames the attempt index) silently falls back to `OpenSessionRace`, quietly reintroducing the exact permanent-lockout bug T7 just fixed, with no log signal that the fallback fired.
-- [ ] **R3-constraint-mapping-untested** — `QuizRepository.cs:187-194`: no automated test proves the constraint-name → enum mapping itself (handler tests mock the enum directly). A small pure-function test (extract the mapping logic) would close this without needing real Postgres.
-- [ ] **R4-login-timeout-silent** / **R4-001** (same issue, already tracked above) — reaffirmed by this review.
-- [ ] **R4-timeout-drops-notification** / **R4-002** (same issue, already tracked above) — reaffirmed; this review adds that it's specifically reachable now that `BadgeAwardService`'s per-proposal catch was tightened (see fix note below), since a timeout mid-batch can still trip between one proposal's insert and the trailing save.
-- [ ] **R3-login-timeout-bound-unproved** / already tracked above as **R3-timeout-bound-unproved** — reaffirmed.
+**Fixed during correction passes** (kept here for the audit trail):
+- [x] **R2-001** — this doc's `Progress` section was out of date vs. its own diff. Fixed.
+- [x] **R1-exam-attempt-bump-bypasses-limit-check** / **R3-attempt-retry-bypasses-limit** — T7's attempt-collision retry didn't re-check `maxAttempts` before opening a session past the limit. Fixed: returns `ValidationFailure` when `attemptNumber + 1 > maxAttempts` instead of retrying.
+- [x] **R2-publish-oce-filter-inconsistent** / **R3-publish-oce-skips-save** — `BadgeAwardService`'s per-proposal publish catch used a narrower cancellation filter than the other 3 call sites. Aligned.
+- [x] **R1-backlog-doc-restates-seed-credentials** — this doc pasted the seeded dev password in 2 places. Redacted to reference `ELearning.API.http` instead.
+- [x] **R2-bell-toggle-vs-outside-click** / **R3-bell-toggle-reopens** — clicking the bell to close the panel actually closed-then-immediately-reopened it (the panel's outside-click handler fired before the button's own toggle, since the bell wasn't excluded from the "outside" check). Fixed: lifted a `containerRef` (covering button + panel) from `NotificationBell` into `NotificationPanel`, replacing the panel-only ref. Live-verified in the browser: bell now opens, closes, and outside-click/Escape all work correctly.
+- [x] **R3-retry-limit-branch-untested** — the `attemptNumber + 1 > maxAttempts` guard (above) had no test. Added `HandleAsync_AttemptNumberCollisionAtAttemptLimit_ReturnsValidationFailureWithoutRetrying`, real RED→GREEN (RED: `Expected: Validation, Actual: Conflict`).
+
+**Still open (deferred, non-blocking):**
+- [ ] **R4-001** / **R4-login-timeout-silent** / **R4-login-badge-timeout-unobserved** — when the 2s login badge timeout trips, nothing is logged (`LoginHandler` has no `ILogger`; would need constructor injection + updating every existing test that constructs it).
+- [ ] **R4-002** / **R4-timeout-drops-notification** / **R4-timeout-drops-staged-notifications** — if the login timeout trips between a `TryAddAsync` insert and the trailing `SaveChangesAsync`, the badge is saved but its notification is silently dropped for good (`HasBadgeAsync` blocks re-award). Same root shape as T5/R-int-002, reachable specifically via the timeout path.
+- [ ] **R4-003** — the login timeout is hardcoded (not injectable via `TimeProvider`/options), so its test spends ~2s of real wall-clock time per run and the bound can't be tuned without a code change.
+- [ ] **R3-timeout-bound-unproved** / **R3-login-timeout-bound-unproved** — `HandleAsync_BadgeServiceTimesOut_LoginStillSucceeds` doesn't actually prove the 2s bound (never asserts elapsed time or that the passed token was cancelled; ties into R4-003).
+- [ ] **R3-log-assert-weakened** — the shared `VerifyErrorLogged` test helper matches `It.IsAny<Exception>()`, slightly weaker than the old exact-type match.
+- [ ] **R2-003** — T5's partial-failure test picks which fake proposal's `PublishAsync` throws by matching notification title text, coupling it to `BuildNotificationCopy`'s wording.
+- [ ] **R4-exam-conflict-unobservable** / **R4-exam-attempt-conflict-unlogged** — neither T7 retry-collision branch (success or still-colliding-after-retry) logs anything; no server-side record for support to investigate.
+- [ ] **R4-constraint-drift-silent-fallback** / **R4-constraint-name-fallback-silent** — `QuizRepository`'s constraint-name `switch` silently falls back to `OpenSessionRace` for any unrecognized name (e.g. after a future index rename), quietly reintroducing the exact lockout bug T7 fixed, with no log signal.
+- [ ] **R3-constraint-mapping-untested** — no automated test proves the constraint-name → `ExamSessionInsertResult` mapping itself; handler tests mock the enum directly. A small pure-function test (extract the mapping) would close this without needing real Postgres.
+- [ ] **R2-unused-open-session-index-const** — `QuizRepository.cs`'s `OpenSessionIndexName` constant is declared but never used in an explicit `switch` arm, only named in a comment; the open-session case is actually just the `default` fallthrough.
+- [ ] **R2-null-body-guard-partial** — the null-body guard added in T9 is hand-copied into 2 controller actions; `QuizzesController.SubmitLessonQuiz` still has the identical unguarded `NullReferenceException` path (flagged by T9 as a separate follow-up, `task_02eb50c8`, not yet fixed).
 
 ## Deferred (not in this pass)
 - **R3-001** — exam-session concurrency guard has no automated test; needs a new integration-test project against real Postgres. Own follow-up when that infra is decided.
@@ -300,9 +306,9 @@ switch has no case for, so it falls through to the generic 500.
 
 Verified with a live repro, not just reasoning from docs: ran the API via
 `dotnet run --project ELearning.API --launch-profile http` (`elearning-backend`
-launch config) against the real dev Postgres, logged in as `student@elearning.com`
-/ `admin@elearning.com` (`Admin123*`, from `ELearning.API.http`), then hit both
-endpoints with `curl`:
+launch config) against the real dev Postgres, logged in with the seeded
+student/admin accounts (credentials in `ELearning.API.http`, not repeated here),
+then hit both endpoints with `curl`:
 - `POST /api/quizzes/courses/{id}/exam/submit` with non-UTF-8 bytes
   (`--data-binary` of raw `\xFF\xFE\x00\x01...`), literal `null`, and an empty
   body — all three: real `500`, log shows
@@ -523,8 +529,8 @@ explicit scope note.
 
 Visually verified live, not just statically: started both launch configs
 (`elearning-backend` on :5277, `elearning-frontend` on :5173) in the Browser
-pane, logged in as `student@elearning.com` / `Admin123*` (from
-`ELearning.API.http`), and drove the actual dashboard. Confirmed: the bell
+pane, logged in with the seeded student account (credentials in
+`ELearning.API.http`, not repeated here), and drove the actual dashboard. Confirmed: the bell
 showed a real unread badge (1) from a seeded `BadgeEarned` notification;
 clicking it opened the panel with the notification, its message, a correct
 "Hace 15 min" relative timestamp, an unread dot, and the "Marcar todas como
@@ -534,3 +540,34 @@ hid itself) purely from the query-cache invalidation, no manual refresh;
 outside-click closed the panel; re-opening and pressing Escape closed it too.
 No console errors during any of this. Both dev servers were stopped
 afterward.
+
+### Final Gentle AI review (all 12 tasks, lineage `review-7380b18361a8e6ff`) — approved, 5 findings fixed immediately
+26 files, 1218 lines, high tier. 13 non-blocking findings across 4 lenses. Five
+were fixed right away (see the consolidated Follow-ups section above for the
+full list, now merged into one section since the doc having two separate,
+drifting Follow-ups sections was itself one of the 13 findings):
+
+1. **The real bug**: clicking the notification bell to close the panel actually
+   closed it and immediately reopened it — the panel's document-level
+   `mousedown` outside-click handler ran before the button's own `onClick`
+   toggle, and the bell wasn't excluded from the "outside" check. Fixed by
+   lifting a shared `containerRef` (wrapping both the button and the panel)
+   from `NotificationBell` into `NotificationPanel`, replacing the panel's
+   previously-local, panel-only ref. Live-verified in the browser: bell open
+   → bell click closes it (no reopen) → reopen → outside-click closes it →
+   reopen → Escape closes it. All correct now.
+2. The attempt-limit guard added in the previous correction pass had no test
+   proving it — added one, with real RED (`Expected: Validation, Actual:
+   Conflict`) against the guard temporarily removed, then GREEN with it
+   restored.
+3. Redacted the seeded dev password that 2 Progress entries had pasted in
+   plaintext (referenced `ELearning.API.http` instead).
+4. Fixed the doc's own self-inconsistent follow-up counts by merging the two
+   drifting "Follow-ups" sections into one.
+
+Full suite after these fixes: **641/641** (640 + 1 new test), 0 regressions.
+`tsc -b --noEmit` clean on the frontend fix. Remaining 11 findings recorded
+in the consolidated Follow-ups section above (mostly timeout/observability
+gaps already tracked, plus 2 new minor readability items: an unused constant
+in `QuizRepository.cs`, and the duplicated null-body-guard pattern with
+`SubmitLessonQuiz` still unfixed).

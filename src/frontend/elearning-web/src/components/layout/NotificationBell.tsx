@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNotifications } from '../../hooks/useNotifications';
 import { NotificationPanel } from './NotificationPanel';
 
@@ -6,9 +6,13 @@ export const NotificationBell = () => {
   const { data: notifications } = useNotifications();
   const unreadCount = notifications?.filter((n) => !n.isRead).length || 0;
   const [isOpen, setIsOpen] = useState(false);
+  // Covers the button AND the panel, so the panel's outside-click check doesn't
+  // treat clicking the bell itself as "outside" (which would close then
+  // immediately reopen it via the button's own toggle).
+  const containerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
         onClick={() => setIsOpen((prev) => !prev)}
         className="relative rounded-lg p-2 text-zinc-400 hover:text-white hover:bg-white/[0.05] transition"
@@ -23,7 +27,7 @@ export const NotificationBell = () => {
           </span>
         )}
       </button>
-      {isOpen && <NotificationPanel onClose={() => setIsOpen(false)} />}
+      {isOpen && <NotificationPanel onClose={() => setIsOpen(false)} containerRef={containerRef} />}
     </div>
   );
 };
