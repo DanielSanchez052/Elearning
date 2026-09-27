@@ -108,7 +108,7 @@ public sealed class BadgeAwardService : IBadgeAwardService
                 await _notifications.PublishAsync(
                     userId, NotificationType.BadgeEarned, title, message, referenceId: userBadge.Id, ct);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {
                 _logger.LogError(ex,
                     "Failed to publish badge-earned notification for user {UserId}, badge {BadgeCode}; " +

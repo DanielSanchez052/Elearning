@@ -339,3 +339,38 @@ Not fixed (out of scope for T9, flagged separately): `QuizzesController.SubmitLe
 (`POST /api/quizzes/lessons/{id}/submit`) has the identical `request.SelectedOptionIds`
 dereference and the same null-body 500 risk, but it wasn't named in this task's
 scope.
+
+### Gentle AI review (Group 1 + T5 + T7 + T8, lineage `review-b86ea5eb6e085f5e`) — approved, 2 findings fixed immediately
+17 files, 722 lines, high tier (auth hot path). 11 non-blocking findings across
+4 lenses. Two were fixed right away since they were direct, cheap corrections:
+
+- **R1-exam-attempt-bump-bypasses-limit-check** / **R3-attempt-retry-bypasses-limit**
+  (same issue, risk + reliability lenses): T7's retry-once logic opened a session
+  at `attemptNumber + 1` without re-checking `maxAttempts`. If the colliding
+  attempt was already the last allowed one, the retry could open a session past
+  the course's attempt limit. Fixed in `StartCourseExamCommand.cs`: return the
+  same `ValidationFailure` the earlier attempt-limit check uses when
+  `attemptNumber + 1 > maxAttempts`, instead of retrying past it.
+- **R2-publish-oce-filter-inconsistent** / **R3-publish-oce-skips-save** (same
+  issue, readability + reliability lenses): `BadgeAwardService`'s new
+  per-proposal `PublishAsync` catch used `ex is not OperationCanceledException`
+  without the `|| !ct.IsCancellationRequested` guard added to the other 3
+  call sites — so a stray `OperationCanceledException` from the notification
+  publisher, not tied to `ct`, would still abort the batch loop (skipping later
+  proposals and the trailing `SaveChangesAsync`). Aligned the filter to match.
+
+Also fixed the doc self-inconsistency the readability lens flagged
+(**R2-backlog-doc-self-inconsistent**): this file said "8 findings" for a list
+of 7, and R2-001 was still unchecked despite its own text saying it was fixed —
+both corrected. Also tightened the `ExamSessionInsertResult.AttemptNumberCollision`
+XML doc (**R2-enum-doc-contradicts-handler**) to describe the real bounded-retry
+contract instead of a vaguer "re-derive and retry" that didn't match the handler.
+
+Remaining 9 findings recorded as follow-ups above (mostly already-tracked
+timeout/observability gaps reaffirmed by this review, plus one new: constraint-name
+drift silently falling back to the safe default with no log signal).
+
+Full suite after these fixes: **640/640**, 0 regressions (no new tests needed —
+these were corrections to already-tested code paths; existing
+`StartCourseExamHandlerTests` and `BadgeAwardServiceTests` still cover the
+changed branches' outer behavior).

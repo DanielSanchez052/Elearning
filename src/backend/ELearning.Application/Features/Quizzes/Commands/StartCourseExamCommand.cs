@@ -101,7 +101,13 @@ public sealed class StartCourseExamHandler : ICommandHandler<StartCourseExamComm
                 // cerrada, p.ej. por un resultado reseteado/borrado) para el intento calculado, y no hay
                 // sesión abierta que resumir (si la hubiera, GetOpenExamSessionAsync ya la habría devuelto
                 // arriba). Recalcular el intento nunca cambiaría nada aquí (mismo latestResult), así que
-                // se reintenta una sola vez saltando el número de intento que chocó.
+                // se reintenta una sola vez saltando el número de intento que chocó — pero solo si ese
+                // intento siguiente sigue dentro del límite; si no, no tiene sentido abrir una sesión
+                // para un intento que SubmitQuizHandler rechazaría de todas formas.
+                if (attemptNumber + 1 > maxAttempts)
+                    return Result.ValidationFailure<StartCourseExamResultDto>(
+                        $"Alcanzaste el máximo de {maxAttempts} intentos para esta evaluación.");
+
                 var retrySession = ExamSession.Start(cmd.UserId, cmd.CourseId, attemptNumber + 1);
                 insertResult = await _quizzes.TryAddExamSessionAsync(retrySession, ct);
                 newSession = retrySession;

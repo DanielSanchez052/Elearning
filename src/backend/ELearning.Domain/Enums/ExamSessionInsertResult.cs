@@ -21,8 +21,10 @@ public enum ExamSessionInsertResult
     /// Rejected by <c>idx_exam_session_user_course_attempt</c>: a session (open or already
     /// submitted) already exists for this exact attempt number — e.g. because a quiz result was
     /// reset/deleted, or the attempt number desynced from the exam-session table for some other
-    /// reason. There is no open session to resume, so the caller must re-derive the next attempt
-    /// number and retry instead of surfacing a permanent conflict.
+    /// reason. There is no open session to resume. Re-deriving the next attempt number from the
+    /// same inputs would return the identical value within one request, so the caller's only
+    /// recovery is to skip past the colliding number with exactly one retry (bounded by the
+    /// attempt limit), then surface a conflict if that retry collides too.
     /// </summary>
     AttemptNumberCollision
 }
