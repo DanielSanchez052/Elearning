@@ -43,7 +43,7 @@ Route: direct inline (4 single-file, already-understood edits) or one bundled wr
 Route: delegated writer (each touches backend handler + repository/controller + tests — 2+ non-trivial files per task).
 
 ### Group 3 — frontend fixes (medium complexity)
-- [ ] **T10** (R3-002) `QuizSessionPage.tsx:300-311` — on a "ya aprobaste"/"sin intentos" error from `exam/start`, fall back to showing the existing exam-results view instead of a bare error message.
+- [x] **T10** (R3-002) `QuizSessionPage.tsx:300-311` — on a "ya aprobaste"/"sin intentos" error from `exam/start`, fall back to showing the existing exam-results view instead of a bare error message.
 - [ ] **T11** (smoke-test bug) `useBadges.ts` — invalidate `badgeKeys.mine()` after lesson-completion and quiz-submission mutations succeed, so a freshly-earned badge doesn't wait out the 60s `staleTime`.
 
 Route: delegated writer (frontend, no test runner — characterize via `tsc -b --noEmit` + eslint + manual check).
@@ -374,3 +374,46 @@ Full suite after these fixes: **640/640**, 0 regressions (no new tests needed �
 these were corrections to already-tested code paths; existing
 `StartCourseExamHandlerTests` and `BadgeAwardServiceTests` still cover the
 changed branches' outer behavior).
+
+### T10 (R3-002) — done
+Confirmed the regression: `QuizSessionPage.tsx`'s course-exam-start-on-load
+`useEffect` (line ~98) calls `startCourseExamAsync(courseId)`, and
+`applyStartResult`'s reject handler (line ~85-88) sets `startError` to the
+backend's message via `getErrorMessage`. Since `StartCourseExamCommand`
+returns a `ValidationFailure` with "Ya aprobaste esta evaluación..." or
+"Alcanzaste el máximo de N intentos..." for a student who already passed or
+exhausted attempts, those cases hit the exact same `startError` branch as a
+genuine network/server error — the bare-error block at line ~300-311 (message
++ "Volver al curso" link) — with no way back to see past results.
+
+There was no existing "past attempts" rendering to reuse: the only results
+view in this component is the `result ? (...) : (...)` block (line ~353),
+which only ever holds a *freshly-submitted* `QuizResultDto` (set by
+`submitQuiz`'s `setResult(response.data)`) — never populated from
+`examResultsQuery.data`/`attempts` (a `QuizAttemptDto[]`, with just
+`attemptNumber`/`score`/`isPassed`/`completedAt`, a lighter shape than
+`QuizResultDto`). So a minimal new attempts-list rendering was built inline
+in the `startError` branch rather than extracted/reused from elsewhere.
+
+Fix: split the `!isLessonQuiz && !examSession && startError` branch in two.
+When `attempts.length === 0` (reusing the existing `attempts` variable, which
+already reads `examResultsQuery.data ?? []`), keep the original bare-error
+block unchanged — the genuine dead-end case with nothing to show. When
+`attempts.length > 0`, render the `startError` message alongside a simple
+sorted (`attemptNumber` desc) list of past attempts (attempt number, formatted
+date, score, pass/fail), so a student who already passed or ran out of
+attempts sees their history instead of a dead end. The `isLessonQuiz` path
+(and every other branch) is untouched.
+
+Characterization (no frontend test runner in this repo, matching this
+backlog's established convention): `npx tsc -b --noEmit` from
+`src/frontend/elearning-web` — clean, no errors. `npx eslint
+src/pages/quiz/QuizSessionPage.tsx` reports 4 pre-existing problems (2
+`react-hooks/set-state-in-effect` errors at lines 138/274, 1
+`@typescript-eslint/no-explicit-any` at line 253, 1 `exhaustive-deps` warning
+at line 275) — confirmed pre-existing by running eslint against the
+unmodified file via `git stash`/`git stash pop`; the new code introduces no
+new lint errors. Manually traced the JSX logic: `attempts` is computed before
+the early-return blocks (line ~110-112) so it's available in scope; the new
+branch only activates for the course-exam path (`!isLessonQuiz`) with no
+active session and a start error, exactly mirroring the original guard.
