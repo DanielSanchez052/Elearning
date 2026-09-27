@@ -89,7 +89,7 @@ export function AdminQuizzesPage() {
   }) => {
     try {
       const res = await createQuestion.mutateAsync(data.question);
-      const questionId = res.data.value;
+      const questionId = res.data;
 
       for (const option of data.options) {
         await createOption.mutateAsync({

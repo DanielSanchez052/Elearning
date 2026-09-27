@@ -18,7 +18,7 @@ export const quizzesAdminApi = {
 
   // Questions Management
   createQuestion: (data: CreateQuizQuestionRequest) =>
-    axios.post<{ value: string }>('/admin/quizzes/questions', data),
+    axios.post<string>('/admin/quizzes/questions', data),
 
   updateQuestion: (questionId: string, data: UpdateQuizQuestionRequest) =>
     axios.put(`/admin/quizzes/questions/${questionId}`, data),
@@ -28,7 +28,7 @@ export const quizzesAdminApi = {
 
   // Options Management
   createOption: (questionId: string, data: CreateQuizOptionRequest) =>
-    axios.post<{ value: string }>(
+    axios.post<string>(
       `/admin/quizzes/questions/${questionId}/options`,
       data
     ),
