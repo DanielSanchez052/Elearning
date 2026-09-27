@@ -31,7 +31,7 @@ public class SpeedsterRuleTests
             startedAt: duration is null ? null : StartedAt);
 
         if (duration is not null)
-            GamificationTestHelpers.SetPrivate(result, "CompletedAt", StartedAt + duration.Value);
+            GamificationTestHelpers.SetPrivate(result, nameof(UserQuizResult.CompletedAt), StartedAt + duration.Value);
 
         return result;
     }
