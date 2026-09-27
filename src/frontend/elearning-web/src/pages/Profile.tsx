@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useMyEnrollments } from '@/hooks/useEnrollments';
 import { useMyCertificates } from '@/hooks/useCertificates';
+import { useMyBadges } from '@/hooks/useBadges';
 import { certificatesApi } from '@/api/certificates';
 import { getApiErrorMessage } from '@/lib/axios';
 import type { CertificateDto } from '@/types/certificate.types';
@@ -21,6 +22,7 @@ export const ProfilePage = () => {
   const { user } = useAuthStore();
   const enrollmentsQuery = useMyEnrollments();
   const certificatesQuery = useMyCertificates();
+  const badgesQuery = useMyBadges();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
@@ -115,7 +117,30 @@ export const ProfilePage = () => {
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded shadow p-6">
           <h2 className="text-xl font-bold mb-4">Badges</h2>
-          <p className="text-gray-600">No hay badges aún</p>
+          {badgesQuery.isLoading ? (
+            <p className="text-gray-600">Cargando badges...</p>
+          ) : badgesQuery.isError ? (
+            <p className="text-gray-600">No se pudieron cargar tus badges.</p>
+          ) : (badgesQuery.data ?? []).length === 0 ? (
+            <p className="text-gray-600">No hay badges aún</p>
+          ) : (
+            <ul className="divide-y">
+              {(badgesQuery.data ?? []).map((badge) => (
+                <li key={badge.id} className="py-3">
+                  <p className="font-bold">{badge.name}</p>
+                  {badge.courseTitle && (
+                    <p className="text-sm">{badge.courseTitle}</p>
+                  )}
+                  {badge.description && (
+                    <p className="text-gray-600 text-sm">{badge.description}</p>
+                  )}
+                  <p className="text-gray-600 text-sm">
+                    Obtenido el {formatDate(badge.obtainedAt)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className="bg-white rounded shadow p-6">
           <h2 className="text-xl font-bold mb-4">Certificados</h2>
