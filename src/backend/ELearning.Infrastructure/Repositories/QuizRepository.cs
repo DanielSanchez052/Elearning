@@ -3,6 +3,7 @@ using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 using ELearning.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace ELearning.Infrastructure.Repositories;
 
@@ -154,6 +155,32 @@ public class QuizRepository : IQuizRepository
             .Where(r => r.UserId == userId && r.CourseId == courseId)
             .OrderByDescending(r => r.AttemptNumber)
             .ToListAsync(ct);
+    }
+
+    // ── Exam Sessions ──────────────────────────────────────────────────────────
+
+    public async Task<ExamSession?> GetOpenExamSessionAsync(Guid userId, Guid courseId, CancellationToken ct = default)
+    {
+        // Tracked on purpose: SubmitQuizHandler closes the session in its single SaveChangesAsync.
+        return await _context.ExamSessions
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.CourseId == courseId && s.SubmittedAt == null, ct);
+    }
+
+    public async Task<bool> TryAddExamSessionAsync(ExamSession session, CancellationToken ct = default)
+    {
+        await _context.ExamSessions.AddAsync(session, ct);
+
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+            return true;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // Otra solicitud abrió la sesión en paralelo: descartar la entidad para no reintentarla en el próximo SaveChanges.
+            _context.Entry(session).State = EntityState.Detached;
+            return false;
+        }
     }
 
     // ── Persistence ────────────────────────────────────────────────────────────

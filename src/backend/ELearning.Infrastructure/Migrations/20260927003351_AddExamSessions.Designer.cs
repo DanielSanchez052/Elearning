@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using ELearning.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ELearning.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260927003351_AddExamSessions")]
+    partial class AddExamSessions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -58,29 +61,6 @@ namespace ELearning.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("badges", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Code = "LoginFirst",
-                            Description = "Iniciaste sesión en la plataforma por primera vez.",
-                            Name = "Primer Inicio de Sesión"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Code = "CourseDone",
-                            Description = "Completaste todas las lecciones requeridas de un curso.",
-                            Name = "Curso Completado"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Code = "Speedster",
-                            Description = "Aprobaste el examen final de un curso en menos de 10 minutos, en tu primer intento.",
-                            Name = "Velocista"
-                        });
                 });
 
             modelBuilder.Entity("ELearning.Domain.Entities.Country", b =>
@@ -585,10 +565,6 @@ namespace ELearning.Infrastructure.Migrations
                     b.Property<int>("BadgeId")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("CourseId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("course_id");
-
                     b.Property<Dictionary<string, object>>("Metadata")
                         .HasColumnType("jsonb")
                         .HasColumnName("metadata");
@@ -606,14 +582,10 @@ namespace ELearning.Infrastructure.Migrations
 
                     b.HasIndex("BadgeId");
 
-                    b.HasIndex("CourseId");
-
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "BadgeId", "CourseId")
+                    b.HasIndex("UserId", "BadgeId")
                         .IsUnique();
-
-                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("UserId", "BadgeId", "CourseId"), false);
 
                     b.ToTable("user_badges", (string)null);
                 });
@@ -892,11 +864,6 @@ namespace ELearning.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ELearning.Domain.Entities.Course", "Course")
-                        .WithMany()
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("ELearning.Domain.Entities.User", "User")
                         .WithMany("Badges")
                         .HasForeignKey("UserId")
@@ -904,8 +871,6 @@ namespace ELearning.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Badge");
-
-                    b.Navigation("Course");
 
                     b.Navigation("User");
                 });

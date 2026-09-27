@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  useCourseExam,
   useCourseExamResults,
   useLessonQuizzes,
   useLessonResults,
+  useStartCourseExam,
   useSubmitCourseExam,
   useSubmitLessonQuiz,
 } from '@/hooks/quizzes';
 import { useMarkLessonComplete } from '@/hooks/useEnrollments';
-import type { QuizQuestion, QuizResultDto } from '@/types/quiz.types';
+import type { QuizQuestion, QuizResultDto, StartCourseExamResult } from '@/types/quiz.types';
 import { useQuizSessionStore } from '@/store/quizSessionStore';
 
 function formatTime(totalSeconds: number) {
@@ -22,8 +22,34 @@ function formatTime(totalSeconds: number) {
   return `${mins}:${secs}`;
 }
 
-function getDurationByQuestions(count: number) {
+// Lesson quizzes keep their original pace.
+function getLessonQuizDurationSec(count: number) {
   return Math.max(120, count * 45);
+}
+
+// Course final exam. The badge "Velocista" is earned by passing the first attempt in
+// under 10 minutes (measured server-side from /exam/start to submission). The exam's own
+// countdown must therefore always be longer than those 10 minutes; otherwise the
+// auto-submit would land inside the badge window and any pass of a short exam would
+// qualify by construction. A 15-minute floor leaves a 5-minute margin even for tiny exams,
+// and 60 s per question lets larger exams grow past it (the old rate was 45 s).
+const COURSE_EXAM_MIN_SEC = 15 * 60;
+const COURSE_EXAM_SEC_PER_QUESTION = 60;
+
+function getCourseExamDurationSec(count: number) {
+  return Math.max(COURSE_EXAM_MIN_SEC, count * COURSE_EXAM_SEC_PER_QUESTION);
+}
+
+function getDurationByQuestions(count: number, isLessonQuiz: boolean) {
+  return isLessonQuiz ? getLessonQuizDurationSec(count) : getCourseExamDurationSec(count);
+}
+
+const START_EXAM_ERROR = 'No se pudo iniciar el examen. Intenta nuevamente.';
+
+function getErrorMessage(error: unknown, fallback: string) {
+  const data = (error as { response?: { data?: { message?: string; error?: string } } } | null)
+    ?.response?.data;
+  return data?.message || data?.error || fallback;
 }
 
 export default function QuizSessionPage() {
@@ -31,16 +57,51 @@ export default function QuizSessionPage() {
   const isLessonQuiz = Boolean(lessonId);
 
   const lessonQuery = useLessonQuizzes(lessonId ?? '', isLessonQuiz);
-  const examQuery = useCourseExam(courseId ?? '', !isLessonQuiz && Boolean(courseId));
 
   const lessonResultsQuery = useLessonResults(lessonId ?? '', isLessonQuiz);
   const examResultsQuery = useCourseExamResults(courseId ?? '', !isLessonQuiz && Boolean(courseId));
 
   const submitLessonQuiz = useSubmitLessonQuiz();
   const submitCourseExam = useSubmitCourseExam();
+  const startCourseExam = useStartCourseExam();
   const markLessonComplete = useMarkLessonComplete();
 
-  const questionsRaw = isLessonQuiz ? lessonQuery.data : examQuery.data;
+  // Course exams are started server-side: the response carries the questions and the
+  // attempt's startedAt. Calling start again while the attempt is open resumes it with
+  // the original startedAt, so a reload never grants extra time.
+  const [examSession, setExamSession] = useState<StartCourseExamResult | null>(null);
+  const [startError, setStartError] = useState('');
+  const [timeExpiredOnLoad, setTimeExpiredOnLoad] = useState(false);
+  const { mutateAsync: startCourseExamAsync } = startCourseExam;
+
+  const applyStartResult = useCallback(
+    (outcome: Promise<StartCourseExamResult>, isCancelled: () => boolean = () => false) =>
+      outcome.then(
+        (session) => {
+          if (isCancelled()) return;
+          setStartError('');
+          setExamSession(session);
+        },
+        (error) => {
+          if (isCancelled()) return;
+          setStartError(getErrorMessage(error, START_EXAM_ERROR));
+        }
+      ),
+    []
+  );
+
+  // Start (or resume) on page open. Duplicate calls (e.g. StrictMode) are safe:
+  // the backend returns the same open session.
+  useEffect(() => {
+    if (isLessonQuiz || !courseId) return;
+    let cancelled = false;
+    applyStartResult(startCourseExamAsync(courseId), () => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [isLessonQuiz, courseId, startCourseExamAsync, applyStartResult]);
+
+  const questionsRaw = isLessonQuiz ? lessonQuery.data : examSession?.questions;
   const questions = useMemo(
     () => [...(questionsRaw ?? [])].sort((a, b) => a.orderIndex - b.orderIndex),
     [questionsRaw]
@@ -72,12 +133,35 @@ export default function QuizSessionPage() {
 
   useEffect(() => {
     if (!questions.length) return;
-    startSession(getDurationByQuestions(questions.length));
+    const durationSec = getDurationByQuestions(questions.length, isLessonQuiz);
+    timeoutSubmitRef.current = false;
+    setTimeExpiredOnLoad(false);
+
+    if (isLessonQuiz || !examSession) {
+      startSession(durationSec);
+    } else {
+      // Elapsed time uses the server's clock on both ends (serverNow - startedAt),
+      // so a skewed device clock cannot shrink or stretch the countdown.
+      const elapsedSec = Math.max(
+        0,
+        (Date.parse(examSession.serverNow) - Date.parse(examSession.startedAt)) / 1000
+      );
+      const remainingSec = durationSec - elapsedSec;
+      startSession(durationSec, { remainingSec });
+
+      if (remainingSec <= 0) {
+        // Resumed an abandoned attempt after its countdown already ran out. The time
+        // limit is not a hard server cutoff, and an abandoned attempt must not be burned
+        // by an auto-submit the student never saw: let them answer and submit manually.
+        timeoutSubmitRef.current = true;
+        setTimeExpiredOnLoad(true);
+      }
+    }
+
     setResult(null);
     setSubmissionError('');
-    timeoutSubmitRef.current = false;
     return () => resetSession();
-  }, [questions.length, startSession, resetSession]);
+  }, [questions.length, isLessonQuiz, examSession, startSession, resetSession]);
 
   useEffect(() => {
     if (!isRunning || result) return;
@@ -191,18 +275,37 @@ export default function QuizSessionPage() {
   }, [durationSec, timeLeftSec, questions.length, result]);
 
   const startRetry = () => {
-    startSession(durationSec || getDurationByQuestions(questions.length));
+    if (!isLessonQuiz) {
+      // Opens the next attempt server-side; the new session resets the timer and result.
+      if (courseId) applyStartResult(startCourseExamAsync(courseId));
+      return;
+    }
+    startSession(durationSec || getDurationByQuestions(questions.length, true));
     setResult(null);
     setSubmissionError('');
     timeoutSubmitRef.current = false;
   };
 
-  const isLoading = lessonQuery.isLoading || examQuery.isLoading;
+  const isStartingExam = !isLessonQuiz && !examSession && !startError;
+  const isLoading = lessonQuery.isLoading || isStartingExam;
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
         <p className="text-zinc-400">Cargando evaluación...</p>
+      </div>
+    );
+  }
+
+  if (!isLessonQuiz && !examSession && startError) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
+        <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#111118] p-8 text-center">
+          <p className="text-zinc-300 mb-2">{startError}</p>
+          <Link to={`/courses/${courseId}`} className="text-indigo-400 hover:text-indigo-300 text-sm">
+            Volver al curso
+          </Link>
+        </div>
       </div>
     );
   }
@@ -276,9 +379,10 @@ export default function QuizSessionPage() {
               {canRetry && (
                 <button
                   onClick={startRetry}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 transition"
+                  disabled={startCourseExam.isPending}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50 transition"
                 >
-                  Reintentar evaluación
+                  {startCourseExam.isPending ? 'Iniciando...' : 'Reintentar evaluación'}
                 </button>
               )}
               <Link
@@ -294,9 +398,21 @@ export default function QuizSessionPage() {
                 {progressFeedback}
               </p>
             )}
+
+            {startError && (
+              <p className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                {startError}
+              </p>
+            )}
           </div>
         ) : (
           <>
+            {timeExpiredOnLoad && (
+              <p className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">
+                El tiempo sugerido para este intento ya terminó. Aún puedes responder y enviar tus respuestas.
+              </p>
+            )}
+
             <div className="space-y-4">
               {questions.map((question, index) => (
                 <QuestionCard
