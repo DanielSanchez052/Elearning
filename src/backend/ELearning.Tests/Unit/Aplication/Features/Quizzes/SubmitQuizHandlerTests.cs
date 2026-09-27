@@ -1,4 +1,5 @@
 using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Features.Gamification.Services;
 using ELearning.Application.Features.Quizzes.Commands;
 using ELearning.Application.Features.Quizzes.DTOs;
 using ELearning.Domain.Entities;
@@ -15,11 +16,13 @@ public class SubmitQuizHandlerTests
     private readonly Mock<ILessonRepository> _lessonsMock = new();
     private readonly Mock<ICourseRepository> _coursesMock = new();
     private readonly Mock<IQuizRepository> _quizzesMock = new();
+    private readonly Mock<IBadgeAwardService> _badgesMock = new();
     private readonly SubmitQuizHandler _handler;
 
     public SubmitQuizHandlerTests() =>
         _handler = new SubmitQuizHandler(
-            _enrollmentsMock.Object, _lessonsMock.Object, _coursesMock.Object, _quizzesMock.Object);
+            _enrollmentsMock.Object, _lessonsMock.Object, _coursesMock.Object, _quizzesMock.Object,
+            _badgesMock.Object);
 
     // ── Fixture helpers ──────────────────────────────────────────────────────
 
@@ -983,5 +986,146 @@ public class SubmitQuizHandlerTests
 
         Assert.True(result.IsSuccess);
         Assert.False(result.Value.CourseCompleted);
+    }
+
+    // ── 17. Badge awarding (best-effort, after save) ─────────────────────────
+    // Rule logic (Speedster thresholds, CourseDone scoping) is covered by the
+    // Gamification tests; these only verify the handler calls the service.
+
+    [Fact]
+    public async Task HandleAsync_CourseExam_Passed_CallsBothBadgeHooksWithEnrollmentAndCreatedResult()
+    {
+        var userId = Guid.NewGuid();
+        var session = ExamSession.Start(userId, Guid.Empty, 1);
+        var (course, enrollment, correct, _, createdResult) = SetupCourseExamSubmission(userId, session);
+
+        var result = await _handler.HandleAsync(
+            new SubmitQuizCommand(userId, null, course.Id, [correct.Id]));
+
+        Assert.True(result.IsSuccess);
+        _badgesMock.Verify(b => b.OnCourseCompletedAsync(enrollment, default), Times.Once);
+        _badgesMock.Verify(b => b.OnCourseExamPassedAsync(createdResult()!, default), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_CourseExam_Passed_BadgeHooksRunAfterSaveChanges()
+    {
+        var userId = Guid.NewGuid();
+        var (course, _, correct, _, _) = SetupCourseExamSubmission(userId, openSession: null);
+        var calls = new List<string>();
+        _quizzesMock.Setup(r => r.SaveChangesAsync(default)).Callback(() => calls.Add("save")).Returns(Task.CompletedTask);
+        _badgesMock
+            .Setup(b => b.OnCourseCompletedAsync(It.IsAny<CourseEnrollment>(), default))
+            .Callback(() => calls.Add("courseCompleted"))
+            .ReturnsAsync([]);
+        _badgesMock
+            .Setup(b => b.OnCourseExamPassedAsync(It.IsAny<UserQuizResult>(), default))
+            .Callback(() => calls.Add("examPassed"))
+            .ReturnsAsync([]);
+
+        await _handler.HandleAsync(new SubmitQuizCommand(userId, null, course.Id, [correct.Id]));
+
+        Assert.Equal(["save", "courseCompleted", "examPassed"], calls);
+    }
+
+    [Fact]
+    public async Task HandleAsync_CourseExam_Failed_CallsNoBadgeHook()
+    {
+        var userId = Guid.NewGuid();
+        var (course, _, _, incorrect, _) = SetupCourseExamSubmission(userId, openSession: null);
+
+        var result = await _handler.HandleAsync(
+            new SubmitQuizCommand(userId, null, course.Id, [incorrect.Id]));
+
+        Assert.True(result.IsSuccess);
+        VerifyNoBadgeHookCalled();
+    }
+
+    [Fact]
+    public async Task HandleAsync_LessonQuiz_Passed_CallsNoBadgeHook()
+    {
+        var userId = Guid.NewGuid();
+        var (course, enrollment) = CreateActiveEnrollment(userId);
+        var lesson = Lesson.Create(course.Id, "Lección", LessonType.Video, "v.mp4", 1, isRequired: false);
+        course.Lessons.Add(lesson);
+        var (question, correct, _) = BuildLessonQuestion(lesson.Id);
+
+        _lessonsMock.Setup(r => r.GetByIdAsync(lesson.Id, default)).ReturnsAsync(lesson);
+        _enrollmentsMock
+            .Setup(r => r.GetByUserAndCourseAsync(userId, course.Id, default))
+            .ReturnsAsync(enrollment);
+        _quizzesMock
+            .Setup(r => r.GetQuestionsByLessonAsync(lesson.Id, default))
+            .ReturnsAsync([question]);
+        _quizzesMock
+            .Setup(r => r.GetLatestLessonResultAsync(userId, lesson.Id, default))
+            .ReturnsAsync((UserQuizResult?)null);
+        SetupOptionLookup(correct);
+
+        var result = await _handler.HandleAsync(
+            new SubmitQuizCommand(userId, lesson.Id, null, [correct.Id]));
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value.IsPassed);
+        VerifyNoBadgeHookCalled();
+    }
+
+    [Fact]
+    public async Task HandleAsync_CourseExam_RejectedSubmission_CallsNoBadgeHook()
+    {
+        var userId = Guid.NewGuid();
+        var staleSession = ExamSession.Start(userId, Guid.Empty, 2);
+        var (course, _, correct, _, _) = SetupCourseExamSubmission(userId, staleSession);
+
+        var result = await _handler.HandleAsync(
+            new SubmitQuizCommand(userId, null, course.Id, [correct.Id]));
+
+        Assert.Equal(ResultErrorType.Conflict, result.ErrorType);
+        VerifyNoBadgeHookCalled();
+    }
+
+    [Fact]
+    public async Task HandleAsync_CourseExam_BadgeServiceThrows_SubmissionStillSucceedsAndIsSaved()
+    {
+        var userId = Guid.NewGuid();
+        var (course, _, correct, _, _) = SetupCourseExamSubmission(userId, openSession: null);
+        _badgesMock
+            .Setup(b => b.OnCourseCompletedAsync(It.IsAny<CourseEnrollment>(), default))
+            .ThrowsAsync(new InvalidOperationException("badge store down"));
+        _badgesMock
+            .Setup(b => b.OnCourseExamPassedAsync(It.IsAny<UserQuizResult>(), default))
+            .ThrowsAsync(new InvalidOperationException("badge store down"));
+
+        var result = await _handler.HandleAsync(
+            new SubmitQuizCommand(userId, null, course.Id, [correct.Id]));
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value.IsPassed);
+        Assert.Equal(100m, result.Value.Score);
+        Assert.True(result.Value.CourseCompleted);
+        _quizzesMock.Verify(r => r.SaveChangesAsync(default), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_CourseExam_CourseCompletedHookThrows_ExamPassedHookStillRuns()
+    {
+        var userId = Guid.NewGuid();
+        var (course, _, correct, _, _) = SetupCourseExamSubmission(userId, openSession: null);
+        _badgesMock
+            .Setup(b => b.OnCourseCompletedAsync(It.IsAny<CourseEnrollment>(), default))
+            .ThrowsAsync(new InvalidOperationException("badge store down"));
+
+        var result = await _handler.HandleAsync(
+            new SubmitQuizCommand(userId, null, course.Id, [correct.Id]));
+
+        Assert.True(result.IsSuccess);
+        _badgesMock.Verify(b => b.OnCourseExamPassedAsync(It.IsAny<UserQuizResult>(), default), Times.Once);
+    }
+
+    private void VerifyNoBadgeHookCalled()
+    {
+        _badgesMock.Verify(b => b.OnCourseCompletedAsync(It.IsAny<CourseEnrollment>(), It.IsAny<CancellationToken>()), Times.Never);
+        _badgesMock.Verify(b => b.OnCourseExamPassedAsync(It.IsAny<UserQuizResult>(), It.IsAny<CancellationToken>()), Times.Never);
+        _badgesMock.Verify(b => b.OnUserLoggedInAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Enrollments.Commands;
 using ELearning.Application.Features.Enrollments.DTOs;
+using ELearning.Application.Features.Gamification.Services;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
@@ -13,10 +14,11 @@ public class MarkLessonCompleteHandlerTests
 {
     private readonly Mock<IEnrollmentRepository> _enrollmentsMock = new();
     private readonly Mock<IQuizRepository> _quizzesMock = new();
+    private readonly Mock<IBadgeAwardService> _badgesMock = new();
     private readonly MarkLessonCompleteHandler _handler;
 
     public MarkLessonCompleteHandlerTests() =>
-        _handler = new MarkLessonCompleteHandler(_enrollmentsMock.Object, _quizzesMock.Object);
+        _handler = new MarkLessonCompleteHandler(_enrollmentsMock.Object, _quizzesMock.Object, _badgesMock.Object);
 
     private static (CourseEnrollment enrollment, Lesson lesson) CreateEnrollmentWithLesson(
         Guid userId,
@@ -51,6 +53,7 @@ public class MarkLessonCompleteHandlerTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
+        VerifyCourseCompletedHookNeverCalled();
     }
 
     [Fact]
@@ -75,6 +78,7 @@ public class MarkLessonCompleteHandlerTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Conflict, result.ErrorType);
+        VerifyCourseCompletedHookNeverCalled();
     }
 
     [Fact]
@@ -97,6 +101,7 @@ public class MarkLessonCompleteHandlerTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
+        VerifyCourseCompletedHookNeverCalled();
     }
 
     [Fact]
@@ -152,6 +157,7 @@ public class MarkLessonCompleteHandlerTests
         Assert.Equal(1, value.TotalRequiredLessons);
         Assert.False(value.CourseCompleted); // Because exam exists
         _enrollmentsMock.Verify(r => r.SaveChangesAsync(default), Times.Once);
+        VerifyCourseCompletedHookNeverCalled();
     }
 
     [Fact]
@@ -182,4 +188,63 @@ public class MarkLessonCompleteHandlerTests
         Assert.True(value.CourseCompleted); // Because it was last required and no exam
         _enrollmentsMock.Verify(r => r.SaveChangesAsync(default), Times.Once);
     }
+
+    // ── Badge awarding (best-effort, after save) ─────────────────────────────
+
+    private CourseEnrollment SetupLastRequiredLessonNoExam(out Lesson lesson)
+    {
+        var (enrollment, onlyLesson) = CreateEnrollmentWithLesson(Guid.NewGuid(), Guid.NewGuid(), true, lessonAlreadyCompleted: false);
+        lesson = onlyLesson;
+
+        _quizzesMock
+            .Setup(r => r.GetQuestionsByCourseAsync(enrollment.CourseId, default))
+            .ReturnsAsync(Array.Empty<QuizQuestion>());
+        _enrollmentsMock
+            .Setup(r => r.GetByUserAndCourseAsync(enrollment.UserId, enrollment.CourseId, default))
+            .ReturnsAsync(enrollment);
+        _enrollmentsMock
+            .Setup(r => r.GetProgressAsync(enrollment.Id, onlyLesson.Id, default))
+            .ReturnsAsync(enrollment.LessonProgress.First());
+
+        return enrollment;
+    }
+
+    [Fact]
+    public async Task HandleAsync_CourseCompleted_CallsCourseCompletedHookOnceAfterSaving()
+    {
+        var enrollment = SetupLastRequiredLessonNoExam(out var lesson);
+        var calls = new List<string>();
+        _enrollmentsMock.Setup(r => r.SaveChangesAsync(default)).Callback(() => calls.Add("save")).Returns(Task.CompletedTask);
+        _badgesMock
+            .Setup(b => b.OnCourseCompletedAsync(enrollment, default))
+            .Callback(() => calls.Add("badge"))
+            .ReturnsAsync([]);
+
+        var result = await _handler.HandleAsync(new MarkLessonCompleteCommand(enrollment.UserId, enrollment.CourseId, lesson.Id));
+
+        Assert.True(result.Value.CourseCompleted);
+        _badgesMock.Verify(b => b.OnCourseCompletedAsync(enrollment, default), Times.Once);
+        Assert.Equal(["save", "badge"], calls);
+    }
+
+    [Fact]
+    public async Task HandleAsync_CourseCompleted_BadgeServiceThrows_StillReturnsSuccessAndCourseCompleted()
+    {
+        var enrollment = SetupLastRequiredLessonNoExam(out var lesson);
+        _badgesMock
+            .Setup(b => b.OnCourseCompletedAsync(It.IsAny<CourseEnrollment>(), default))
+            .ThrowsAsync(new InvalidOperationException("badge store down"));
+
+        var result = await _handler.HandleAsync(new MarkLessonCompleteCommand(enrollment.UserId, enrollment.CourseId, lesson.Id));
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value.CourseCompleted);
+        Assert.True(enrollment.IsCompleted);
+        _enrollmentsMock.Verify(r => r.SaveChangesAsync(default), Times.Once);
+    }
+
+    private void VerifyCourseCompletedHookNeverCalled() =>
+        _badgesMock.Verify(
+            b => b.OnCourseCompletedAsync(It.IsAny<CourseEnrollment>(), It.IsAny<CancellationToken>()),
+            Times.Never);
 }

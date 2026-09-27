@@ -4,11 +4,11 @@ using ELearning.Domain.Entities;
 namespace ELearning.Application.Features.Gamification.Services;
 
 /// <summary>
-/// Called AFTER the triggering handler's own SaveChangesAsync. Awarding is
-/// best-effort and must never fail the user's actual action (login, lesson
-/// completion, quiz submission) — the caller is expected to invoke these
-/// methods defensively (e.g. wrapped in try/catch) once Integration wires
-/// them into LoginHandler / MarkLessonCompleteHandler / SubmitQuizHandler.
+/// Called AFTER the triggering handler's own SaveChangesAsync (LoginHandler,
+/// MarkLessonCompleteHandler, SubmitQuizHandler). Awarding is best-effort and
+/// must never fail the user's actual action: implementations log failures and
+/// return an empty list, and callers still wrap each call in try/catch as a
+/// second guard (also covering cancellation, which is allowed to propagate).
 /// </summary>
 public interface IBadgeAwardService
 {

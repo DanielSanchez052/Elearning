@@ -3,6 +3,7 @@ using ELearning.Application.Features.Gamification.Services;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace ELearning.Tests.Unit.Aplication.Features.Gamification;
@@ -10,6 +11,7 @@ namespace ELearning.Tests.Unit.Aplication.Features.Gamification;
 public class BadgeAwardServiceTests
 {
     private readonly Mock<IBadgeRepository> _badgesMock = new();
+    private readonly Mock<ILogger<BadgeAwardService>> _loggerMock = new();
     private readonly BadgeAwardService _service;
 
     public BadgeAwardServiceTests() =>
@@ -17,9 +19,51 @@ public class BadgeAwardServiceTests
             _badgesMock.Object,
             new ILoginBadgeRule[] { new FirstLoginRule() },
             new ICourseCompletionBadgeRule[] { new CourseCompletedRule() },
-            new IExamPassedBadgeRule[] { new SpeedsterRule() });
+            new IExamPassedBadgeRule[] { new SpeedsterRule() },
+            _loggerMock.Object);
 
     private static User BuildUser() => User.Create("Test", "test@test.com", "hash", countryId: 1);
+
+    // ── Best-effort contract ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task AnyHook_RepositoryThrows_ReturnsEmptyAndLogsErrorInsteadOfThrowing()
+    {
+        _badgesMock
+            .Setup(r => r.GetByCodeAsync(It.IsAny<BadgeCode>(), default))
+            .ThrowsAsync(new InvalidOperationException("db down"));
+
+        var result = await _service.OnUserLoggedInAsync(BuildUser());
+
+        Assert.Empty(result);
+        _loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<InvalidOperationException>(),
+                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AnyHook_Cancelled_PropagatesCancellationWithoutLoggingAnError()
+    {
+        _badgesMock
+            .Setup(r => r.GetByCodeAsync(It.IsAny<BadgeCode>(), default))
+            .ThrowsAsync(new OperationCanceledException());
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _service.OnUserLoggedInAsync(BuildUser()));
+
+        _loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+            Times.Never);
+    }
 
     // ── OnUserLoggedInAsync ──────────────────────────────────────────────────
 

@@ -1,5 +1,6 @@
 using ELearning.Application.Features.Quizzes.DTOs;
 using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Features.Gamification.Services;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Interfaces.Repositories;
 
@@ -18,17 +19,20 @@ public sealed class SubmitQuizHandler : ICommandHandler<SubmitQuizCommand, QuizR
     private readonly ILessonRepository _lessons;
     private readonly ICourseRepository _courses;
     private readonly IQuizRepository _quizzes;
+    private readonly IBadgeAwardService _badges;
 
     public SubmitQuizHandler(
         IEnrollmentRepository enrollments,
         ILessonRepository lessons,
         ICourseRepository courses,
-        IQuizRepository quizzes)
+        IQuizRepository quizzes,
+        IBadgeAwardService badges)
     {
         _enrollments = enrollments;
         _lessons = lessons;
         _courses = courses;
         _quizzes = quizzes;
+        _badges = badges;
     }
 
     public async Task<Result<QuizResultDto>> HandleAsync(SubmitQuizCommand cmd, CancellationToken ct = default)
@@ -221,6 +225,15 @@ public sealed class SubmitQuizHandler : ICommandHandler<SubmitQuizCommand, QuizR
         await _quizzes.CreateResultAsync(result, ct);
         await _quizzes.SaveChangesAsync(ct);
 
+        // 5b. MEDALLAS (best-effort, después de guardar): un fallo nunca invalida el envío ya guardado.
+        if (courseCompleted)
+            await TryAwardBadgesAsync(() => _badges.OnCourseCompletedAsync(enrollment, ct));
+
+        // Solo el examen final del curso (mismo criterio que la sesión de examen): recibe la entidad,
+        // que es la que lleva CourseId, AttemptNumber y Duration.
+        if (lessonContext is null && isPassed)
+            await TryAwardBadgesAsync(() => _badges.OnCourseExamPassedAsync(result, ct));
+
         // 6. CREAR DTO DE RESPUESTA
         var resultDto = new QuizResultDto(
             Score: score,
@@ -238,5 +251,22 @@ public sealed class SubmitQuizHandler : ICommandHandler<SubmitQuizCommand, QuizR
         );
 
         return resultDto;
+    }
+
+    /// <summary>
+    /// Each badge hook is guarded on its own, so one failing never skips the other
+    /// and neither can turn a saved submission into a failed request.
+    /// IBadgeAwardService logs its own failures.
+    /// </summary>
+    private static async Task TryAwardBadgesAsync(Func<Task> award)
+    {
+        try
+        {
+            await award();
+        }
+        catch (Exception)
+        {
+            // Swallowed on purpose: the student's result is already persisted.
+        }
     }
 }
