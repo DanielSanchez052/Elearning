@@ -4,7 +4,7 @@ export interface UserBadgeDto {
   id: string;
   code: string;
   name: string;
-  description: string;
+  description: string | null;
   obtainedAt: string;
   /** Set for course-scoped badges (CourseDone, Speedster); null for LoginFirst. */
   courseId: string | null;
