@@ -102,10 +102,12 @@ public class MarkLessonCompleteHandler : ICommandHandler<MarkLessonCompleteComma
             {
                 await _badges.OnCourseCompletedAsync(enrollment, ct);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {
                 // IBadgeAwardService logs its own failures; this only guards the lesson result.
-                // Real cancellation is allowed to propagate, per IBadgeAwardService's contract.
+                // Only real client cancellation (ct itself cancelled) propagates; a stray
+                // OperationCanceledException from elsewhere is swallowed like any other
+                // failure, matching LoginHandler's filter shape.
             }
         }
 

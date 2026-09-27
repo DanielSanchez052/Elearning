@@ -14,6 +14,8 @@ public sealed record LoginCommand(
 
 public sealed class LoginHandler : ICommandHandler<LoginCommand, LoginResponseDto>
 {
+    private static readonly TimeSpan LoginBadgeTimeout = TimeSpan.FromSeconds(2);
+
     private readonly IUserRepository _users;
     private readonly IPasswordHasherService _hasher;
     private readonly IJwtService _jwt;
@@ -65,7 +67,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, LoginResponseDt
         // Bounded so a slow badge store can't add unbounded latency to every login.
         try
         {
-            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            using var timeoutCts = new CancellationTokenSource(LoginBadgeTimeout);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
             await _badges.OnUserLoggedInAsync(user, linkedCts.Token);
         }
