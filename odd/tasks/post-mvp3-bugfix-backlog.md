@@ -44,7 +44,7 @@ Route: delegated writer (each touches backend handler + repository/controller + 
 
 ### Group 3 — frontend fixes (medium complexity)
 - [x] **T10** (R3-002) `QuizSessionPage.tsx:300-311` — on a "ya aprobaste"/"sin intentos" error from `exam/start`, fall back to showing the existing exam-results view instead of a bare error message.
-- [ ] **T11** (smoke-test bug) `useBadges.ts` — invalidate `badgeKeys.mine()` after lesson-completion and quiz-submission mutations succeed, so a freshly-earned badge doesn't wait out the 60s `staleTime`.
+- [x] **T11** (smoke-test bug) `useBadges.ts` — invalidate `badgeKeys.mine()` after lesson-completion and quiz-submission mutations succeed, so a freshly-earned badge doesn't wait out the 60s `staleTime`.
 
 Route: delegated writer (frontend, no test runner — characterize via `tsc -b --noEmit` + eslint + manual check).
 
@@ -417,3 +417,42 @@ new lint errors. Manually traced the JSX logic: `attempts` is computed before
 the early-return blocks (line ~110-112) so it's available in scope; the new
 branch only activates for the course-exam path (`!isLessonQuiz`) with no
 active session and a start error, exactly mirroring the original guard.
+
+### T11 (smoke-test bug) — done
+Confirmed the bug: `useBadges.ts`'s `useMyBadges` query has `staleTime: 1000 *
+60` and `badgeKeys.mine()` was never invalidated by anything — badges are
+only ever awarded server-side as a side effect of login, lesson completion,
+or quiz/exam submission, and none of those three mutation hooks touched the
+badges cache. A badge earned by finishing a lesson or passing a quiz/exam
+seconds earlier could still read stale (pre-award) data on the Profile page
+for up to 60s.
+
+Fix: added `queryClient.invalidateQueries({ queryKey: badgeKeys.mine() })` to
+the existing `onSuccess` callbacks of:
+- `useMarkLessonComplete` in `useEnrollments.ts` (alongside its existing
+  `enrollmentKeys.mine()` / `enrollmentKeys.progress()` /
+  `quizzesKeys.courseExam()` / `quizzesKeys.lesson()` invalidations),
+- `useSubmitLessonQuiz` in `quizzes.ts` (alongside `quizzesKeys.lesson()` /
+  `quizzesKeys.results.lesson()`),
+- `useSubmitCourseExam` in `quizzes.ts` (alongside `quizzesKeys.courseExam()`
+  / `quizzesKeys.results.courseExam()`).
+
+Login is deliberately not touched — it's not a TanStack Query mutation with a
+query-invalidation hook in this codebase, so there's nothing to add the
+badges invalidation to there; a post-login badge award is picked up by the
+existing `staleTime`/refetch behavior like any other query. No other mutation
+in the app was touched, matching the task's scope (badges are only earned via
+these three paths).
+
+Both `useBadges.ts` and the two edited files already used `@/...` absolute
+imports for their other imports, so `badgeKeys` is imported the same way
+(`import { badgeKeys } from '@/hooks/useBadges'`) in both `useEnrollments.ts`
+and `quizzes.ts`.
+
+Characterization (no frontend test runner in this repo): `npx tsc -b
+--noEmit` from `src/frontend/elearning-web` — clean, no errors. `npx eslint
+src/hooks/useEnrollments.ts src/hooks/quizzes.ts src/hooks/useBadges.ts` —
+clean, no errors or warnings on any of the three files. Manually verified no
+import cycle: `useBadges.ts` imports only `@tanstack/react-query` and
+`@/api/badges`, so `useEnrollments.ts`/`quizzes.ts` importing from it doesn't
+loop back.
