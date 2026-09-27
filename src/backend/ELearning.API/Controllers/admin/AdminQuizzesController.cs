@@ -50,6 +50,9 @@ public class AdminQuizzesController(
     [HttpPost("questions")]
     public async Task<IActionResult> CreateQuestion([FromBody] CreateQuizQuestionRequest request, CancellationToken ct)
     {
+        if (request is null)
+            return this.ToActionResult(Result.ValidationFailure<Guid>("El cuerpo de la solicitud es requerido"));
+
         var cmd = new CreateQuizQuestionCommand(
             request.LessonId,
             request.CourseId,

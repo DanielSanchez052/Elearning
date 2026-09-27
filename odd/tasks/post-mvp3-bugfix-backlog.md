@@ -38,7 +38,7 @@ Route: direct inline (4 single-file, already-understood edits) or one bundled wr
 - [x] **T6** (R-int-003) `LoginCommand.cs:64-72` — wrap the `OnUserLoggedInAsync` call with a linked `CancellationTokenSource` timeout (~2s) so a slow badge store can't add unbounded latency to login. New test: badge call exceeding the timeout doesn't fail login and doesn't block past the bound.
 - [x] **T7** (R3-003) `StartCourseExamCommand.cs:83-107` + `QuizRepository.TryAddExamSessionAsync` — distinguish which unique index a `23505` violation hit (inspect Postgres constraint name) so a stale-attempt-index collision doesn't return `Conflict` forever; re-derive the next attempt number and retry once instead. Unit-testable by mocking the constraint name.
 - [x] **T8** (smoke-test bug) `CreateQuizQuestionCommand.cs:40-43,63-66` — `cmd.LessonId == Guid.Empty` doesn't catch `null`; fix to return a proper 400 validation error instead of throwing → 500.
-- [ ] **T9** (smoke-test bug) `AdminQuizzesController.CreateQuestion` / `QuizzesController.SubmitCourseExam` — investigate the unbound-request-body → `NullReferenceException` → 500 path (root cause not investigated yet) and add proper model-binding validation.
+- [x] **T9** (smoke-test bug) `AdminQuizzesController.CreateQuestion` / `QuizzesController.SubmitCourseExam` — investigate the unbound-request-body → `NullReferenceException` → 500 path (root cause not investigated yet) and add proper model-binding validation.
 
 Route: delegated writer (each touches backend handler + repository/controller + tests — 2+ non-trivial files per task).
 
@@ -59,8 +59,19 @@ Route: delegated writer (new component + wiring existing hooks + AppHeader — 2
 - [ ] **R4-003** — `LoginHandlerTests.cs`: the timeout is hardcoded (not injectable via `TimeProvider`/options), so the new timeout test spends ~2s of real wall-clock time per run and the bound can't be tuned without a code change.
 - [ ] **R3-timeout-bound-unproved** — `LoginHandlerTests.cs:191-211`: `HandleAsync_BadgeServiceTimesOut_LoginStillSucceeds` doesn't actually prove the 2s bound — the fake badge call would return the same result whether or not the timeout exists, since the test never asserts elapsed time or that the passed token was cancelled. Would need `TimeProvider` injection (ties into R4-003) or an elapsed-time assertion to be a real RED→GREEN proof.
 - [ ] **R3-log-assert-weakened** — `BadgeAwardServiceTests.cs`: the shared `VerifyErrorLogged` helper matches `It.IsAny<Exception>()`, slightly weaker than the old test's exact `InvalidOperationException` match. Low priority (the tests still assert the log fires the right number of times).
-- [ ] **R2-001** — this doc, `Progress` section: was out of date when Gentle AI reviewed the Group-1+T5 candidate (T1-T4/T6 were unchecked with no notes even though they were in the same diff). Fixed as part of this same correction pass.
+- [x] **R2-001** — this doc, `Progress` section: was out of date when Gentle AI reviewed the Group-1+T5 candidate (T1-T4/T6 were unchecked with no notes even though they were in the same diff). Fixed as part of this same correction pass.
 - [ ] **R2-003** — `BadgeAwardServiceTests.cs` (T5's new partial-failure test): picks which of the 2 fake proposals' `PublishAsync` throws by matching the notification title text against `BuildNotificationCopy`'s wording, coupling the test to copy text that isn't shown in the test itself. Picking by `referenceId` or call order would be clearer and copy-change-proof.
+
+## Follow-ups (non-blocking, from Gentle AI review of Group 1 + T5 + T7 + T8, approved)
+Two findings were fixed immediately in this same correction pass (see Progress below):
+attempt-limit bypass on the T7 retry, and the `BadgeAwardService` per-proposal publish
+filter being inconsistent with the other 3 cancellation-filter call sites. Remaining 9:
+- [ ] **R4-exam-conflict-unobservable** — `StartCourseExamCommand.cs:109-115`: neither the retry-collision branch nor the still-colliding-after-retry branch logs anything, so support has no server-side record (user/course/colliding attempt number) to investigate the underlying data inconsistency when a student hits the `Conflict`.
+- [ ] **R4-constraint-drift-silent-fallback** — `QuizRepository.cs:186-193`: the constraint-name `switch` only matches the two hardcoded index-name strings; any other name (e.g. after a future migration renames the attempt index) silently falls back to `OpenSessionRace`, quietly reintroducing the exact permanent-lockout bug T7 just fixed, with no log signal that the fallback fired.
+- [ ] **R3-constraint-mapping-untested** — `QuizRepository.cs:187-194`: no automated test proves the constraint-name → enum mapping itself (handler tests mock the enum directly). A small pure-function test (extract the mapping logic) would close this without needing real Postgres.
+- [ ] **R4-login-timeout-silent** / **R4-001** (same issue, already tracked above) — reaffirmed by this review.
+- [ ] **R4-timeout-drops-notification** / **R4-002** (same issue, already tracked above) — reaffirmed; this review adds that it's specifically reachable now that `BadgeAwardService`'s per-proposal catch was tightened (see fix note below), since a timeout mid-batch can still trip between one proposal's insert and the trailing save.
+- [ ] **R3-login-timeout-bound-unproved** / already tracked above as **R3-timeout-bound-unproved** — reaffirmed.
 
 ## Deferred (not in this pass)
 - **R3-001** — exam-session concurrency guard has no automated test; needs a new integration-test project against real Postgres. Own follow-up when that infra is decided.
@@ -144,7 +155,7 @@ mutation. Fixed by adding the same `|| !ct.IsCancellationRequested` guard to bot
 fixed **R2-002** (readability): the 2s login timeout is now a named
 `LoginBadgeTimeout` constant instead of an inline magic number.
 
-Remaining 8 findings recorded as follow-ups below (not fixed now — none are
+Remaining 7 findings recorded as follow-ups below (not fixed now — none are
 blocking and several need a bigger change than this correction pass warrants).
 
 ### T7 (R3-003) — done
@@ -261,3 +272,70 @@ Correctas! - Con error:     0, Superado:     7, Omitido:     0, Total:     7, Du
 Full suite: **640/640** (638 pre-existing + 2 new tests, 0 regressions). Not fixed:
 the validator's deeper gap (accepting a mismatched FK for the declared `Type`) —
 out of scope for this specific finding, left as-is.
+
+### T9 (smoke-test bug) — done
+Root cause investigated and confirmed (previously unknown). `ELearning.API.csproj`
+does have `<Nullable>enable</Nullable>` and both controllers have `[ApiController]`,
+so the framework's implicit-required-for-non-nullable-`[FromBody]`-parameters
+behavior exists in principle — but `Program.cs` explicitly disables the mechanism
+that would ever act on it:
+```csharp
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
+});
+```
+This flag turns off `[ApiController]`'s automatic "ModelState invalid → 400"
+short-circuit *app-wide* (it was set deliberately so this codebase's manual
+`Result`/`ToActionResult` validation pattern, e.g. `Result.ValidationFailure`,
+is the only thing that produces 400s — not System.Text.Json/ModelState). One
+side effect nobody had traced: when `[FromBody]` binding produces a `null`
+`request` (literal JSON `null`, an empty body, or non-UTF-8 bytes that make
+`System.Text.Json` throw and get recorded as a ModelState error instead of
+short-circuiting), the action method still executes with `request == null`,
+and both handlers dereference a property on `request` in their first lines
+(`request.LessonId` / `request.SelectedOptionIds`) — an unhandled
+`NullReferenceException`, which `ExceptionHandlingMiddleware`'s exception-type
+switch has no case for, so it falls through to the generic 500.
+
+Verified with a live repro, not just reasoning from docs: ran the API via
+`dotnet run --project ELearning.API --launch-profile http` (`elearning-backend`
+launch config) against the real dev Postgres, logged in as `student@elearning.com`
+/ `admin@elearning.com` (`Admin123*`, from `ELearning.API.http`), then hit both
+endpoints with `curl`:
+- `POST /api/quizzes/courses/{id}/exam/submit` with non-UTF-8 bytes
+  (`--data-binary` of raw `\xFF\xFE\x00\x01...`), literal `null`, and an empty
+  body — all three: real `500`, log shows
+  `System.NullReferenceException ... at QuizzesController.SubmitCourseExam(...)
+  line 76` (the `request.SelectedOptionIds` line).
+- `POST /api/admin/quizzes/questions` with literal `null` — same real `500`.
+
+Fix (framework-idiomatic given the constraint that `SuppressModelStateInvalidFilter`
+can't be relied on and is staying — it's load-bearing for the rest of the app's
+validation pattern): an explicit `if (request is null) return
+this.ToActionResult(Result.ValidationFailure<T>("El cuerpo de la solicitud es
+requerido"));` at the top of each action, matching this codebase's existing
+`Result` → `ToActionResult` → `BadRequest` shape (same `{ error: "..." }` body
+other validation failures already return) instead of inventing a new response
+shape or a global exception-handling change.
+
+Re-verified live after the fix, same three requests: all now return real `400`
+`{"error":"El cuerpo de la solicitud es requerido"}` instead of `500`. A
+sanity-check well-formed body to `CreateQuestion` still reaches the handler
+and returns its normal validation result (`FK: Debe proporcionar LessonId o
+CourseId`), confirming the null-guard doesn't shadow real requests.
+
+No controller-level test infrastructure exists in this codebase (`ELearning.Tests`
+has no `WebApplicationFactory`/`TestServer`/direct-controller-instantiation
+tests anywhere — same gap `mvp3-badges.md` A4 already noted: "no controller test
+project; route smoke-checked"). Did not force new test-infrastructure into this
+one small fix; verified via the live repro above instead (before/after, both
+against a real running server and real Postgres).
+
+Full suite: **640/640**, 0 regressions (no handler/unit-level code changed —
+the fix is controller-only, so the existing test count is unaffected).
+
+Not fixed (out of scope for T9, flagged separately): `QuizzesController.SubmitLessonQuiz`
+(`POST /api/quizzes/lessons/{id}/submit`) has the identical `request.SelectedOptionIds`
+dereference and the same null-body 500 risk, but it wasn't named in this task's
+scope.

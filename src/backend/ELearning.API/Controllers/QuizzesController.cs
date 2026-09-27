@@ -72,6 +72,9 @@ public class QuizzesController(
     [HttpPost("courses/{courseId:guid}/exam/submit")]
     public async Task<IActionResult> SubmitCourseExam(Guid courseId, [FromBody] SubmitQuizRequest request, CancellationToken ct)
     {
+        if (request is null)
+            return this.ToActionResult(Result.ValidationFailure<QuizResultDto>("El cuerpo de la solicitud es requerido"));
+
         var userId = User.GetUserId();
         var cmd = new SubmitQuizCommand(userId, null, courseId, request.SelectedOptionIds);
         var result = await submitQuizHandler.HandleAsync(cmd, ct);
