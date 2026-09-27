@@ -1,6 +1,8 @@
 using ELearning.Application.Features.Gamification.DTOs;
 using ELearning.Application.Features.Gamification.Rules;
+using ELearning.Application.Features.Notifications.Services;
 using ELearning.Domain.Entities;
+using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
 
@@ -12,6 +14,7 @@ public sealed class BadgeAwardService : IBadgeAwardService
     private readonly IReadOnlyList<ILoginBadgeRule> _loginRules;
     private readonly IReadOnlyList<ICourseCompletionBadgeRule> _courseCompletionRules;
     private readonly IReadOnlyList<IExamPassedBadgeRule> _examPassedRules;
+    private readonly INotificationPublisher _notifications;
     private readonly ILogger<BadgeAwardService> _logger;
 
     public BadgeAwardService(
@@ -19,12 +22,14 @@ public sealed class BadgeAwardService : IBadgeAwardService
         IEnumerable<ILoginBadgeRule> loginRules,
         IEnumerable<ICourseCompletionBadgeRule> courseCompletionRules,
         IEnumerable<IExamPassedBadgeRule> examPassedRules,
+        INotificationPublisher notifications,
         ILogger<BadgeAwardService> logger)
     {
         _badges = badges;
         _loginRules = loginRules.ToList();
         _courseCompletionRules = courseCompletionRules.ToList();
         _examPassedRules = examPassedRules.ToList();
+        _notifications = notifications;
         _logger = logger;
     }
 
@@ -87,9 +92,39 @@ public sealed class BadgeAwardService : IBadgeAwardService
             if (!inserted)
                 continue; // race safety net: someone else awarded it first
 
+            // Only a badge that was really inserted gets a notification, so losing
+            // the insert race never produces a duplicate "badge earned" message.
+            var (title, message) = BuildNotificationCopy(badge);
+            await _notifications.PublishAsync(
+                userId, NotificationType.BadgeEarned, title, message, referenceId: userBadge.Id, ct);
+
             awarded.Add(new AwardedBadgeDto(badge.Id, badge.Code, badge.Name, proposal.CourseId, userBadge.ObtainedAt));
         }
 
+        // TryAddAsync already committed each UserBadge (it must save to catch the
+        // unique-index race), so the staged notifications need this separate save.
+        if (awarded.Count > 0)
+            await _badges.SaveChangesAsync(ct);
+
         return awarded;
+    }
+
+    /// <summary>In-app notification copy (Spanish) for a newly earned badge.</summary>
+    public static (string Title, string Message) BuildNotificationCopy(Badge badge)
+    {
+        var title = $"¡Medalla obtenida: {badge.Name}!";
+
+        var message = badge.Code switch
+        {
+            nameof(BadgeCode.LoginFirst) =>
+                "Iniciaste sesión en la plataforma por primera vez. ¡Te damos la bienvenida!",
+            nameof(BadgeCode.CourseDone) =>
+                "Completaste un curso. ¡Sigue así! Puedes ver tus medallas en tu perfil.",
+            nameof(BadgeCode.Speedster) =>
+                $"¡Eres un Velocista! Aprobaste el examen final en menos de {SpeedsterRule.Threshold.TotalMinutes:0} minutos, en tu primer intento.",
+            _ => badge.Description ?? "Obtuviste una nueva medalla. Puedes verla en tu perfil."
+        };
+
+        return (title, message);
     }
 }

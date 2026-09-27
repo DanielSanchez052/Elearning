@@ -1,5 +1,6 @@
 using ELearning.Application.Features.Gamification.Rules;
 using ELearning.Application.Features.Gamification.Services;
+using ELearning.Application.Features.Notifications.Services;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
@@ -11,6 +12,7 @@ namespace ELearning.Tests.Unit.Aplication.Features.Gamification;
 public class BadgeAwardServiceTests
 {
     private readonly Mock<IBadgeRepository> _badgesMock = new();
+    private readonly Mock<INotificationPublisher> _publisherMock = new();
     private readonly Mock<ILogger<BadgeAwardService>> _loggerMock = new();
     private readonly BadgeAwardService _service;
 
@@ -20,9 +22,97 @@ public class BadgeAwardServiceTests
             new ILoginBadgeRule[] { new FirstLoginRule() },
             new ICourseCompletionBadgeRule[] { new CourseCompletedRule() },
             new IExamPassedBadgeRule[] { new SpeedsterRule() },
+            _publisherMock.Object,
             _loggerMock.Object);
 
     private static User BuildUser() => User.Create("Test", "test@test.com", "hash", countryId: 1);
+
+    // ── Badge-earned notification ────────────────────────────────────────────
+
+    [Fact]
+    public async Task NewAward_PublishesBadgeEarnedNotificationForTheNewUserBadge_ThenSavesOnce()
+    {
+        var user = BuildUser();
+        var badge = GamificationTestHelpers.BuildBadge(1, BadgeCode.LoginFirst, "Primer Inicio de Sesión");
+        UserBadge? inserted = null;
+        var calls = new List<string>();
+
+        _badgesMock.Setup(r => r.GetByCodeAsync(BadgeCode.LoginFirst, default)).ReturnsAsync(badge);
+        _badgesMock.Setup(r => r.HasBadgeAsync(user.Id, badge.Id, null, default)).ReturnsAsync(false);
+        _badgesMock
+            .Setup(r => r.TryAddAsync(It.IsAny<UserBadge>(), default))
+            .Callback((UserBadge ub, CancellationToken _) => inserted = ub)
+            .ReturnsAsync(true);
+        _publisherMock
+            .Setup(p => p.PublishAsync(It.IsAny<Guid>(), It.IsAny<NotificationType>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<Guid?>(), default))
+            .Callback(() => calls.Add("publish"))
+            .Returns(Task.CompletedTask);
+        _badgesMock.Setup(r => r.SaveChangesAsync(default)).Callback(() => calls.Add("save")).Returns(Task.CompletedTask);
+
+        await _service.OnUserLoggedInAsync(user);
+
+        Assert.NotNull(inserted);
+        _publisherMock.Verify(p => p.PublishAsync(
+            user.Id,
+            NotificationType.BadgeEarned,
+            It.Is<string>(t => t.Contains("Primer Inicio de Sesión")),
+            It.Is<string>(m => !string.IsNullOrWhiteSpace(m)),
+            inserted!.Id,
+            default), Times.Once);
+        Assert.Equal(["publish", "save"], calls);
+    }
+
+    [Fact]
+    public async Task AlreadyOwned_PublishesNothingAndDoesNotSave()
+    {
+        var user = BuildUser();
+        var badge = GamificationTestHelpers.BuildBadge(1, BadgeCode.LoginFirst);
+
+        _badgesMock.Setup(r => r.GetByCodeAsync(BadgeCode.LoginFirst, default)).ReturnsAsync(badge);
+        _badgesMock.Setup(r => r.HasBadgeAsync(user.Id, badge.Id, null, default)).ReturnsAsync(true);
+
+        await _service.OnUserLoggedInAsync(user);
+
+        VerifyNothingPublishedOrSaved();
+    }
+
+    [Fact]
+    public async Task LostInsertRace_PublishesNothingAndDoesNotSave()
+    {
+        var user = BuildUser();
+        var badge = GamificationTestHelpers.BuildBadge(1, BadgeCode.LoginFirst);
+
+        _badgesMock.Setup(r => r.GetByCodeAsync(BadgeCode.LoginFirst, default)).ReturnsAsync(badge);
+        _badgesMock.Setup(r => r.HasBadgeAsync(user.Id, badge.Id, null, default)).ReturnsAsync(false);
+        _badgesMock.Setup(r => r.TryAddAsync(It.IsAny<UserBadge>(), default)).ReturnsAsync(false);
+
+        await _service.OnUserLoggedInAsync(user);
+
+        VerifyNothingPublishedOrSaved();
+    }
+
+    [Theory]
+    [InlineData(BadgeCode.LoginFirst, "Primer Inicio de Sesión")]
+    [InlineData(BadgeCode.CourseDone, "Curso Completado")]
+    [InlineData(BadgeCode.Speedster, "Velocista")]
+    public void BuildNotificationCopy_EveryBadge_HasSpanishTitleWithNameAndAMessage(BadgeCode code, string name)
+    {
+        var badge = GamificationTestHelpers.BuildBadge(1, code, name);
+
+        var (title, message) = BadgeAwardService.BuildNotificationCopy(badge);
+
+        Assert.Contains(name, title);
+        Assert.True(title.Length <= 150, "notifications.title is varchar(150)");
+        Assert.False(string.IsNullOrWhiteSpace(message));
+    }
+
+    private void VerifyNothingPublishedOrSaved()
+    {
+        _publisherMock.Verify(p => p.PublishAsync(It.IsAny<Guid>(), It.IsAny<NotificationType>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()), Times.Never);
+        _badgesMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
 
     // ── Best-effort contract ─────────────────────────────────────────────────
 
