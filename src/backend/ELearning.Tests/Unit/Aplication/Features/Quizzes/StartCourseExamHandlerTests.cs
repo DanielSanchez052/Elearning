@@ -270,6 +270,23 @@ public class StartCourseExamHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_ResumedSession_ReturnsServerNowSoClientCanComputeElapsedTime()
+    {
+        var userId = Guid.NewGuid();
+        var (course, _) = SetupEligibleStudent(userId);
+        var openSession = ExamSession.Start(userId, course.Id, 1);
+        Helpers.SetPrivate(openSession, nameof(ExamSession.StartedAt), DateTime.UtcNow.AddMinutes(-4));
+        UseInMemorySessionStore(openSession);
+        var before = DateTime.UtcNow;
+
+        var result = await _handler.HandleAsync(new StartCourseExamCommand(userId, course.Id));
+
+        Assert.True(result.IsSuccess);
+        Assert.InRange(result.Value.ServerNow, before, DateTime.UtcNow);
+        Assert.InRange(result.Value.ServerNow - result.Value.StartedAt, TimeSpan.FromMinutes(4), TimeSpan.FromMinutes(4.1));
+    }
+
+    [Fact]
     public async Task HandleAsync_ReturnsStudentSafeQuestionsWithOrderedOptions()
     {
         var userId = Guid.NewGuid();

@@ -111,6 +111,7 @@ public sealed class StartCourseExamHandler : ICommandHandler<StartCourseExamComm
             SessionId: session.Id,
             AttemptNumber: session.AttemptNumber,
             StartedAt: session.StartedAt,
+            ServerNow: DateTime.UtcNow,
             Questions: MapQuestions(questions)));
     }
 

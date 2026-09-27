@@ -31,6 +31,16 @@ export function useCourseExam(courseId: string, enabled = true) {
   });
 }
 
+// A mutation, not a query: starting an attempt must only happen on explicit user
+// intent (opening the exam page or retrying), never on refetch/focus/invalidation,
+// otherwise a finished attempt could silently open the next attempt's clock.
+export function useStartCourseExam() {
+  return useMutation({
+    mutationFn: (courseId: string) =>
+      quizzesApi.startCourseExam(courseId).then((r) => r.data),
+  });
+}
+
 export function useSubmitLessonQuiz() {
   const queryClient = useQueryClient();
 

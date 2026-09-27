@@ -77,6 +77,15 @@ export interface QuizResultDto {
   maxAttempts: number;
   feedback: string;
   completedAt: string;
+  courseCompleted?: boolean;
+}
+
+export interface StartCourseExamResult {
+  sessionId: string;
+  attemptNumber: number;
+  startedAt: string;
+  serverNow: string;
+  questions: QuizQuestion[];
 }
 
 export interface QuizAttemptDto {
