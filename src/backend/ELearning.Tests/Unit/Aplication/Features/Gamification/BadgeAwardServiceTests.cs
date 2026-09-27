@@ -114,10 +114,38 @@ public class BadgeAwardServiceTests
         _badgesMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    // ── Best-effort contract ─────────────────────────────────────────────────
+    // ── Best-effort contract (all 3 triggers: login, course completion, exam) ──
+
+    private static CourseEnrollment BuildEnrollment() =>
+        CourseEnrollment.Create(Guid.NewGuid(), Guid.NewGuid());
+
+    private static UserQuizResult BuildPassedExamResult()
+    {
+        var startedAt = new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc);
+        var result = UserQuizResult.Create(
+            userId: Guid.NewGuid(),
+            lessonId: null,
+            courseId: Guid.NewGuid(),
+            attemptNumber: 1,
+            score: 100m,
+            passScore: 70m,
+            startedAt: startedAt);
+        GamificationTestHelpers.SetPrivate(result, nameof(UserQuizResult.CompletedAt), startedAt + TimeSpan.FromMinutes(5));
+        return result;
+    }
+
+    private void VerifyErrorLogged(Times times) =>
+        _loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+            times);
 
     [Fact]
-    public async Task AnyHook_RepositoryThrows_ReturnsEmptyAndLogsErrorInsteadOfThrowing()
+    public async Task OnUserLoggedInAsync_RepositoryThrows_ReturnsEmptyAndLogsErrorInsteadOfThrowing()
     {
         _badgesMock
             .Setup(r => r.GetByCodeAsync(It.IsAny<BadgeCode>(), default))
@@ -126,18 +154,11 @@ public class BadgeAwardServiceTests
         var result = await _service.OnUserLoggedInAsync(BuildUser());
 
         Assert.Empty(result);
-        _loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<InvalidOperationException>(),
-                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
-            Times.Once);
+        VerifyErrorLogged(Times.Once());
     }
 
     [Fact]
-    public async Task AnyHook_Cancelled_PropagatesCancellationWithoutLoggingAnError()
+    public async Task OnUserLoggedInAsync_Cancelled_PropagatesCancellationWithoutLoggingAnError()
     {
         _badgesMock
             .Setup(r => r.GetByCodeAsync(It.IsAny<BadgeCode>(), default))
@@ -145,14 +166,57 @@ public class BadgeAwardServiceTests
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => _service.OnUserLoggedInAsync(BuildUser()));
 
-        _loggerMock.Verify(
-            l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
-            Times.Never);
+        VerifyErrorLogged(Times.Never());
+    }
+
+    [Fact]
+    public async Task OnCourseCompletedAsync_RepositoryThrows_ReturnsEmptyAndLogsErrorInsteadOfThrowing()
+    {
+        _badgesMock
+            .Setup(r => r.GetByCodeAsync(It.IsAny<BadgeCode>(), default))
+            .ThrowsAsync(new InvalidOperationException("db down"));
+
+        var result = await _service.OnCourseCompletedAsync(BuildEnrollment());
+
+        Assert.Empty(result);
+        VerifyErrorLogged(Times.Once());
+    }
+
+    [Fact]
+    public async Task OnCourseCompletedAsync_Cancelled_PropagatesCancellationWithoutLoggingAnError()
+    {
+        _badgesMock
+            .Setup(r => r.GetByCodeAsync(It.IsAny<BadgeCode>(), default))
+            .ThrowsAsync(new OperationCanceledException());
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _service.OnCourseCompletedAsync(BuildEnrollment()));
+
+        VerifyErrorLogged(Times.Never());
+    }
+
+    [Fact]
+    public async Task OnCourseExamPassedAsync_RepositoryThrows_ReturnsEmptyAndLogsErrorInsteadOfThrowing()
+    {
+        _badgesMock
+            .Setup(r => r.GetByCodeAsync(It.IsAny<BadgeCode>(), default))
+            .ThrowsAsync(new InvalidOperationException("db down"));
+
+        var result = await _service.OnCourseExamPassedAsync(BuildPassedExamResult());
+
+        Assert.Empty(result);
+        VerifyErrorLogged(Times.Once());
+    }
+
+    [Fact]
+    public async Task OnCourseExamPassedAsync_Cancelled_PropagatesCancellationWithoutLoggingAnError()
+    {
+        _badgesMock
+            .Setup(r => r.GetByCodeAsync(It.IsAny<BadgeCode>(), default))
+            .ThrowsAsync(new OperationCanceledException());
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _service.OnCourseExamPassedAsync(BuildPassedExamResult()));
+
+        VerifyErrorLogged(Times.Never());
     }
 
     // ── OnUserLoggedInAsync ──────────────────────────────────────────────────
