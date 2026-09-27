@@ -1,6 +1,8 @@
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Common.Decorators;
 using ELearning.Application.Common.Validators;
+using ELearning.Application.Features.Gamification.Rules;
+using ELearning.Application.Features.Gamification.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ELearning.Application.DependencyInjection;
@@ -14,8 +16,23 @@ public static class DependencyInjectionExtensions
         RegisterCommandHandlers(services, assembly);
         RegisterQueryHandlers(services, assembly);
         RegisterValidators(services, assembly);
+        AddGamification(services);
 
         return services;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // GAMIFICATION (badges)
+    // ─────────────────────────────────────────────────────────────────────────
+    // Not covered by the reflection scans above (those only register
+    // ICommandHandler/IQueryHandler/IValidator implementations), so the badge
+    // award service and its rules need explicit registration.
+
+    private static void AddGamification(IServiceCollection services)
+    {
+        services.AddScoped<IBadgeAwardService, BadgeAwardService>();
+        services.AddScoped<ILoginBadgeRule, FirstLoginRule>();
+        services.AddScoped<ICourseCompletionBadgeRule, CourseCompletedRule>();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
