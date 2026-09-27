@@ -1,6 +1,7 @@
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Common.Decorators;
 using ELearning.Application.Common.Validators;
+using ELearning.Application.Features.Notifications.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ELearning.Application.DependencyInjection;
@@ -14,8 +15,18 @@ public static class DependencyInjectionExtensions
         RegisterCommandHandlers(services, assembly);
         RegisterQueryHandlers(services, assembly);
         RegisterValidators(services, assembly);
+        RegisterServices(services);
 
         return services;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SERVICES (registro explícito — no cubierto por el escaneo de handlers/validators)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static void RegisterServices(IServiceCollection services)
+    {
+        services.AddScoped<INotificationPublisher, NotificationPublisher>();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
