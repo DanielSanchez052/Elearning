@@ -1,4 +1,5 @@
 using ELearning.Domain.Entities;
+using ELearning.Domain.Enums;
 
 namespace ELearning.Domain.Interfaces.Repositories;
 
@@ -73,9 +74,12 @@ public interface IQuizRepository
 
     /// <summary>
     /// Persistir una nueva sesión de examen (guarda cambios inmediatamente).
-    /// Devuelve false si otra solicitud abrió una sesión en paralelo (violación de índice único).
+    /// Si una violación de índice único (23505) rechaza el insert, indica cuál de los dos índices
+    /// de <c>exam_sessions</c> fue: <see cref="ExamSessionInsertResult.OpenSessionRace"/> (otra
+    /// solicitud abrió la sesión en paralelo) o <see cref="ExamSessionInsertResult.AttemptNumberCollision"/>
+    /// (ya existe una sesión para ese número de intento).
     /// </summary>
-    Task<bool> TryAddExamSessionAsync(ExamSession session, CancellationToken ct = default);
+    Task<ExamSessionInsertResult> TryAddExamSessionAsync(ExamSession session, CancellationToken ct = default);
 
     // ── Persistence ────────────────────────────────────────────────────────────
 

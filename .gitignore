@@ -1,3 +1,6 @@
+# CodeGraph local index
+.codegraph/
+
 # .NET
 bin/
 obj/

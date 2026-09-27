@@ -37,7 +37,7 @@ public sealed class CreateQuizQuestionHandler : ICommandHandler<CreateQuizQuesti
 
         if (quizType == QuizType.PerLesson)
         {
-            if (cmd.LessonId == Guid.Empty)
+            if (cmd.LessonId is null || cmd.LessonId == Guid.Empty)
                 return Result.ValidationFailure<Guid>("LessonId es requerido para quizzes por lección");
 
             var lesson = await _lessons.GetByIdAsync(cmd.LessonId.Value, ct);
@@ -60,7 +60,7 @@ public sealed class CreateQuizQuestionHandler : ICommandHandler<CreateQuizQuesti
         }
         else if (quizType == QuizType.CourseExam)
         {
-            if (cmd.CourseId == Guid.Empty)
+            if (cmd.CourseId is null || cmd.CourseId == Guid.Empty)
                 return Result.ValidationFailure<Guid>("CourseId es requerido para exámenes de curso");
 
             var course = await _courses.GetByIdAsync(cmd.CourseId.Value, ct);

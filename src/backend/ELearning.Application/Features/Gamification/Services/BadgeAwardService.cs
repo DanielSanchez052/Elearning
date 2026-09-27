@@ -92,13 +92,29 @@ public sealed class BadgeAwardService : IBadgeAwardService
             if (!inserted)
                 continue; // race safety net: someone else awarded it first
 
-            // Only a badge that was really inserted gets a notification, so losing
-            // the insert race never produces a duplicate "badge earned" message.
-            var (title, message) = BuildNotificationCopy(badge);
-            await _notifications.PublishAsync(
-                userId, NotificationType.BadgeEarned, title, message, referenceId: userBadge.Id, ct);
-
+            // The insert already succeeded (and was saved by TryAddAsync's own
+            // internal save), so the badge counts as awarded regardless of what
+            // happens next — a failure publishing its notification must not
+            // lose it, and must not stop the remaining proposals in this batch
+            // from being evaluated.
             awarded.Add(new AwardedBadgeDto(badge.Id, badge.Code, badge.Name, proposal.CourseId, userBadge.ObtainedAt));
+
+            try
+            {
+                // Only a badge that was really inserted gets a notification, so
+                // losing the insert race never produces a duplicate "badge
+                // earned" message.
+                var (title, message) = BuildNotificationCopy(badge);
+                await _notifications.PublishAsync(
+                    userId, NotificationType.BadgeEarned, title, message, referenceId: userBadge.Id, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogError(ex,
+                    "Failed to publish badge-earned notification for user {UserId}, badge {BadgeCode}; " +
+                    "the badge itself was still awarded.",
+                    userId, badge.Code);
+            }
         }
 
         // TryAddAsync already committed each UserBadge (it must save to catch the

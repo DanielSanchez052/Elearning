@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { enrollmentsApi } from '@/api/enrollments';
 import { quizzesKeys } from '@/hooks/quizzes';
+import { badgeKeys } from '@/hooks/useBadges';
 
 export const enrollmentKeys = {
   all: ['enrollments'] as const,
@@ -57,6 +58,7 @@ export function useMarkLessonComplete() {
       queryClient.invalidateQueries({
         queryKey: quizzesKeys.lesson(payload.lessonId),
       });
+      queryClient.invalidateQueries({ queryKey: badgeKeys.mine() });
     },
   });
 }

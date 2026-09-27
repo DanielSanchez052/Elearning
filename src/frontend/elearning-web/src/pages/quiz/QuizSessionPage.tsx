@@ -298,13 +298,63 @@ export default function QuizSessionPage() {
   }
 
   if (!isLessonQuiz && !examSession && startError) {
+    // A course-exam start can fail because the student genuinely can't start a new
+    // attempt (already passed, or ran out of attempts) rather than because of a real
+    // error. When there's at least one past attempt to show, fall back to the
+    // read-only exam-results view instead of a dead-end bare error message. A real
+    // network/server error with no prior attempts still gets the bare-error fallback.
+    if (attempts.length === 0) {
+      return (
+        <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
+          <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#111118] p-8 text-center">
+            <p className="text-zinc-300 mb-2">{startError}</p>
+            <Link to={`/courses/${courseId}`} className="text-indigo-400 hover:text-indigo-300 text-sm">
+              Volver al curso
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
-        <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#111118] p-8 text-center">
-          <p className="text-zinc-300 mb-2">{startError}</p>
-          <Link to={`/courses/${courseId}`} className="text-indigo-400 hover:text-indigo-300 text-sm">
-            Volver al curso
-          </Link>
+        <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#111118] p-8">
+          <p className="text-zinc-300 mb-4 text-center">{startError}</p>
+          <h2 className="text-sm font-semibold text-zinc-400 mb-3">Intentos anteriores</h2>
+          <div className="space-y-2">
+            {[...attempts]
+              .sort((a, b) => b.attemptNumber - a.attemptNumber)
+              .map((attempt) => (
+                <div
+                  key={attempt.attemptNumber}
+                  className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm text-white">Intento {attempt.attemptNumber}</p>
+                    <p className="text-xs text-zinc-500">
+                      {new Date(attempt.completedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className={`text-sm font-semibold ${
+                        attempt.isPassed ? 'text-emerald-300' : 'text-red-300'
+                      }`}
+                    >
+                      {Number(attempt.score).toFixed(1)}%
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      {attempt.isPassed ? 'Aprobado' : 'No aprobado'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+          </div>
+          <div className="mt-6 text-center">
+            <Link to={`/courses/${courseId}`} className="text-indigo-400 hover:text-indigo-300 text-sm">
+              Volver al curso
+            </Link>
+          </div>
         </div>
       </div>
     );

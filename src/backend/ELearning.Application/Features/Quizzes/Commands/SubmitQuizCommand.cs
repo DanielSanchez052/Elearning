@@ -227,12 +227,12 @@ public sealed class SubmitQuizHandler : ICommandHandler<SubmitQuizCommand, QuizR
 
         // 5b. MEDALLAS (best-effort, después de guardar): un fallo nunca invalida el envío ya guardado.
         if (courseCompleted)
-            await TryAwardBadgesAsync(() => _badges.OnCourseCompletedAsync(enrollment, ct));
+            await TryAwardBadgesAsync(() => _badges.OnCourseCompletedAsync(enrollment, ct), ct);
 
         // Solo el examen final del curso (mismo criterio que la sesión de examen): recibe la entidad,
         // que es la que lleva CourseId, AttemptNumber y Duration.
         if (lessonContext is null && isPassed)
-            await TryAwardBadgesAsync(() => _badges.OnCourseExamPassedAsync(result, ct));
+            await TryAwardBadgesAsync(() => _badges.OnCourseExamPassedAsync(result, ct), ct);
 
         // 6. CREAR DTO DE RESPUESTA
         var resultDto = new QuizResultDto(
@@ -258,15 +258,18 @@ public sealed class SubmitQuizHandler : ICommandHandler<SubmitQuizCommand, QuizR
     /// and neither can turn a saved submission into a failed request.
     /// IBadgeAwardService logs its own failures.
     /// </summary>
-    private static async Task TryAwardBadgesAsync(Func<Task> award)
+    private static async Task TryAwardBadgesAsync(Func<Task> award, CancellationToken ct)
     {
         try
         {
             await award();
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             // Swallowed on purpose: the student's result is already persisted.
+            // Only real client cancellation (ct itself cancelled) propagates; a stray
+            // OperationCanceledException from elsewhere is swallowed like any other
+            // failure, matching LoginHandler's filter shape.
         }
     }
 }
