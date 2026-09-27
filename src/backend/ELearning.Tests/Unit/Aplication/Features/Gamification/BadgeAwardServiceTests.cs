@@ -219,6 +219,60 @@ public class BadgeAwardServiceTests
         VerifyErrorLogged(Times.Never());
     }
 
+    // ── Multi-proposal batch isolation (R-int-002) ──────────────────────────
+    //
+    // The real login/course-completion/exam rule sets each register exactly
+    // one rule per trigger and never propose more than 1 badge at a time, so
+    // no genuine single-trigger call in this codebase currently yields 2+
+    // proposals. These two fake ILoginBadgeRule doubles let one
+    // OnUserLoggedInAsync call evaluate 2 proposals in the same batch, which
+    // is the only way to exercise AwardAsync's per-proposal isolation.
+
+    private sealed class FakeLoginRule(BadgeCode code) : ILoginBadgeRule
+    {
+        public IReadOnlyList<BadgeAwardProposal> Evaluate(User user) => [new BadgeAwardProposal(code)];
+    }
+
+    [Fact]
+    public async Task OnUserLoggedInAsync_TwoProposals_OneNotificationFails_OtherStillAwardedAndSaved()
+    {
+        var user = BuildUser();
+        var badgeA = GamificationTestHelpers.BuildBadge(1, BadgeCode.LoginFirst, "Primer Inicio de Sesión");
+        var badgeB = GamificationTestHelpers.BuildBadge(2, BadgeCode.CourseDone, "Curso Completado");
+
+        var service = new BadgeAwardService(
+            _badgesMock.Object,
+            new ILoginBadgeRule[] { new FakeLoginRule(BadgeCode.LoginFirst), new FakeLoginRule(BadgeCode.CourseDone) },
+            new ICourseCompletionBadgeRule[] { new CourseCompletedRule() },
+            new IExamPassedBadgeRule[] { new SpeedsterRule() },
+            _publisherMock.Object,
+            _loggerMock.Object);
+
+        _badgesMock.Setup(r => r.GetByCodeAsync(BadgeCode.LoginFirst, default)).ReturnsAsync(badgeA);
+        _badgesMock.Setup(r => r.GetByCodeAsync(BadgeCode.CourseDone, default)).ReturnsAsync(badgeB);
+        _badgesMock.Setup(r => r.HasBadgeAsync(user.Id, badgeA.Id, null, default)).ReturnsAsync(false);
+        _badgesMock.Setup(r => r.HasBadgeAsync(user.Id, badgeB.Id, null, default)).ReturnsAsync(false);
+        _badgesMock.Setup(r => r.TryAddAsync(It.IsAny<UserBadge>(), default)).ReturnsAsync(true);
+        _publisherMock
+            .Setup(p => p.PublishAsync(
+                user.Id, NotificationType.BadgeEarned, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid?>(), default))
+            .Callback((Guid _, NotificationType _, string title, string _, Guid? _, CancellationToken _) =>
+            {
+                if (title.Contains("Primer Inicio de Sesión"))
+                    throw new InvalidOperationException("publish failed for badge A");
+            })
+            .Returns(Task.CompletedTask);
+
+        var result = await service.OnUserLoggedInAsync(user);
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, r => r.Code == BadgeCode.LoginFirst.ToString());
+        Assert.Contains(result, r => r.Code == BadgeCode.CourseDone.ToString());
+        _badgesMock.Verify(r => r.TryAddAsync(It.IsAny<UserBadge>(), default), Times.Exactly(2));
+        _badgesMock.Verify(r => r.SaveChangesAsync(default), Times.Once);
+        VerifyErrorLogged(Times.Once());
+    }
+
     // ── OnUserLoggedInAsync ──────────────────────────────────────────────────
 
     [Fact]

@@ -34,7 +34,7 @@ only, matching prior sessions' convention).
 Route: direct inline (4 single-file, already-understood edits) or one bundled writer — whichever keeps this session's context thinnest at execution time.
 
 ### Group 2 — real bugfixes, backend (medium complexity)
-- [ ] **T5** (R-int-002, most impactful) `BadgeAwardService.cs:~90-110` — isolate each proposal's `PublishAsync` in its own try/catch inside the award loop (log+continue instead of aborting the whole batch), and make sure the final `SaveChangesAsync` for staged notifications always runs even if one proposal's publish failed for another badge. New tests: partial-failure mid-batch still awards+saves the other proposals.
+- [x] **T5** (R-int-002, most impactful) `BadgeAwardService.cs:~90-110` — isolate each proposal's `PublishAsync` in its own try/catch inside the award loop (log+continue instead of aborting the whole batch), and make sure the final `SaveChangesAsync` for staged notifications always runs even if one proposal's publish failed for another badge. New tests: partial-failure mid-batch still awards+saves the other proposals.
 - [ ] **T6** (R-int-003) `LoginCommand.cs:64-72` — wrap the `OnUserLoggedInAsync` call with a linked `CancellationTokenSource` timeout (~2s) so a slow badge store can't add unbounded latency to login. New test: badge call exceeding the timeout doesn't fail login and doesn't block past the bound.
 - [ ] **T7** (R3-003) `StartCourseExamCommand.cs:83-107` + `QuizRepository.TryAddExamSessionAsync` — distinguish which unique index a `23505` violation hit (inspect Postgres constraint name) so a stale-attempt-index collision doesn't return `Conflict` forever; re-derive the next attempt number and retry once instead. Unit-testable by mocking the constraint name.
 - [ ] **T8** (smoke-test bug) `CreateQuizQuestionCommand.cs:40-43,63-66` — `cmd.LessonId == Guid.Empty` doesn't catch `null`; fix to return a proper 400 validation error instead of throwing → 500.
@@ -61,4 +61,43 @@ Route: delegated writer (new component + wiring existing hooks + AppHeader — 2
 Branch: `fix/post-mvp3-bugfix-backlog` from `main`.
 
 ## Progress
-(filled in as tasks complete)
+
+### T5 (R-int-002) — done
+Confirmed the bug: inside `AwardAsync`'s `foreach` loop, `PublishAsync` had no
+try/catch, so a notification failure on proposal N unwound past the loop into
+`AwardBestEffortAsync`'s outer catch, which logs and returns an empty list —
+losing the count of proposals 1..N-1 that were already inserted, skipping
+proposals N+1..end entirely for that trigger, and never reaching the final
+`SaveChangesAsync`. Fix: record `awarded.Add(...)` right after `TryAddAsync`
+succeeds (so the badge counts as awarded regardless of what happens next),
+then wrap only the `PublishAsync` call in its own try/catch (log+continue,
+same `ex is not OperationCanceledException` filter as the outer wrapper) so
+one proposal's notification failure can't lose earlier awards, skip later
+proposals, or block the trailing `SaveChangesAsync`.
+
+Since every real rule (`FirstLoginRule`, `CourseCompletedRule`,
+`SpeedsterRule`) is the sole registered rule for its trigger and each proposes
+at most 1 badge, no genuine single-trigger call in this codebase currently
+produces 2+ proposals in one batch. The new test therefore uses two local
+fake `ILoginBadgeRule` doubles constructed directly in the test (not real
+product rules) so one `OnUserLoggedInAsync` call evaluates 2 proposals in the
+same `AwardAsync` batch — the only way to exercise the isolation honestly.
+
+RED (bug present):
+```
+Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   0
+Con error! - Con error:     1, Superado:     0, Omitido:     0, Total:     1
+```
+
+GREEN (fix applied, filtered to the test class):
+```
+Correctas! - Con error:     0, Superado:    22, Omitido:     0, Total:    22, Duración: 215 ms - ELearning.Tests.dll (net10.0)
+```
+
+Full suite after the fix:
+```
+Correctas! - Con error:     0, Superado:   635, Omitido:     0, Total:   635, Duración: 2 s - ELearning.Tests.dll (net10.0)
+```
+(634 pre-existing + 1 new test, 0 regressions.)
