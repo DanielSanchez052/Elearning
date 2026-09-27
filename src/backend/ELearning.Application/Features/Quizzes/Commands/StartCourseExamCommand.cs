@@ -1,6 +1,7 @@
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Quizzes.DTOs;
 using ELearning.Domain.Entities;
+using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Quizzes.Commands;
@@ -92,14 +93,36 @@ public sealed class StartCourseExamHandler : ICommandHandler<StartCourseExamComm
         if (session is null)
         {
             var newSession = ExamSession.Start(cmd.UserId, cmd.CourseId, attemptNumber);
+            var insertResult = await _quizzes.TryAddExamSessionAsync(newSession, ct);
 
-            if (await _quizzes.TryAddExamSessionAsync(newSession, ct))
+            if (insertResult == ExamSessionInsertResult.AttemptNumberCollision)
+            {
+                // idx_exam_session_user_course_attempt colisionó: ya existe una sesión (probablemente
+                // cerrada, p.ej. por un resultado reseteado/borrado) para el intento calculado, y no hay
+                // sesión abierta que resumir (si la hubiera, GetOpenExamSessionAsync ya la habría devuelto
+                // arriba). Recalcular el intento nunca cambiaría nada aquí (mismo latestResult), así que
+                // se reintenta una sola vez saltando el número de intento que chocó.
+                var retrySession = ExamSession.Start(cmd.UserId, cmd.CourseId, attemptNumber + 1);
+                insertResult = await _quizzes.TryAddExamSessionAsync(retrySession, ct);
+                newSession = retrySession;
+
+                if (insertResult == ExamSessionInsertResult.AttemptNumberCollision)
+                {
+                    // Sigue colisionando tras el único reintento: estado inesperado y no recuperable
+                    // automáticamente (posible inconsistencia de datos más profunda). Documentado como
+                    // el camino no recuperable esperado — Conflict es honesto aquí, no un loop infinito.
+                    return Result.Conflict<StartCourseExamResultDto>(
+                        "No se pudo iniciar el examen por un conflicto inesperado de intentos. Contacta a soporte si el problema persiste.");
+                }
+            }
+
+            if (insertResult == ExamSessionInsertResult.Inserted)
             {
                 session = newSession;
             }
             else
             {
-                // Otra solicitud abrió la sesión al mismo tiempo: devolver esa.
+                // Otra solicitud abrió la sesión al mismo tiempo (idx_exam_session_one_open_per_user_course): devolver esa.
                 session = await _quizzes.GetOpenExamSessionAsync(cmd.UserId, cmd.CourseId, ct);
                 if (session is null)
                     return Result.Conflict<StartCourseExamResultDto>(

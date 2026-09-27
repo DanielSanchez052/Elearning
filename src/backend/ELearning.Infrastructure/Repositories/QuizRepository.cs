@@ -166,20 +166,32 @@ public class QuizRepository : IQuizRepository
             .FirstOrDefaultAsync(s => s.UserId == userId && s.CourseId == courseId && s.SubmittedAt == null, ct);
     }
 
-    public async Task<bool> TryAddExamSessionAsync(ExamSession session, CancellationToken ct = default)
+    // Nombres exactos de los índices únicos de exam_sessions (ExamSessionConfiguration.cs).
+    private const string OpenSessionIndexName = "idx_exam_session_one_open_per_user_course";
+    private const string AttemptNumberIndexName = "idx_exam_session_user_course_attempt";
+
+    public async Task<ExamSessionInsertResult> TryAddExamSessionAsync(ExamSession session, CancellationToken ct = default)
     {
         await _context.ExamSessions.AddAsync(session, ct);
 
         try
         {
             await _context.SaveChangesAsync(ct);
-            return true;
+            return ExamSessionInsertResult.Inserted;
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
-            // Otra solicitud abrió la sesión en paralelo: descartar la entidad para no reintentarla en el próximo SaveChanges.
+            // Descartar la entidad para no reintentarla en el próximo SaveChanges.
             _context.Entry(session).State = EntityState.Detached;
-            return false;
+
+            var constraintName = ((PostgresException)ex.InnerException!).ConstraintName;
+            return constraintName switch
+            {
+                AttemptNumberIndexName => ExamSessionInsertResult.AttemptNumberCollision,
+                // OpenSessionIndexName, o un nombre inesperado (drift de esquema): tratar como la
+                // colisión de sesión abierta, el comportamiento histórico seguro por defecto.
+                _ => ExamSessionInsertResult.OpenSessionRace
+            };
         }
     }
 

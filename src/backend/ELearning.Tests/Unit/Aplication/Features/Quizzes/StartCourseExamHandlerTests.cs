@@ -83,7 +83,7 @@ public class StartCourseExamHandlerTests
         _quizzesMock
             .Setup(r => r.TryAddExamSessionAsync(It.IsAny<ExamSession>(), default))
             .Callback((ExamSession s, CancellationToken _) => stored = s)
-            .ReturnsAsync(true);
+            .ReturnsAsync(ExamSessionInsertResult.Inserted);
         return () => stored;
     }
 
@@ -338,7 +338,7 @@ public class StartCourseExamHandlerTests
             .ReturnsAsync(winner);
         _quizzesMock
             .Setup(r => r.TryAddExamSessionAsync(It.IsAny<ExamSession>(), default))
-            .ReturnsAsync(false);
+            .ReturnsAsync(ExamSessionInsertResult.OpenSessionRace);
 
         var result = await _handler.HandleAsync(new StartCourseExamCommand(userId, course.Id));
 
@@ -357,12 +357,79 @@ public class StartCourseExamHandlerTests
             .ReturnsAsync((ExamSession?)null);
         _quizzesMock
             .Setup(r => r.TryAddExamSessionAsync(It.IsAny<ExamSession>(), default))
-            .ReturnsAsync(false);
+            .ReturnsAsync(ExamSessionInsertResult.OpenSessionRace);
 
         var result = await _handler.HandleAsync(new StartCourseExamCommand(userId, course.Id));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Conflict, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task HandleAsync_AttemptNumberCollision_RetriesOnceWithNextAttemptAndSucceeds()
+    {
+        // Bug case (R3-003): the computed attempt number collides with idx_exam_session_user_course_attempt
+        // (e.g. a closed session already exists for it, with no open session to resume). The handler must
+        // retry once with the next attempt number instead of returning a permanent Conflict.
+        var userId = Guid.NewGuid();
+        var (course, _) = SetupEligibleStudent(userId);
+        _quizzesMock
+            .Setup(r => r.GetOpenExamSessionAsync(userId, course.Id, default))
+            .ReturnsAsync((ExamSession?)null);
+        _quizzesMock
+            .SetupSequence(r => r.TryAddExamSessionAsync(It.IsAny<ExamSession>(), default))
+            .ReturnsAsync(ExamSessionInsertResult.AttemptNumberCollision)
+            .ReturnsAsync(ExamSessionInsertResult.Inserted);
+
+        var result = await _handler.HandleAsync(new StartCourseExamCommand(userId, course.Id));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value.AttemptNumber);
+        _quizzesMock.Verify(r => r.TryAddExamSessionAsync(It.IsAny<ExamSession>(), default), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task HandleAsync_AttemptNumberCollisionPersistsAfterRetry_ReturnsConflict()
+    {
+        // Still colliding after the single retry is a genuinely unexpected state (not auto-recoverable):
+        // returning Conflict here (instead of looping forever) is the correct, honest behavior.
+        var userId = Guid.NewGuid();
+        var (course, _) = SetupEligibleStudent(userId);
+        _quizzesMock
+            .Setup(r => r.GetOpenExamSessionAsync(userId, course.Id, default))
+            .ReturnsAsync((ExamSession?)null);
+        _quizzesMock
+            .Setup(r => r.TryAddExamSessionAsync(It.IsAny<ExamSession>(), default))
+            .ReturnsAsync(ExamSessionInsertResult.AttemptNumberCollision);
+
+        var result = await _handler.HandleAsync(new StartCourseExamCommand(userId, course.Id));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Conflict, result.ErrorType);
+        _quizzesMock.Verify(r => r.TryAddExamSessionAsync(It.IsAny<ExamSession>(), default), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task HandleAsync_AttemptNumberCollisionThenOpenSessionRaceOnRetry_ReturnsResumedSession()
+    {
+        // Edge case: the retry (next attempt number) itself loses a genuine concurrent-open-session
+        // race. The handler should still resolve it the normal way instead of surfacing Conflict.
+        var userId = Guid.NewGuid();
+        var (course, _) = SetupEligibleStudent(userId);
+        var winner = ExamSession.Start(userId, course.Id, 2);
+        _quizzesMock
+            .SetupSequence(r => r.GetOpenExamSessionAsync(userId, course.Id, default))
+            .ReturnsAsync((ExamSession?)null)
+            .ReturnsAsync(winner);
+        _quizzesMock
+            .SetupSequence(r => r.TryAddExamSessionAsync(It.IsAny<ExamSession>(), default))
+            .ReturnsAsync(ExamSessionInsertResult.AttemptNumberCollision)
+            .ReturnsAsync(ExamSessionInsertResult.OpenSessionRace);
+
+        var result = await _handler.HandleAsync(new StartCourseExamCommand(userId, course.Id));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(winner.Id, result.Value.SessionId);
     }
 
     [Fact]

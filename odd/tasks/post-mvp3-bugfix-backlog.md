@@ -36,7 +36,7 @@ Route: direct inline (4 single-file, already-understood edits) or one bundled wr
 ### Group 2 — real bugfixes, backend (medium complexity)
 - [x] **T5** (R-int-002, most impactful) `BadgeAwardService.cs:~90-110` — isolate each proposal's `PublishAsync` in its own try/catch inside the award loop (log+continue instead of aborting the whole batch), and make sure the final `SaveChangesAsync` for staged notifications always runs even if one proposal's publish failed for another badge. New tests: partial-failure mid-batch still awards+saves the other proposals.
 - [x] **T6** (R-int-003) `LoginCommand.cs:64-72` — wrap the `OnUserLoggedInAsync` call with a linked `CancellationTokenSource` timeout (~2s) so a slow badge store can't add unbounded latency to login. New test: badge call exceeding the timeout doesn't fail login and doesn't block past the bound.
-- [ ] **T7** (R3-003) `StartCourseExamCommand.cs:83-107` + `QuizRepository.TryAddExamSessionAsync` — distinguish which unique index a `23505` violation hit (inspect Postgres constraint name) so a stale-attempt-index collision doesn't return `Conflict` forever; re-derive the next attempt number and retry once instead. Unit-testable by mocking the constraint name.
+- [x] **T7** (R3-003) `StartCourseExamCommand.cs:83-107` + `QuizRepository.TryAddExamSessionAsync` — distinguish which unique index a `23505` violation hit (inspect Postgres constraint name) so a stale-attempt-index collision doesn't return `Conflict` forever; re-derive the next attempt number and retry once instead. Unit-testable by mocking the constraint name.
 - [ ] **T8** (smoke-test bug) `CreateQuizQuestionCommand.cs:40-43,63-66` — `cmd.LessonId == Guid.Empty` doesn't catch `null`; fix to return a proper 400 validation error instead of throwing → 500.
 - [ ] **T9** (smoke-test bug) `AdminQuizzesController.CreateQuestion` / `QuizzesController.SubmitCourseExam` — investigate the unbound-request-body → `NullReferenceException` → 500 path (root cause not investigated yet) and add proper model-binding validation.
 
@@ -146,3 +146,90 @@ fixed **R2-002** (readability): the 2s login timeout is now a named
 
 Remaining 8 findings recorded as follow-ups below (not fixed now — none are
 blocking and several need a bigger change than this correction pass warrants).
+
+### T7 (R3-003) — done
+Confirmed the bug: `QuizRepository.TryAddExamSessionAsync` caught `DbUpdateException`
+with `ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation }`
+— matching a `23505` on *either* of the two unique indexes on `exam_sessions`
+(`idx_exam_session_user_course_attempt` and `idx_exam_session_one_open_per_user_course`,
+both defined in `ExamSessionConfiguration.cs`) — and always returned `false`.
+`StartCourseExamHandler.HandleAsync` always treated `false` as "someone else
+opened the session concurrently", re-fetching via `GetOpenExamSessionAsync`.
+That's correct for the open-session index, but wrong for the attempt-number
+index: if a *closed* session already exists at the computed `attemptNumber`
+(e.g. a quiz result was reset/deleted, or the stale-session-close branch closed
+a session at a different attempt than just computed), `GetOpenExamSessionAsync`
+finds nothing (there's no open session — the conflicting row is closed), so the
+handler returned a bare `Result.Conflict(...)`. Since `attemptNumber` is
+deterministic from `latestResult`, every retry recomputes the exact same
+colliding number — a permanent lockout with no self-recovery.
+
+**Fix shape**: changed `IQuizRepository.TryAddExamSessionAsync`'s return type
+from `Task<bool>` to `Task<ExamSessionInsertResult>`, a new 3-value enum
+(`Inserted` / `OpenSessionRace` / `AttemptNumberCollision`) added to
+`ELearning.Domain.Enums`. No existing `Try*Async` method in this codebase
+returns anything richer than `bool` (only other match is
+`BadgeRepository.TryAddAsync`, also plain `bool`), so this is a new pattern
+here — chosen over 2 booleans since the three outcomes are mutually exclusive
+(a proper closed enum reads better than `(bool inserted, bool isAttemptCollision)`
+at call sites). `QuizRepository` now inspects
+`((PostgresException)ex.InnerException).ConstraintName` and matches the two
+exact index names from `ExamSessionConfiguration.cs`
+(`idx_exam_session_user_course_attempt` → `AttemptNumberCollision`; anything
+else, including `idx_exam_session_one_open_per_user_course` or an unrecognized
+name from future schema drift, → `OpenSessionRace`, the historically-safe
+default). `StartCourseExamHandler` now branches: `OpenSessionRace` keeps the
+original re-fetch-and-resume behavior; `AttemptNumberCollision` retries
+**exactly once** with `attemptNumber + 1` (re-querying `latestResult` again
+would return the identical value here, since nothing changed between the two
+calls in the same request — bumping past the colliding number is the only
+approach that can actually progress with the read methods this repository
+exposes); if that single retry also collides, it's treated as a genuinely
+unexpected, non-auto-recoverable state and returns `Result.Conflict(...)`
+(documented in code as the intentional non-looping stop condition, not silently
+swallowed).
+
+**Testing boundary**: the constraint-name-inspection branch inside
+`QuizRepository.TryAddExamSessionAsync` needs a real `PostgresException` thrown
+by a live Postgres unique-index violation to exercise honestly — this codebase
+has no integration-test project against real Postgres (see R3-001, deferred
+above), and constructing a fake `PostgresException` with a `ConstraintName` via
+reflection would test Npgsql's plumbing, not this code's logic. That branch is
+therefore left to manual/desk verification (read the `switch` against the two
+exact index-name strings copied from `ExamSessionConfiguration.cs`), matching
+this codebase's existing testing boundary. All real behavioral coverage for
+this fix lives at the handler level via `IQuizRepository` mocks in
+`StartCourseExamHandlerTests.cs`, which is honest and sufficient here since the
+bug and its fix are entirely about how the handler *reacts* to the repository's
+signal, not about the Postgres exception handling itself.
+
+RED (bug present — attempt-collision case wired through the new enum but the
+handler still collapses it into the old single-branch behavior, to prove the
+handler logic itself is the bug, not just a missing enum value):
+```
+HandleAsync_AttemptNumberCollision_RetriesOnceWithNextAttemptAndSucceeds [FAIL]
+  Assert.True() Failure
+  Expected: True
+  Actual:   False
+
+HandleAsync_AttemptNumberCollisionPersistsAfterRetry_ReturnsConflict [FAIL]
+  Moq.MockException: Expected invocation on the mock exactly 2 times, but was 1 times:
+  r => r.TryAddExamSessionAsync(It.IsAny<ExamSession>(), CancellationToken)
+
+Con error! - Con error:     2, Superado:    18, Omitido:     0, Total:    20, Duración: 284 ms - ELearning.Tests.dll (net10.0)
+```
+(A third new test, the open-session-race-on-retry edge case, passed even under
+the unfixed code — it happens to take the same re-fetch path as the existing
+concurrent-race test, so it's a coincidental pass, not evidence the fix isn't
+needed; the two failures above are the real RED.)
+
+GREEN (fix applied, filtered to the handler test class):
+```
+Correctas! - Con error:     0, Superado:    20, Omitido:     0, Total:    20, Duración: 232 ms - ELearning.Tests.dll (net10.0)
+```
+
+Full suite after the fix:
+```
+Correctas! - Con error:     0, Superado:   638, Omitido:     0, Total:   638, Duración: 2 s - ELearning.Tests.dll (net10.0)
+```
+(635 pre-existing + 3 new tests, 0 regressions.)
