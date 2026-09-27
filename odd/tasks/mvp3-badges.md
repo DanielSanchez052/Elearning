@@ -32,9 +32,9 @@ Gives accurate quiz-duration data; useful even before badges exist (feeds future
 - [ ] B5. Tests: `BadgeAwardServiceTests` (already-owned → no insert/no notify; race via `TryAddAsync=false` → no notify; exception → logged+swallowed), `FirstLoginRuleTests`, `CourseCompletedRuleTests`, `GetMyBadgesHandlerTests`. **Complexity: M.**
 
 ## Track C — Notifications plumbing for badge-earned (small, independent)
-- [ ] C1. `INotificationRepository.AddAsync` + implementation (currently missing — the existing Notifications CRUD never needed to create rows from server-side code before). **Complexity: S.**
-- [ ] C2. `INotificationPublisher` (Application/Features/Notifications/Services) — stages the in-app row now; email/SignalR channels are no-ops/deferred for this slice (see design decision: no email, no toast contract change yet), built as a reusable seam for the other 2 MVP3 notification triggers later. **Complexity: S.**
-- [ ] C3. Tests: `NotificationPublisherTests`. **Complexity: S.**
+- [x] C1. `INotificationRepository.AddAsync` + implementation (currently missing — the existing Notifications CRUD never needed to create rows from server-side code before). **Complexity: S.**
+- [x] C2. `INotificationPublisher` (Application/Features/Notifications/Services) — stages the in-app row now; email/SignalR channels are no-ops/deferred for this slice (see design decision: no email, no toast contract change yet), built as a reusable seam for the other 2 MVP3 notification triggers later. **Complexity: S.**
+- [x] C3. Tests: `NotificationPublisherTests`. **Complexity: S.**
 
 ## Integration — depends on A + B + C all being done
 - [ ] I1. `SpeedsterRule` (needs Track A's `UserQuizResult.Duration` + Track B's rule infra): awards `Speedster` scoped to `CourseId` when `CourseId != null && IsPassed && Duration < 10min && AttemptNumber == 1`.
@@ -50,3 +50,15 @@ Gives accurate quiz-duration data; useful even before badges exist (feeds future
 
 ## Progress
 (filled in as completed)
+
+### Track C — done (2026-09-26)
+- C1 (`d2a1af5`): `INotificationRepository.AddAsync(Notification, CancellationToken)` added + implemented in `NotificationRepository` (stages via `_db.Notifications.AddAsync`, does not save). No dedicated repo test — matches this codebase's existing convention (no repository-level tests anywhere; repos are exercised via handler-test mocks).
+- C2 (`0b6b534`): `INotificationPublisher`/`NotificationPublisher` added under `ELearning.Application/Features/Notifications/Services/`. Registered explicitly in `DependencyInjectionExtensions.AddApplication()` via a new `RegisterServices` step (not covered by the reflection-based handler/validator scan). Signature settled on:
+  ```csharp
+  Task PublishAsync(Guid userId, NotificationType type, string title, string message, Guid? referenceId = null, CancellationToken ct = default);
+  ```
+  Generic enough to serve badge-earned now and the other 2 MVP3 triggers (new course published, pending-course reminder) later with no signature change.
+- C3 (this commit): `NotificationPublisherTests` (3 tests) — verifies `AddAsync` is called with a correctly-populated `Notification` (UserId/Type/Title/Message/ReferenceId), verifies a null `referenceId` round-trips, and **verifies `SaveChangesAsync` is never called** (`Times.Never`) to lock in the caller-saves contract.
+- **Confirmed: `NotificationPublisher` does NOT call `SaveChangesAsync`.** Email and SignalR are explicitly NOT wired — only the in-app row is staged. Integration (a later track) must call `SaveChangesAsync` itself (e.g. as part of `BadgeAwardService`'s existing save) for the notification to persist.
+- Test counts: C1 → 0 new (no repo test convention in this repo), C2 → 0 new (implementation-only commit), C3 → 3 new (`NotificationPublisherTests`).
+- Full backend suite: 544 passed, 0 failed, 0 skipped (541 baseline + 3 new). No regressions.
