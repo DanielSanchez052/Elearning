@@ -91,6 +91,10 @@ export function AdminQuizzesPage() {
       const res = await createQuestion.mutateAsync(data.question);
       const questionId = res.data;
 
+      if (!questionId) {
+        throw new Error('El servidor no devolvió el id de la pregunta creada.');
+      }
+
       for (const option of data.options) {
         await createOption.mutateAsync({
           questionId,

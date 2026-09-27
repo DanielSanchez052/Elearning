@@ -63,3 +63,12 @@ worktree's path — so live verification was done by applying this same diff as
 a temporary patch to the main checkout, testing it there, then reverting that
 temporary patch once confirmed. The commit here is this worktree's own,
 independent of that temporary test copy.
+
+### Gentle AI review (lineage `review-59033fbaedd2b028`) — approved, 1 finding fixed
+Medium tier (1 lens, review-reliability), 3 files, 71 lines. One non-blocking
+WARNING: `questionId` (from `res.data`) was used without a runtime check —
+if the response shape ever regresses again, the same undefined-id 404 would
+silently reappear with no automated test to catch it. Fixed immediately since
+it was cheap: added `if (!questionId) throw new Error(...)` right after
+reading it, so a future regression fails loudly instead of 404ing silently
+per option. `tsc -b --noEmit` clean after the addition.
