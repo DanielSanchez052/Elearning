@@ -75,4 +75,22 @@ public class CreateLessonHandlerTests
         Assert.Equal(4, created.OrderIndex);
         _lessonsMock.Verify(r => r.CreateAsync(It.IsAny<Lesson>(), default), Times.Once);
     }
+
+    [Fact]
+    public async Task HandleAsync_RequiredQuizLesson_ReturnsValidationFailureAndDoesNotCreate()
+    {
+        var ownerId = Guid.NewGuid();
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+
+        _coursesMock
+            .Setup(r => r.GetByIdAsync(course.Id, default))
+            .ReturnsAsync(course);
+
+        var cmd = new CreateLessonCommand(course.Id, "Quiz Capítulo 1", "quiz", null, true, ownerId, "instructor");
+        var result = await _handler.HandleAsync(cmd);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Validation, result.ErrorType);
+        _lessonsMock.Verify(r => r.CreateAsync(It.IsAny<Lesson>(), default), Times.Never);
+    }
 }

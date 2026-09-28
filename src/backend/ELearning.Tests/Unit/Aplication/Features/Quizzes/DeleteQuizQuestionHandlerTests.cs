@@ -41,11 +41,16 @@ public class DeleteQuizQuestionHandlerTests
     [Fact]
     public async Task HandleAsync_ValidQuestion_DeletesAndSaves()
     {
-        var question = QuizQuestion.CreatePerLesson(Guid.NewGuid(), "Pregunta", 60m, 3, 1, true);
+        var lessonId = Guid.NewGuid();
+        var question = QuizQuestion.CreatePerLesson(lessonId, "Pregunta", 60m, 3, 1, true);
+        var otherQuestion = QuizQuestion.CreatePerLesson(lessonId, "Otra pregunta", 60m, 3, 2, true);
 
         _quizzesMock
             .Setup(r => r.GetQuestionByIdAsync(question.Id, default))
             .ReturnsAsync(question);
+        _quizzesMock
+            .Setup(r => r.GetQuestionsByLessonAsync(lessonId, default))
+            .ReturnsAsync(new List<QuizQuestion> { question, otherQuestion });
         _quizzesMock
             .Setup(r => r.DeleteQuestionAsync(question.Id, default))
             .Returns(Task.CompletedTask);
@@ -58,5 +63,47 @@ public class DeleteQuizQuestionHandlerTests
         Assert.True(result.IsSuccess);
         _quizzesMock.Verify(r => r.DeleteQuestionAsync(question.Id, default), Times.Once);
         _quizzesMock.Verify(r => r.SaveChangesAsync(default), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_LastQuestionInLesson_ReturnsValidationFailureAndDoesNotDelete()
+    {
+        var lessonId = Guid.NewGuid();
+        var question = QuizQuestion.CreatePerLesson(lessonId, "Única pregunta", 60m, 3, 1, true);
+
+        _quizzesMock
+            .Setup(r => r.GetQuestionByIdAsync(question.Id, default))
+            .ReturnsAsync(question);
+        _quizzesMock
+            .Setup(r => r.GetQuestionsByLessonAsync(lessonId, default))
+            .ReturnsAsync(new List<QuizQuestion> { question });
+
+        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(question.Id));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Validation, result.ErrorType);
+        _quizzesMock.Verify(r => r.DeleteQuestionAsync(It.IsAny<Guid>(), default), Times.Never);
+        _quizzesMock.Verify(r => r.SaveChangesAsync(default), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_LastQuestionInCourseExam_ReturnsValidationFailureAndDoesNotDelete()
+    {
+        var courseId = Guid.NewGuid();
+        var question = QuizQuestion.CreateCourseExam(courseId, "Única pregunta de examen", 70m, 3, 1, true);
+
+        _quizzesMock
+            .Setup(r => r.GetQuestionByIdAsync(question.Id, default))
+            .ReturnsAsync(question);
+        _quizzesMock
+            .Setup(r => r.GetQuestionsByCourseAsync(courseId, default))
+            .ReturnsAsync(new List<QuizQuestion> { question });
+
+        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(question.Id));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Validation, result.ErrorType);
+        _quizzesMock.Verify(r => r.DeleteQuestionAsync(It.IsAny<Guid>(), default), Times.Never);
+        _quizzesMock.Verify(r => r.SaveChangesAsync(default), Times.Never);
     }
 }

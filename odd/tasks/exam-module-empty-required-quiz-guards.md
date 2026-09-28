@@ -40,14 +40,14 @@ invariant checks on destructive/structural operations:
   clear validation error — not by silently overriding what the admin asked for.
 
 ## Tasks
-- [ ] **T1** `DeleteQuizQuestionCommand.cs` (`src/backend/ELearning.Application/Features/Quizzes/Commands/DeleteQuizQuestionCommand.cs`) —
+- [x] **T1** `DeleteQuizQuestionCommand.cs` (`src/backend/ELearning.Application/Features/Quizzes/Commands/DeleteQuizQuestionCommand.cs`) —
   before deleting, look up how many questions currently exist in the same
   scope as the question being deleted (its `LessonId` if set, else its
   `CourseId` via `_quizzes.GetQuestionsByLessonAsync`/`GetQuestionsByCourseAsync`).
   If this question is the only one in that scope, return
   `Result.ValidationFailure("No puedes eliminar la última pregunta de este quiz. Elimina la lección completa (o deja de usar el examen del curso) en su lugar.")`
   instead of deleting.
-- [ ] **T2** `DeleteQuizOptionCommand.cs` (same folder) — before deleting, fetch
+- [x] **T2** `DeleteQuizOptionCommand.cs` (same folder) — before deleting, fetch
   all options for `option.QuestionId` via `_quizzes.GetOptionsByQuestionAsync`.
   Reject with `Result.ValidationFailure(...)` if either:
   - this is the only remaining option for the question (`count == 1`), or
@@ -56,13 +56,13 @@ invariant checks on destructive/structural operations:
   Two distinct messages for the two cases (e.g. "No puedes eliminar la última
   opción de esta pregunta." / "No puedes eliminar la única opción correcta de
   esta pregunta.").
-- [ ] **T3** `CreateLessonCommand.cs` (`src/backend/ELearning.Application/Features/Lessons/Commands/CreateLessonCommand.cs`) —
+- [x] **T3** `CreateLessonCommand.cs` (`src/backend/ELearning.Application/Features/Lessons/Commands/CreateLessonCommand.cs`) —
   if `lessonType == LessonType.Quiz && cmd.IsRequired`, return
   `Result.ValidationFailure<Guid>("No puedes crear una lección de tipo Quiz como obligatoria sin preguntas. Créala primero, agrega sus preguntas, y luego márcala como obligatoria.")`
   instead of creating it. (A brand-new lesson can never have questions yet —
   this is always true at creation time for this type, no repository call
   needed.)
-- [ ] **T4** `UpdateLessonCommand.cs` (`src/backend/ELearning.Application/Features/Lessons/Commands/UpdateLessonCommand.cs`) —
+- [x] **T4** `UpdateLessonCommand.cs` (`src/backend/ELearning.Application/Features/Lessons/Commands/UpdateLessonCommand.cs`) —
   needs `IQuizRepository` injected (not currently a dependency — add it to the
   constructor and to wherever this handler is constructed/registered, check
   the DI registration scan still picks it up automatically via the existing
@@ -86,5 +86,82 @@ narrow class of bug). Branch: `fix/exam-module-empty-required-quiz-guards`
 from `main`.
 
 ## Progress
-(fill in as each task completes: what was found, RED/GREEN evidence, full
-suite count before/after)
+
+**Baseline**: `dotnet test ELearning.Tests/ELearning.Tests.csproj` from `src/backend` →
+`Con error: 0, Superado: 641, Omitido: 0, Total: 641` (confirmed before starting,
+matches the ~641 estimate).
+
+All 4 handlers already had test files with NotFound/Forbidden/happy-path coverage
+(`DeleteQuizQuestionHandlerTests`, `DeleteQuizOptionHandlerTests`,
+`CreateLessonHandlerTests`, `UpdateLessonHandlerTests`), so no new empty-file
+scaffolding was needed — only the new guard tests (and, for T1/T2, updating the
+existing happy-path test to satisfy the new repository call the guard requires).
+
+**T1 — `DeleteQuizQuestionCommand.cs`**
+- RED: added `HandleAsync_LastQuestionInLesson_ReturnsValidationFailureAndDoesNotDelete`
+  and `HandleAsync_LastQuestionInCourseExam_ReturnsValidationFailureAndDoesNotDelete`
+  (mocking `GetQuestionsByLessonAsync`/`GetQuestionsByCourseAsync` to return a
+  single-question list). Ran against unguarded code: both failed
+  (`Assert.False() Failure: Expected False, Actual True` — deletion succeeded).
+- GREEN: added scope lookup (`LessonId` → `GetQuestionsByLessonAsync`, else
+  `CourseId` → `GetQuestionsByCourseAsync`) before delete; if
+  `scopeQuestions.Count <= 1`, return
+  `Result.ValidationFailure("No puedes eliminar la última pregunta de este quiz. Elimina la lección completa (o deja de usar el examen del curso) en su lugar.")`.
+  Updated the existing happy-path test to mock a 2-question scope. Both new
+  tests pass.
+
+**T2 — `DeleteQuizOptionCommand.cs`**
+- RED: added `HandleAsync_LastRemainingOption_...` and
+  `HandleAsync_LastCorrectOption_...`. Both failed against unguarded code the
+  same way (deletion succeeded when it shouldn't).
+- GREEN: fetch `GetOptionsByQuestionAsync(option.QuestionId)`; reject with
+  `Result.ValidationFailure("No puedes eliminar la última opción de esta pregunta.")`
+  if `options.Count <= 1`; reject with
+  `Result.ValidationFailure("No puedes eliminar la única opción correcta de esta pregunta.")`
+  if the option `IsCorrect` and it's the only correct one left. Added
+  `using System.Linq;` for `.Count(predicate)`. Updated the existing happy-path
+  test to mock 2 options (one correct, one not). Both new tests pass.
+
+**T3 — `CreateLessonCommand.cs`**
+- RED: added `HandleAsync_RequiredQuizLesson_ReturnsValidationFailureAndDoesNotCreate`
+  (Type "quiz", IsRequired true). Failed against unguarded code (lesson was
+  created).
+- GREEN: after parsing `lessonType`, if `lessonType == LessonType.Quiz &&
+  cmd.IsRequired`, return
+  `Result.ValidationFailure<Guid>("No puedes crear una lección de tipo Quiz como obligatoria sin preguntas. Créala primero, agrega sus preguntas, y luego márcala como obligatoria.")`
+  before touching the lesson/order-index repository calls (no repo call
+  needed, per the doc's note that a new lesson can never have questions yet).
+  Test passes.
+
+**T4 — `UpdateLessonCommand.cs`**
+- Confirmed `IQuizRepository` is registered in
+  `ELearning.Infrastructure/DependencyInjection/DependencyInjectionExtensions.cs`,
+  and `ELearning.Application`'s `RegisterCommandHandlers` registers handler
+  types via plain `services.AddScoped(handlerType)` (constructor-injected by
+  the container, not a hand-written factory), so adding the new
+  `IQuizRepository` constructor parameter to `UpdateLessonHandler` is picked
+  up automatically — **no change to `DependencyInjectionExtensions.cs` was
+  needed** (verified, not assumed).
+- RED: adding `_quizzesMock` + passing it as a 3rd constructor arg in
+  `UpdateLessonHandlerTests` first produced a compile error
+  (`CS1729: 'UpdateLessonHandler' no contiene un constructor que tome 3
+  argumentos`) since the constructor didn't accept it yet — the real RED for
+  this task's shape. After adding the constructor parameter (mechanical,
+  no guard logic), the new test
+  `HandleAsync_QuizLessonWithoutQuestionsMarkedRequired_...` failed at runtime
+  (`Assert.False() Failure: Expected False, Actual True` — update succeeded
+  when it shouldn't have).
+- GREEN: after the ownership/forbidden check, if `lesson.Type ==
+  LessonType.Quiz && cmd.IsRequired`, call
+  `_quizzes.GetQuestionsByLessonAsync(lesson.Id, ct)`; if count == 0, return
+  `Result.ValidationFailure("No puedes marcar esta lección como obligatoria porque no tiene preguntas. Agrega al menos una pregunta primero.")`.
+  Added a companion `HandleAsync_QuizLessonWithQuestionsMarkedRequired_UpdatesSuccessfully`
+  test (Quiz lesson with 1 question, marked required → succeeds) to cover the
+  non-blocked Quiz path. Both new tests pass; non-Quiz and `IsRequired=false`
+  paths are unaffected (existing tests still green).
+
+**Final suite**: `Con error: 0, Superado: 648, Omitido: 0, Total: 648` (641 baseline
++ 7 new tests: 2 for T1, 2 for T2, 1 for T3, 2 for T4). No regressions.
+
+**Commit**: `fbf7671` — `fix(quizzes,lessons): guard against unsatisfiable required-quiz states`
+(no push, no PR, per instructions).

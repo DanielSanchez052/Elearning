@@ -41,11 +41,16 @@ public class DeleteQuizOptionHandlerTests
     [Fact]
     public async Task HandleAsync_ValidOption_DeletesAndSaves()
     {
-        var option = QuizOption.Create(Guid.NewGuid(), "Opcion", false, 1);
+        var questionId = Guid.NewGuid();
+        var option = QuizOption.Create(questionId, "Opcion", false, 1);
+        var correctOption = QuizOption.Create(questionId, "Opcion correcta", true, 2);
 
         _quizzesMock
             .Setup(r => r.GetOptionByIdAsync(option.Id, default))
             .ReturnsAsync(option);
+        _quizzesMock
+            .Setup(r => r.GetOptionsByQuestionAsync(questionId, default))
+            .ReturnsAsync(new List<QuizOption> { option, correctOption });
         _quizzesMock
             .Setup(r => r.DeleteOptionAsync(option.Id, default))
             .Returns(Task.CompletedTask);
@@ -58,5 +63,48 @@ public class DeleteQuizOptionHandlerTests
         Assert.True(result.IsSuccess);
         _quizzesMock.Verify(r => r.DeleteOptionAsync(option.Id, default), Times.Once);
         _quizzesMock.Verify(r => r.SaveChangesAsync(default), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_LastRemainingOption_ReturnsValidationFailureAndDoesNotDelete()
+    {
+        var questionId = Guid.NewGuid();
+        var option = QuizOption.Create(questionId, "Única opción", true, 1);
+
+        _quizzesMock
+            .Setup(r => r.GetOptionByIdAsync(option.Id, default))
+            .ReturnsAsync(option);
+        _quizzesMock
+            .Setup(r => r.GetOptionsByQuestionAsync(questionId, default))
+            .ReturnsAsync(new List<QuizOption> { option });
+
+        var result = await _handler.HandleAsync(new DeleteQuizOptionCommand(option.Id));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Validation, result.ErrorType);
+        _quizzesMock.Verify(r => r.DeleteOptionAsync(It.IsAny<Guid>(), default), Times.Never);
+        _quizzesMock.Verify(r => r.SaveChangesAsync(default), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_LastCorrectOption_ReturnsValidationFailureAndDoesNotDelete()
+    {
+        var questionId = Guid.NewGuid();
+        var correctOption = QuizOption.Create(questionId, "Opcion correcta", true, 1);
+        var incorrectOption = QuizOption.Create(questionId, "Opcion incorrecta", false, 2);
+
+        _quizzesMock
+            .Setup(r => r.GetOptionByIdAsync(correctOption.Id, default))
+            .ReturnsAsync(correctOption);
+        _quizzesMock
+            .Setup(r => r.GetOptionsByQuestionAsync(questionId, default))
+            .ReturnsAsync(new List<QuizOption> { correctOption, incorrectOption });
+
+        var result = await _handler.HandleAsync(new DeleteQuizOptionCommand(correctOption.Id));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Validation, result.ErrorType);
+        _quizzesMock.Verify(r => r.DeleteOptionAsync(It.IsAny<Guid>(), default), Times.Never);
+        _quizzesMock.Verify(r => r.SaveChangesAsync(default), Times.Never);
     }
 }
