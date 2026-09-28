@@ -10,10 +10,12 @@ public sealed record DeleteQuizQuestionCommand(
 public sealed class DeleteQuizQuestionHandler : ICommandHandler<DeleteQuizQuestionCommand>
 {
     private readonly IQuizRepository _quizzes;
+    private readonly ILessonRepository _lessons;
 
-    public DeleteQuizQuestionHandler(IQuizRepository quizzes)
+    public DeleteQuizQuestionHandler(IQuizRepository quizzes, ILessonRepository lessons)
     {
         _quizzes = quizzes;
+        _lessons = lessons;
     }
 
     public async Task<Result> HandleAsync(DeleteQuizQuestionCommand cmd, CancellationToken ct = default)
@@ -25,12 +27,20 @@ public sealed class DeleteQuizQuestionHandler : ICommandHandler<DeleteQuizQuesti
         if (question is null)
             return Result.NotFound("Pregunta no encontrada");
 
-        var scopeQuestions = question.LessonId is not null
-            ? await _quizzes.GetQuestionsByLessonAsync(question.LessonId.Value, ct)
-            : await _quizzes.GetQuestionsByCourseAsync(question.CourseId!.Value, ct);
-
-        if (scopeQuestions.Count <= 1)
-            return Result.ValidationFailure("No puedes eliminar la última pregunta de este quiz. Elimina la lección completa (o deja de usar el examen del curso) en su lugar.");
+        // Solo bloqueamos si borrar dejaría una lección OBLIGATORIA sin preguntas
+        // (el gate de "lecciones requeridas" nunca podría satisfacerse). Un quiz
+        // opcional, o el examen final del curso (su "obligatoriedad" depende de que
+        // tenga preguntas: sin ninguna, simplemente deja de exigirse), pueden vaciarse.
+        if (question.LessonId is not null)
+        {
+            var lesson = await _lessons.GetByIdAsync(question.LessonId.Value, ct);
+            if (lesson is { IsRequired: true })
+            {
+                var scopeQuestions = await _quizzes.GetQuestionsByLessonAsync(question.LessonId.Value, ct);
+                if (scopeQuestions.Count <= 1)
+                    return Result.ValidationFailure("No puedes eliminar la última pregunta de esta lección obligatoria. Márcala como no obligatoria, o elimina la lección completa, primero.");
+            }
+        }
 
         await _quizzes.DeleteQuestionAsync(cmd.QuestionId, ct);
         await _quizzes.SaveChangesAsync(ct);

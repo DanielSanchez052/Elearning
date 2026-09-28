@@ -165,3 +165,40 @@ existing happy-path test to satisfy the new repository call the guard requires).
 
 **Commit**: `0aaaaf8` — `fix(quizzes,lessons): guard against unsatisfiable required-quiz states`
 (no push, no PR, per instructions).
+
+**T1 refinement — narrowed after Gentle AI review feedback (post-commit `0aaaaf8`)**
+
+The `review-reliability` lens (medium-risk candidate covering the guards commit)
+flagged the T1 guard as overbroad: it blocked deleting the last question for
+*any* lesson-quiz (even a non-required one) and for the course-exam scope,
+neither of which can actually leave an unsatisfiable required gate — a
+non-required Quiz lesson emptying out doesn't block anything, and the course
+exam's "requiredness" is itself derived from having ≥1 question
+(`hasFinalExam = GetQuestionsByCourseAsync(...).Count > 0`, see
+`MarkLessonCompleteCommand.cs`), so removing its last question just turns the
+final exam off — it doesn't strand a student.
+
+Narrowed the guard to only fire when `question.LessonId` is set AND the
+owning lesson (`ILessonRepository.GetByIdAsync`) has `IsRequired == true`.
+Course-exam-scoped questions (`LessonId is null`) are no longer guarded at
+all by this handler.
+
+- RED: renamed `HandleAsync_LastQuestionInLesson_...` to
+  `HandleAsync_LastQuestionInRequiredLesson_ReturnsValidationFailureAndDoesNotDelete`
+  (now stubs a required `Lesson` via `ILessonRepository`); added
+  `HandleAsync_LastQuestionInNonRequiredLesson_DeletesSuccessfully`; flipped
+  `HandleAsync_LastQuestionInCourseExam_...` to expect success
+  (`DeletesSuccessfully`). Compile RED first (`CS1729`, constructor now takes
+  2 args), then runtime RED for the new non-required/course-exam cases
+  against the old unconditional guard.
+- GREEN: injected `ILessonRepository` into `DeleteQuizQuestionHandler`
+  (already DI-registered elsewhere, picked up automatically, same as T4's
+  `UpdateLessonHandler`); guard now scoped to
+  `question.LessonId is not null && lesson is { IsRequired: true }`.
+- **Final suite**: `Con error: 0, Superado: 649, Omitido: 0, Total: 649` (648 + 1
+  net new test). No regressions.
+- **Not done in this pass** (deferred, low impact per user): the TOCTOU race
+  the same lens flagged (read-count-then-delete, no lock/second check) on
+  both `DeleteQuizQuestionCommand` and `DeleteQuizOptionCommand` — real but
+  requires literally concurrent admin requests on the last 2 items; noted as
+  future hardening, not fixed here.
