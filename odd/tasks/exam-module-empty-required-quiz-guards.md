@@ -163,5 +163,5 @@ existing happy-path test to satisfy the new repository call the guard requires).
 **Final suite**: `Con error: 0, Superado: 648, Omitido: 0, Total: 648` (641 baseline
 + 7 new tests: 2 for T1, 2 for T2, 1 for T3, 2 for T4). No regressions.
 
-**Commit**: `fbf7671` — `fix(quizzes,lessons): guard against unsatisfiable required-quiz states`
+**Commit**: `0aaaaf8` — `fix(quizzes,lessons): guard against unsatisfiable required-quiz states`
 (no push, no PR, per instructions).
