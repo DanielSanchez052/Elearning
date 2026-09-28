@@ -41,6 +41,10 @@ public sealed class CreateLessonHandler : ICommandHandler<CreateLessonCommand, G
             return Result.Forbidden<Guid>("Solo el instructor que creó el curso puede agregar lecciones.");
 
         var lessonType = Enum.Parse<LessonType>(cmd.Type, ignoreCase: true);
+
+        if (lessonType == LessonType.Quiz && cmd.IsRequired)
+            return Result.ValidationFailure<Guid>("No puedes crear una lección de tipo Quiz como obligatoria sin preguntas. Créala primero, agrega sus preguntas, y luego márcala como obligatoria.");
+
         var maxOrder = await _lessons.GetMaxOrderIndexAsync(cmd.CourseId, ct);
 
         var lesson = Lesson.Create(

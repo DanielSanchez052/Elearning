@@ -1,5 +1,6 @@
 using ELearning.Application.Common.Abstractions;
 using ELearning.Domain.Interfaces.Repositories;
+using System.Linq;
 
 namespace ELearning.Application.Features.Quizzes.Commands;
 
@@ -24,6 +25,14 @@ public sealed class DeleteQuizOptionHandler : ICommandHandler<DeleteQuizOptionCo
         var option = await _quizzes.GetOptionByIdAsync(cmd.OptionId, ct);
         if (option is null)
             return Result.NotFound("Opción no encontrada");
+
+        var options = await _quizzes.GetOptionsByQuestionAsync(option.QuestionId, ct);
+
+        if (options.Count <= 1)
+            return Result.ValidationFailure("No puedes eliminar la última opción de esta pregunta.");
+
+        if (option.IsCorrect && options.Count(o => o.IsCorrect) <= 1)
+            return Result.ValidationFailure("No puedes eliminar la única opción correcta de esta pregunta.");
 
         await _quizzes.DeleteOptionAsync(cmd.OptionId, ct);
         await _quizzes.SaveChangesAsync(ct);
