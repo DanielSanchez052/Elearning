@@ -1,34 +1,60 @@
-import { type ButtonHTMLAttributes } from 'react';
+import { type ComponentProps } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '@/lib/utils';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger';
-  size?: 'sm' | 'md' | 'lg';
-}
+const buttonVariants = cva(
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
+  {
+    variants: {
+      variant: {
+        // Acción principal: guardar, crear, inscribirse
+        primary: 'bg-primary text-primary-foreground hover:bg-primary-hover',
+        // Acción secundaria sobre superficie translúcida: cancelar, paginación
+        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary-hover hover:text-foreground',
+        // Contorno: acciones terciarias junto a una primaria
+        outline: 'border border-border-strong text-foreground-soft hover:bg-secondary-hover hover:text-foreground',
+        // Sin fondo: navegación, acciones en tablas
+        ghost: 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+        // Acento suave de marca: filtros activos, acciones destacadas no principales
+        soft: 'border border-brand/30 bg-brand/20 text-brand-foreground hover:bg-brand/30',
+        // Confirmación positiva: completar, aprobar
+        success: 'bg-success text-white hover:bg-success/90',
+        // Acción destructiva discreta: eliminar en tablas, salir
+        danger: 'text-destructive-foreground hover:bg-destructive/10',
+        // Acción destructiva principal: confirmar eliminación
+        destructive: 'bg-destructive text-white hover:bg-destructive/90',
+      },
+      size: {
+        sm: 'rounded-lg px-3 py-1.5 text-xs',
+        md: 'rounded-xl px-4 py-2 text-sm',
+        lg: 'rounded-xl px-6 py-2.5 text-sm',
+        icon: 'size-7 rounded-lg',
+      },
+      fullWidth: {
+        true: 'w-full',
+      },
+    },
+    defaultVariants: {
+      variant: 'primary',
+      size: 'md',
+    },
+  }
+);
 
-export const Button = ({
-  variant = 'primary',
-  size = 'md',
-  className = '',
-  ...props
-}: ButtonProps) => {
-  const baseStyles = 'font-semibold rounded transition-colors';
+export type ButtonProps = ComponentProps<'button'> & VariantProps<typeof buttonVariants>;
 
-  const variantStyles = {
-    primary: 'bg-blue-500 text-white hover:bg-blue-600',
-    secondary: 'bg-gray-300 text-gray-800 hover:bg-gray-400',
-    danger: 'bg-red-500 text-white hover:bg-red-600',
-  };
-
-  const sizeStyles = {
-    sm: 'px-2 py-1 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
-  };
-
+/**
+ * Botón de acción. `variant` elige la jerarquía (primary para la acción principal de la vista,
+ * secondary/outline/ghost para las demás, danger/destructive para eliminar); `size="icon"` para botones de solo ícono
+ * (requieren `aria-label`). Por defecto es `type="button"`: en formularios usa `type="submit"`.
+ * @category Actions
+ */
+export function Button({ className, variant, size, fullWidth, type = 'button', ...props }: ButtonProps) {
   return (
     <button
-      className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      type={type}
+      className={cn(buttonVariants({ variant, size, fullWidth }), className)}
       {...props}
     />
   );
-};
+}

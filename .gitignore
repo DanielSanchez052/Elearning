@@ -79,3 +79,10 @@ yarn-error.log
 *.temp
 # Local Pi runtime state
 .atl/
+
+# design-sync (Claude Design): scripts, build y estado local
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
