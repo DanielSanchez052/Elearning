@@ -1,4 +1,7 @@
-import { useEffect } from 'react';
+import { useId } from 'react';
+import { cn } from '@/lib/utils';
+import { CloseButton } from './CloseButton';
+import { useDialogBehavior } from './useDialogBehavior';
 
 interface DrawerProps {
   open: boolean;
@@ -8,46 +11,33 @@ interface DrawerProps {
   width?: string; // Tailwind width class, default 'w-96'
 }
 
-export default function Drawer({ open, onClose, title, children, width = 'w-96' }: DrawerProps) {
-
-  // Cerrar con Escape
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [open, onClose]);
-
-  // Bloquear scroll del body mientras está abierto
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [open]);
+/**
+ * Panel lateral que entra por la derecha sobre un overlay. Controlado: `open` + `onClose` (Escape o clic fuera).
+ * `width` es una clase de ancho de Tailwind (por defecto "w-96"). Para detalle o edición sin salir de una lista.
+ * @category Overlays
+ */
+export function Drawer({ open, onClose, title, children, width = 'w-96' }: DrawerProps) {
+  const titleId = useId();
+  useDialogBehavior(open, onClose);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Overlay */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-overlay backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
-      <div className={`relative ${width} h-full bg-[#0d0d14] border-l border-white/[0.06] flex flex-col shadow-2xl`}>
-
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className={cn('relative flex h-full flex-col border-l border-border bg-sidebar shadow-2xl', width)}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
-          <h2 className="text-white font-semibold text-sm">{title}</h2>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-zinc-400 hover:text-white transition-all"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <h2 id={titleId} className="text-sm font-semibold text-foreground">{title}</h2>
+          <CloseButton onClick={onClose} />
         </div>
 
         {/* Contenido */}
@@ -58,3 +48,5 @@ export default function Drawer({ open, onClose, title, children, width = 'w-96' 
     </div>
   );
 }
+
+export default Drawer;

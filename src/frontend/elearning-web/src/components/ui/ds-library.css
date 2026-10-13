@@ -1,0 +1,28 @@
+/*
+ * CSS del build de librería del sistema de diseño (dist-ds/styles.css).
+ *
+ * Reutiliza index.css (tokens + Tailwind con las clases que usa la app) y fija una
+ * lista de utilidades que siempre deben existir: quien construya pantallas con esta
+ * librería (p. ej. el agente de Claude Design) solo puede usar clases presentes en
+ * el CSS compilado, porque fuera de la app no hay escaneo de Tailwind.
+ */
+@import "../../index.css";
+
+/* Colores de tokens: superficies, texto, acciones, estados y bordes */
+@source inline("{,hover:}{bg,text,border}-{background,sunken,card,sidebar,overlay,secondary,secondary-hover,muted,accent,primary,primary-hover,primary-foreground,brand,brand-foreground,success,success-foreground,warning,warning-foreground,info,info-foreground,destructive,destructive-foreground,foreground,foreground-soft,muted-foreground,subtle-foreground,placeholder,border,border-strong,input,ring}");
+@source inline("{,hover:}{bg,border}-{brand,success,warning,info,destructive}/{10,20,30}");
+@source inline("divide-{y,x} divide-border ring-ring focus-visible:ring-2");
+
+/* Layout */
+@source inline("{block,inline-block,inline-flex,flex,grid,hidden,contents} flex-{row,col,wrap,1,none} {items,justify}-{start,center,end,between} items-{baseline,stretch} self-{start,center,end}");
+@source inline("{gap,gap-x,gap-y}-{0,0.5,1,1.5,2,2.5,3,4,5,6,8,10,12}");
+@source inline("{p,px,py,pt,pb,pl,pr,m,mx,my,mt,mb,ml,mr}-{0,0.5,1,1.5,2,2.5,3,4,5,6,8,10,12,16} mx-auto space-{x,y}-{1,1.5,2,3,4,5,6,8}");
+@source inline("{,sm:,md:,lg:}grid-cols-{1,2,3,4,5,6} col-span-{1,2,3,4} {,sm:,md:,lg:}{flex-row,flex-col,hidden,block,flex}");
+@source inline("w-{full,auto,fit,48,56,64,72,80,96} h-{full,screen,auto,8,10,12,16,20,24,32,40,48,64} min-h-screen min-w-0 max-w-{xs,sm,md,lg,xl,2xl,3xl,4xl,5xl,6xl,7xl,full} size-{3,4,5,6,8,10,12,14,16}");
+@source inline("{relative,absolute,fixed,sticky} inset-0 {top,right,bottom,left}-0 z-{10,20,30,40,50} overflow-{hidden,auto,y-auto,x-auto} shrink-0 grow");
+
+/* Tipografía */
+@source inline("text-{xs,sm,base,lg,xl,2xl,3xl,4xl} font-{normal,medium,semibold,bold,mono} leading-{tight,snug,normal,relaxed} tracking-{tight,wide,wider} {uppercase,truncate,text-left,text-center,text-right,tabular-nums,whitespace-nowrap,line-clamp-2,line-clamp-3}");
+
+/* Forma y efectos */
+@source inline("rounded-{md,lg,xl,2xl,full} border border-{t,b,l,r} shadow-{sm,lg,2xl} backdrop-blur-sm opacity-{50,60} transition-{colors,all} cursor-pointer");
