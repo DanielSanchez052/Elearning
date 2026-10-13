@@ -47,4 +47,13 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<ELearning.API.Hubs.NotificationHub>("/hubs/notifications");
 
+// Development-only bootstrap: a freshly migrated database has no countries and
+// no users, which makes the API unusable end to end. DevDataSeeder is a no-op
+// outside Development (see SeedForEnvironmentAsync).
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<ELearning.Infrastructure.Seeding.DevDataSeeder>();
+    await seeder.SeedForEnvironmentAsync(app.Environment.EnvironmentName);
+}
+
 app.Run();

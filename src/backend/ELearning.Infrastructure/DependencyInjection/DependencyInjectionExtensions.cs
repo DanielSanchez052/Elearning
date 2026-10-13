@@ -3,6 +3,7 @@ using ELearning.Domain.Interfaces.Repositories;
 using ELearning.Domain.Interfaces.Services;
 using ELearning.Infrastructure.Persistence;
 using ELearning.Infrastructure.Repositories;
+using ELearning.Infrastructure.Seeding;
 using ELearning.Infrastructure.Services;
 
 namespace ELearning.Infrastructure.DependencyInjection;
@@ -16,6 +17,8 @@ public static class DependencyInjectionExtensions
         services.AddRepositories();
 
         services.AddServices();
+
+        services.AddScoped<DevDataSeeder>();
 
         return services;
     }
