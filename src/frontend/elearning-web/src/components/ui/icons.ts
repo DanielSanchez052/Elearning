@@ -34,6 +34,8 @@ export {
   Clock as ClockIcon,
   FileText as FileTextIcon,
   GraduationCap as GraduationCapIcon,
+  GripVertical as GripVerticalIcon,
+  Image as ImageIcon,
   ListChecks as ListChecksIcon,
   Lock as LockIcon,
   Video as VideoIcon,
@@ -57,5 +59,6 @@ export {
   CircleHelp as HelpCircleIcon,
   CircleX as XCircleIcon,
   Info as InfoIcon,
+  LoaderCircle as LoaderIcon,
   TriangleAlert as AlertTriangleIcon,
 } from 'lucide-react';

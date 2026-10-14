@@ -19,6 +19,8 @@
 @source inline("{p,px,py,pt,pb,pl,pr,m,mx,my,mt,mb,ml,mr}-{0,0.5,1,1.5,2,2.5,3,4,5,6,8,10,12,16} mx-auto space-{x,y}-{1,1.5,2,3,4,5,6,8}");
 @source inline("{,sm:,md:,lg:}grid-cols-{1,2,3,4,5,6} col-span-{1,2,3,4} {,sm:,md:,lg:}{flex-row,flex-col,hidden,block,flex}");
 @source inline("w-{full,auto,fit,48,56,64,72,80,96} h-{full,screen,auto,8,10,12,16,20,24,32,40,48,64} min-h-screen min-w-0 max-w-{xs,sm,md,lg,xl,2xl,3xl,4xl,5xl,6xl,7xl,full} size-{3,4,5,6,8,10,12,14,16}");
+/* Medidas que pidió el rediseño (Notas · limitaciones): márgenes automáticos, anchos fijos y responsivos */
+@source inline("{ml,mr,mt,mb}-auto size-{7,9} w-{20,24,28,32,36,40,44} {sm:,md:,lg:}w-{48,56,64,72,80,96,auto,full} {md:,lg:}col-span-{1,2,3} aspect-video border-2 border-dashed min-w-8");
 @source inline("{relative,absolute,fixed,sticky} inset-0 {top,right,bottom,left}-0 z-{10,20,30,40,50} overflow-{hidden,auto,y-auto,x-auto} shrink-0 grow");
 
 /* Tipografía */

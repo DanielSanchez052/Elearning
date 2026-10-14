@@ -24,15 +24,17 @@ Los componentes se configuran por props (`variant`, `size`, `tone`, `padding`). 
 | Marca (índigo) | `bg-primary`, `text-brand-foreground`, fondos suaves `bg-brand/10`, `bg-brand/20`, `border-brand/30` |
 | Estados | `success`, `warning`, `info`, `destructive`: `bg-<estado>`, `bg-<estado>/10`, `border-<estado>/30`, `text-<estado>-foreground` |
 | Bordes | `border border-border` (por defecto), `border-input`, `border-border-strong`; `divide-y divide-border` |
-| Layout | `flex`, `grid`, `grid-cols-1…6` (`sm:`/`md:`/`lg:`), `gap-0…12`, `p-*`/`px-*`/`py-*`/`m-*` 0–16, `space-y-*`, `mx-auto`, `max-w-xs…7xl`, `w-full`, `w-48…96`, `h-8…64`, `size-3…16` |
+| Layout | `flex`, `grid`, `grid-cols-1…6` (`sm:`/`md:`/`lg:`), `gap-0…12`, `p-*`/`px-*`/`py-*`/`m-*` 0–16, `ml-auto`/`mt-auto`, `space-y-*`, `mx-auto`, `max-w-xs…7xl`, `w-full`, `w-20…44`, `w-48…96` (también `sm:`/`md:`/`lg:`), `h-8…64`, `size-3…16`, `aspect-video` |
 | Tipografía | `text-xs…4xl`, `font-medium`/`semibold`/`bold`/`mono`, `leading-*`, `tracking-wider uppercase`, `truncate`, `line-clamp-2` |
 | Forma | `rounded-md`/`lg`/`xl`/`2xl`/`full`, `shadow-lg`/`2xl` |
+
+Componentes de patrón (úsalos en lugar de recrearlos con clases): `StateBlock` (vacío/error con una acción), `Skeleton` (carga), `Avatar` (iniciales), `SegmentedTabs`, `Table`/`TableHead`/`TableBody`/`TableRow`/`TableHeader`/`TableCell`, `Pagination`, `SearchInput`, `Checkbox`, `RadioCard`, `Switch`, `Alert`, `StatCard`, `Spinner`.
 
 Patrones de la app: página `max-w-7xl mx-auto px-6 py-8`; título `text-2xl font-semibold text-foreground` + subtítulo `text-sm text-muted-foreground`; paneles con `Card`; listas dentro de un panel con `Card variant="subtle" padding="sm"`.
 
 ## Íconos
 
-El bundle incluye 49 íconos de lucide con sufijo `Icon` (`PlusIcon`, `BookOpenIcon`, `GraduationCapIcon`, `PlayCircleIcon`, `ClockIcon`, `LockIcon`, `TrophyIcon`, `MedalIcon`, `AwardIcon`, `BellIcon`, `UserIcon`, `UsersIcon`, `GlobeIcon`, `SearchIcon`, `PencilIcon`, `TrashIcon`, `CheckCircleIcon`, `AlertTriangleIcon`, `ChevronRightIcon`…). Dentro de `Button` y `Badge` se dimensionan solos; en otros sitios usa `className="size-4"`. No hay otra librería de íconos.
+El bundle incluye 52 íconos de lucide con sufijo `Icon` (`PlusIcon`, `BookOpenIcon`, `GraduationCapIcon`, `PlayCircleIcon`, `ClockIcon`, `LockIcon`, `TrophyIcon`, `MedalIcon`, `AwardIcon`, `BellIcon`, `UserIcon`, `UsersIcon`, `GlobeIcon`, `SearchIcon`, `PencilIcon`, `TrashIcon`, `CheckCircleIcon`, `AlertTriangleIcon`, `ChevronRightIcon`…). Dentro de `Button` y `Badge` se dimensionan solos; en otros sitios usa `className="size-4"`. No hay otra librería de íconos.
 
 ## Dónde mirar
 

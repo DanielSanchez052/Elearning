@@ -15,7 +15,12 @@
     "Label": "../src/components/ui/Input.tsx",
     "Select": "../src/components/ui/Input.tsx",
     "Textarea": "../src/components/ui/Input.tsx",
-    "Drawer": "../src/components/ui/Drawer.tsx"
+    "Drawer": "../src/components/ui/Drawer.tsx",
+    "TableHead": null,
+    "TableBody": null,
+    "TableRow": null,
+    "TableHeader": null,
+    "TableCell": null
   },
   "dtsPropsFor": {
     "Button": "/** Jerarquía visual: primary = acción principal de la vista (una por vista); secondary/outline/ghost = acciones secundarias; soft = acento de marca suave; success = confirmar/completar; danger = eliminar discreto (tablas); destructive = confirmar eliminación. */\nvariant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'soft' | 'success' | 'danger' | 'destructive';\n/** sm = compacto (tablas, paginación); md = por defecto; lg = CTA; icon = cuadrado 28px solo ícono (requiere aria-label). */\nsize?: 'sm' | 'md' | 'lg' | 'icon';\nfullWidth?: boolean;\n/** Por defecto 'button'; usa 'submit' dentro de formularios. */\ntype?: 'button' | 'submit' | 'reset';\ndisabled?: boolean;\nonClick?: React.MouseEventHandler<HTMLButtonElement>;\n'aria-label'?: string;\ntitle?: string;\n/** Texto y/o un ícono *Icon del bundle, p. ej. <PlusIcon /> (se dimensiona a 16px). */\nchildren?: React.ReactNode;\nclassName?: string;\nid?: string;\nstyle?: React.CSSProperties;",
@@ -25,8 +30,15 @@
     "Textarea": "value?: string;\ndefaultValue?: string;\nonChange?: React.ChangeEventHandler<HTMLTextAreaElement>;\nplaceholder?: string;\nrows?: number;\nmaxLength?: number;\nname?: string;\ndisabled?: boolean;\nrequired?: boolean;\n'aria-invalid'?: boolean;\nclassName?: string;\nid?: string;\nstyle?: React.CSSProperties;",
     "Select": "value?: string;\ndefaultValue?: string;\nonChange?: React.ChangeEventHandler<HTMLSelectElement>;\nname?: string;\ndisabled?: boolean;\nrequired?: boolean;\n'aria-invalid'?: boolean;\n/** Elementos <option> (y opcionalmente <optgroup>). */\nchildren: React.ReactNode;\nclassName?: string;\nid?: string;\nstyle?: React.CSSProperties;",
     "Label": "htmlFor?: string;\nchildren: React.ReactNode;\nclassName?: string;",
-    "Field": "label: string;\n/** Un único Input, Select o Textarea. Field le asigna id, aria-invalid y aria-describedby. */\nchildren: React.ReactElement;\n/** Texto de ayuda bajo el control (no se muestra si hay error). */\nhint?: React.ReactNode;\n/** Mensaje de error; marca el control como inválido. */\nerror?: string;\nclassName?: string;",
-    "AppRoot": "/** La pantalla completa. */\nchildren?: React.ReactNode;\n/** Para una página completa usa \"min-h-screen\". */\nclassName?: string;\nid?: string;\nstyle?: React.CSSProperties;"
+    "Field": "label: string;\n/** Un único Input, Select o Textarea (Field le asigna id, aria-invalid y aria-describedby), o una función que recibe esos atributos: {(control) => <SearchInput {...control} />}. */\nchildren: React.ReactElement | ((control: { id: string; \"aria-invalid\": true | undefined; \"aria-describedby\": string | undefined }) => React.ReactNode);\n/** Texto de ayuda bajo el control (no se muestra si hay error). */\nhint?: React.ReactNode;\n/** Mensaje de error; marca el control como inválido. */\nerror?: string;\n/** id del control (opcional; útil con la forma de función). */\nid?: string;\nclassName?: string;",
+    "AppRoot": "/** La pantalla completa. */\nchildren?: React.ReactNode;\n/** Para una página completa usa \"min-h-screen\". */\nclassName?: string;\nid?: string;\nstyle?: React.CSSProperties;",
+    "Checkbox": "/** Texto junto a la casilla; sin él, pasa aria-label. */\nlabel?: React.ReactNode;\n/** Texto secundario bajo la etiqueta. */\ndescription?: React.ReactNode;\nchecked?: boolean;\ndefaultChecked?: boolean;\nonChange?: React.ChangeEventHandler<HTMLInputElement>;\nname?: string;\nvalue?: string;\ndisabled?: boolean;\nrequired?: boolean;\n'aria-label'?: string;\nclassName?: string;\nid?: string;",
+    "RadioCard": "/** Agrupa varias con el mismo name dentro de un contenedor role=\"radiogroup\". */\nname: string;\nvalue?: string;\nlabel: React.ReactNode;\ndescription?: React.ReactNode;\n/** Contenido a la derecha, p. ej. <Badge tone=\"success\">Correcta</Badge>. */\ntrailing?: React.ReactNode;\n/** default = selección normal (borde de marca al marcarse); success / danger = revisión de resultados (correcta / incorrecta). */\ntone?: 'default' | 'success' | 'danger';\nchecked?: boolean;\ndefaultChecked?: boolean;\nonChange?: React.ChangeEventHandler<HTMLInputElement>;\ndisabled?: boolean;\nclassName?: string;\nid?: string;",
+    "SearchInput": "value?: string;\ndefaultValue?: string;\nonChange?: React.ChangeEventHandler<HTMLInputElement>;\nplaceholder?: string;\nname?: string;\ndisabled?: boolean;\n/** Obligatorio si no hay un Label externo (o úsalo dentro de Field con la forma de función). */\n'aria-label'?: string;\n/** Se aplica al contenedor: úsalo para el ancho (w-80, w-full). */\nclassName?: string;\nid?: string;",
+    "Table": "/** TableHead > TableRow > TableHeader y TableBody > TableRow > TableCell (todos exportados). Va dentro de <Card padding=\"none\">. */\nchildren: React.ReactNode;\nclassName?: string;\nid?: string;\nstyle?: React.CSSProperties;",
+    "SegmentedTabs": "/** Opciones: { value, label, count? } (count se muestra junto a la etiqueta). */\noptions: { value: string; label: string; count?: number }[];\n/** value de la opción seleccionada. */\nvalue: string;\nonChange: (value: string) => void;\n'aria-label': string;\nclassName?: string;",
+    "StateBlock": "/** vacio = todavía no hay datos; error = la carga falló (muestra «Reintentar» por defecto). */\ntipo?: 'vacio' | 'error';\n/** Componente de ícono del bundle, p. ej. GraduationCapIcon (se pasa el componente, no <GraduationCapIcon />). */\nicon?: React.ComponentType<{ className?: string }>;\ntitle?: string;\ntext?: React.ReactNode;\n/** Texto del botón. En error es «Reintentar» por defecto; en vacío solo aparece si se indica. */\naction?: string;\nonAction?: () => void;\nactionVariant?: 'primary' | 'secondary' | 'outline';\n/** Menos aire vertical, para usarlo dentro de un panel. */\ncompact?: boolean;\n/** Borde punteado alrededor (por defecto true). */\nbordered?: boolean;\nclassName?: string;",
+    "StatCard": "label: string;\n/** Valor principal («90%», «9 / 10»). Sin value, la tarjeta se pinta como placeholder punteado (métricas «Próximamente»). */\nvalue?: React.ReactNode;\n/** Texto secundario bajo el valor. */\nhint?: React.ReactNode;\n/** Componente de ícono del bundle, p. ej. GraduationCapIcon (se pasa el componente, no <GraduationCapIcon />). */\nicon?: React.ComponentType<{ className?: string }>;\n/** Color del valor. */\ntone?: 'default' | 'success' | 'danger';\nclassName?: string;"
   },
   "extraEntries": [
     "../src/components/ui/icons.ts"
@@ -65,6 +77,33 @@
       "cardMode": "column"
     },
     "Card": {
+      "cardMode": "column"
+    },
+    "Table": {
+      "cardMode": "column"
+    },
+    "StateBlock": {
+      "cardMode": "column"
+    },
+    "StatCard": {
+      "cardMode": "column"
+    },
+    "Pagination": {
+      "cardMode": "column"
+    },
+    "Alert": {
+      "cardMode": "column"
+    },
+    "Skeleton": {
+      "cardMode": "column"
+    },
+    "RadioCard": {
+      "cardMode": "column"
+    },
+    "SearchInput": {
+      "cardMode": "column"
+    },
+    "Switch": {
       "cardMode": "column"
     }
   },
