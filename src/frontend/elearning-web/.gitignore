@@ -25,3 +25,7 @@ dist-ssr
 
 # Build de librería del sistema de diseño (npm run build:ds)
 dist-ds
+
+# Tooling de agentes (no es fuente del proyecto)
+.agents/
+skills-lock.json
