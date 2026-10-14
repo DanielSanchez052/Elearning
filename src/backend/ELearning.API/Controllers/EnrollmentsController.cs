@@ -26,7 +26,7 @@ public class EnrollmentsController(
     public async Task<IActionResult> Enroll([FromBody] EnrollRequest request, CancellationToken ct)
     {
         var userId = User.GetUserId();
-        var command = new EnrollInCourseCommand(userId, request.CourseId);
+        var command = new EnrollInCourseCommand(userId, request.CourseId, User.GetCountryId());
         var result = await enrollHandler.HandleAsync(command, ct);
 
         return this.ToCreatedResult(result, nameof(GetProgress), new { courseId = request.CourseId });

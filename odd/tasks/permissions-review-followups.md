@@ -31,18 +31,16 @@ Los cursos se crean asignados al país del creador (`country_id` del JWT).
   - Si no le corresponde: 404, sin revelar que existe.
   - Los `ContentUrl` de las lecciones solo van a quien gestiona el curso o está inscrito.
   - Frontend: el 404 muestra "Este curso no está disponible", y al inscribirse se vuelve a pedir el detalle para traer los enlaces.
+- **Inscripción con control de país** (`EnrollInCourseCommand`): solo en cursos disponibles en el país del usuario (`CourseAccess.IsAvailableIn`); si no, 404 como el detalle (antes un curso inactivo daba 409). Cualquier rol puede inscribirse (decisión del 2026-10-14).
 
 ## Pendientes
 
-### 1. Inscripción sin control de país
-- `EnrollInCourseCommand` solo comprueba `course.IsActive`, no que el curso esté disponible en el país del usuario. Tampoco hay restricción de rol (un instructor o admin puede inscribirse como estudiante; puede ser intencional).
-
-### 2. Limpieza menor
+### 1. Limpieza menor
 - `AdminCoursesController.GetAdminList` compara `requesterRole == "instructor"` en vez de usar `User.IsInstructor()`.
 - `AuthorizationExtensions.AddAuthorizationPolicies` tiene todas las políticas comentadas (con roles `Teacher` que no existen). Decidir si se eliminan o si se pasa a políticas con nombre (`StaffOnly`, `AdminOnly`) en lugar de cadenas `Roles = "..."` repetidas.
 - Los roles están como cadenas sueltas en `[Authorize(Roles = ...)]`, `ChangeUserRoleValidator`, etc. Valorar constantes compartidas para evitar otro desajuste como el de `super_admin`.
 - El `country_id` viene del JWT: si un superadmin cambia el país de un usuario, las reglas usan el país antiguo hasta que el usuario vuelva a iniciar sesión.
 
-### 3. Siguientes partes de la revisión
+### 2. Siguientes partes de la revisión
 - Mismo repaso para **admin** y **superadmin** en usuarios y países.
 - Comprobar que el resto del **frontend** (rutas protegidas en `App.tsx`) aplica las mismas reglas que el backend y maneja bien los 403.
