@@ -43,7 +43,9 @@ public static class ClaimsPrincipalExtensions
     }
 
     /// <summary>
-    /// Extrae el rol del usuario desde el claim 'role' del JWT.
+    /// Extrae el rol del usuario desde el claim 'role' del JWT. Como el país, refleja el rol
+    /// al iniciar sesión: tras un cambio de rol, el token anterior conserva sus permisos hasta
+    /// que expira (limitación aceptada; ver odd/tasks/permissions-review-followups.md).
     /// </summary>
     public static string GetRole(this ClaimsPrincipal user)
     {

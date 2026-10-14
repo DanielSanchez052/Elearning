@@ -40,11 +40,19 @@ Los cursos se crean asignados al país del creador (`country_id` del JWT).
   - `JwtService` leía `Jwt:ExpiresInMinutes`, pero la configuración define `Jwt:ExpirationMinutes`; funcionaba solo porque el valor por defecto coincidía (60).
   - Fuera comentarios que repetían el código, un TODO especulativo y `using` sin uso en handlers y validadores.
 
+## Limitaciones conocidas (aceptadas)
+
+### Claims del token desactualizados — decisión del 2026-10-14: documentar y no tocar
+- El rol y el país viajan en el JWT (`role`, `country_id`) y el backend los usa tal cual en cada petición, sin consultar la base de datos.
+- El token dura `Jwt:ExpirationMinutes` (60). Si un superadmin cambia el rol o el país de un usuario, sus permisos siguen siendo los antiguos hasta que el token expira y vuelve a iniciar sesión. Por ejemplo, a un admin al que se le quita el rol le quedan hasta 60 minutos de acceso de admin.
+- El logout es solo del lado del cliente (borra el token del navegador); en el servidor no se revoca. `LogoutHandler` existe pero no está expuesto y lanza `NotImplementedException`.
+- Si en el futuro hace falta cerrar esa ventana, se valoraron:
+  - releer rol y país de la base de datos al validar el token (efecto inmediato, sin migración);
+  - un sello de seguridad en el usuario que invalide sus tokens al cambiar rol, país o contraseña;
+  - acortar la duración del token, que sin refresh tokens obliga a iniciar sesión más a menudo.
+
 ## Pendientes
 
-### 1. Claims del token desactualizados
-El rol y el país viajan en el JWT (60 minutos). Si un superadmin cambia el rol o el país de un usuario, sus permisos siguen siendo los antiguos hasta que el token expira y vuelve a entrar. Esto es más delicado con los cambios de rol, por ejemplo al quitarle el rol de admin a alguien. Opciones: aceptarlo y documentarlo, acortar la vida del token o invalidar los tokens del usuario al cambiarle el rol o el país (por ejemplo con un sello de seguridad en el usuario comprobado en cada petición).
-
-### 2. Siguientes partes de la revisión
+### 1. Siguientes partes de la revisión
 - Mismo repaso para **admin** y **superadmin** en usuarios y países.
 - Comprobar que el resto del **frontend** (rutas protegidas en `App.tsx`) aplica las mismas reglas que el backend y maneja bien los 403.
