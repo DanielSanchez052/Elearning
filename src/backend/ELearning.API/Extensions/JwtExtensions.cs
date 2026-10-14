@@ -8,7 +8,17 @@ public static class JwtExtensions
     public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
         var jwtSettings = configuration.GetSection("Jwt");
-        var secretKey = jwtSettings["SecretKey"] ?? throw new ArgumentNullException("Jwt:SecretKey is not configured");
+        var secretKey = jwtSettings["SecretKey"];
+
+        // Fail fast rather than signing tokens with a value committed to the
+        // repository. There is no fallback on purpose.
+        if (string.IsNullOrWhiteSpace(secretKey))
+        {
+            throw new InvalidOperationException(
+                "Jwt:SecretKey is not configured. Set it with: " +
+                "dotnet user-secrets set \"Jwt:SecretKey\" \"<signing key, at least 32 characters>\" --project ELearning.API " +
+                "(or the Jwt__SecretKey environment variable).");
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 

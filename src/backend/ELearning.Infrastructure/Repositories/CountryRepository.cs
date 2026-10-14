@@ -22,9 +22,15 @@ public class CountryRepository : ICountryRepository
 
     public Task<bool> ExistsByCodeAsync(string code, CancellationToken ct = default)
     {
+        // Both sides are lowercased on purpose. Lowercasing only the stored
+        // column made the check depend on how the caller spelled the argument:
+        // CreateCountryCommand passes an already lowercased code and matched,
+        // while DevDataSeeder passes the canonical uppercase "CO" and did not,
+        // so the seeder re-inserted an existing country and Postgres rejected it
+        // against IX_countries_code, crashing startup.
         return _db.Countries
             .AsNoTracking()
-            .AnyAsync(c => c.Code.ToLower() == code, ct);
+            .AnyAsync(c => c.Code.ToLower() == code.ToLower(), ct);
     }
 
     public async Task<IReadOnlyList<Country>> GetAllAsync(CancellationToken ct = default)

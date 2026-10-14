@@ -80,9 +80,9 @@ quedan en el mismo commit.
 
 **2. Visión General de las Capas**
 
-El backend se divide en cuatro proyectos .NET independientes más un
-microservicio de gamificación. El frontend es un proyecto Next.js
-independiente. Todos conviven en el monorepo.
+El backend se divide en cuatro proyectos .NET independientes. La gamificación
+es parte del monolito. El frontend es un proyecto Vite + React independiente.
+Todos conviven en el monorepo.
 
   -------------------------------------------------------------------------
   **Proyecto / Capa**        **Responsabilidad**
@@ -104,13 +104,9 @@ independiente. Todos conviven en el monorepo.
                              DI, Swagger. Punto de entrada HTTP. Depende de
                              Application e Infrastructure.
 
-  ELearning.Gamification     Microservicio independiente en C#. Motor de
-                             medallas y nivel Móvil. Se comunica con la API
-                             principal vía HTTP.
-
-  elearning-web              Proyecto Next.js 14. Interfaz de usuario
-                             responsive. Se comunica con ELearning.API y
-                             Gamification vía REST.
+  elearning-web              Proyecto Vite + React 19 + TypeScript. Interfaz
+                             de usuario responsive. Se comunica con
+                             ELearning.API vía REST.
   -------------------------------------------------------------------------
 
 **3. Estructura Completa del Monorepo**
@@ -128,7 +124,7 @@ clave.
 |                                                                       |
 | │ 📁 backend/ ← solución .NET completa                                |
 |                                                                       |
-| │ 📁 frontend/ ← proyecto Next.js                                     |
+| │ 📁 frontend/ ← proyecto Vite + React                                 |
 |                                                                       |
 | │                                                                     |
 |                                                                       |
@@ -179,9 +175,7 @@ sigue la regla de Clean Architecture: siempre hacia adentro.
 |                                                                       |
 | 📁 ELearning.API/ ← Capa 4: punto de entrada HTTP                     |
 |                                                                       |
-| 📁 ELearning.Gamification/ ← Microservicio de gamificación            |
-|                                                                       |
-| 📁 ELearning.Tests/ ← Tests unitarios e integración                   |
+| 📁 ELearning.Tests/ ← Tests unitarios                                 |
 +-----------------------------------------------------------------------+
 
 **3.2.1 ELearning.Domain**
@@ -606,51 +600,7 @@ los controladores con estos handlers.
 | 📄 ELearning.API.csproj                                               |
 +-----------------------------------------------------------------------+
 
-**3.2.5 ELearning.Gamification (Microservicio)**
-
-+-----------------------------------------------------------------------+
-| 📁 ELearning.Gamification/                                            |
-|                                                                       |
-| 📁 Controllers/                                                       |
-|                                                                       |
-| │ 📄 BadgesController.cs ← endpoints internos llamados por la API     |
-| principal                                                             |
-|                                                                       |
-| │ 📄 MobileLevelController.cs                                         |
-|                                                                       |
-| │                                                                     |
-|                                                                       |
-| 📁 Rules/ ← una clase por regla de medalla                            |
-|                                                                       |
-| │ 📄 IBadgeRule.cs ← interfaz que todas las reglas implementan        |
-|                                                                       |
-| │ 📄 FirstLoginRule.cs                                                |
-|                                                                       |
-| │ 📄 LoginStreakRule.cs                                               |
-|                                                                       |
-| │ 📄 CourseCompletedRule.cs                                           |
-|                                                                       |
-| │ 📄 SpeedsterRule.cs                                                 |
-|                                                                       |
-| │                                                                     |
-|                                                                       |
-| 📁 Services/                                                          |
-|                                                                       |
-| │ 📄 BadgeEvaluationService.cs ← evalúa todas las reglas y otorga     |
-| medallas                                                              |
-|                                                                       |
-| │ 📄 MobileLevelService.cs ← calcula % con apoyo de Redis             |
-|                                                                       |
-| │                                                                     |
-|                                                                       |
-| 📄 Program.cs                                                         |
-|                                                                       |
-| 📄 appsettings.json                                                   |
-|                                                                       |
-| 📄 ELearning.Gamification.csproj                                      |
-+-----------------------------------------------------------------------+
-
-**3.2.6 ELearning.Tests**
+**3.2.5 ELearning.Tests**
 
 +-----------------------------------------------------------------------+
 | 📁 ELearning.Tests/                                                   |
@@ -1062,8 +1012,9 @@ recorrido de una request de \'inscribirse a un curso\':
 6.  El Handler llama a IEnrollmentRepository.CreateAsync() que en
     Infrastructure escribe en PostgreSQL vía EF Core.
 
-7.  El Handler llama al Gamification microservice vía HTTP para
-    recalcular el nivel Móvil.
+7.  Si el curso completado amerita una medalla, el Handler llama a
+    IBadgeAwardService in-process (gamificación dentro del monolito, ver
+    README) para otorgarla. No hay llamada HTTP a un servicio externo.
 
 8.  El controlador devuelve 201 Created. El ExceptionHandlingMiddleware
     atrapa cualquier excepción (ValidationException, NotFoundException,
@@ -1104,8 +1055,6 @@ el monorepo y la solución .NET desde cero:
 |                                                                       |
 | dotnet new webapi -n ELearning.API -o ELearning.API                   |
 |                                                                       |
-| dotnet new webapi -n ELearning.Gamification -o ELearning.Gamification |
-|                                                                       |
 | dotnet new xunit -n ELearning.Tests -o ELearning.Tests                |
 |                                                                       |
 | \# 5. Agregar proyectos a la solución                                 |
@@ -1118,8 +1067,6 @@ el monorepo y la solución .NET desde cero:
 | ELearning.Infrastructure/ELearning.Infrastructure.csproj              |
 |                                                                       |
 | dotnet sln add ELearning.API/ELearning.API.csproj                     |
-|                                                                       |
-| dotnet sln add ELearning.Gamification/ELearning.Gamification.csproj   |
 |                                                                       |
 | dotnet sln add ELearning.Tests/ELearning.Tests.csproj                 |
 |                                                                       |
@@ -1140,11 +1087,6 @@ el monorepo y la solución .NET desde cero:
 | ELearning.Application/ELearning.Application.csproj \\                 |
 |                                                                       |
 | ELearning.Infrastructure/ELearning.Infrastructure.csproj              |
-|                                                                       |
-| dotnet add ELearning.Gamification/ELearning.Gamification.csproj       |
-| reference \\                                                          |
-|                                                                       |
-| ELearning.Application/ELearning.Application.csproj                    |
 |                                                                       |
 | dotnet add ELearning.Tests/ELearning.Tests.csproj reference \\        |
 |                                                                       |
@@ -1220,7 +1162,8 @@ el monorepo y la solución .NET desde cero:
 | \# Nota: Moq → BSD-3 (libre). FluentAssertions → Apache 2.0 (libre)   |
 +-----------------------------------------------------------------------+
 
-**Crear el proyecto Next.js:**
+**Crear el proyecto Next.js (blueprint original; el frontend real terminó en
+Vite + React 19 + TypeScript):**
 
 +-----------------------------------------------------------------------+
 | \# Desde la raíz del monorepo                                         |
@@ -1340,17 +1283,17 @@ endpoint con permisos condicionales.
 ## Módulo de Gamificación (Medallas) — Decisión de diseño
 
 > Nota: el resto de este documento es el blueprint original, escrito antes
-> de implementar (la Sección 2 describe `ELearning.Gamification` como un
-> microservicio independiente). Esta sección documenta la decisión de
-> arquitectura real, verificada contra el código implementado — no un plan.
+> de implementar. El resumen de la decisión (monolito, no microservicio) y
+> su justificación están en el README del repositorio, sección
+> "Gamificación: monolito, no microservicio". Esta sección conserva el
+> detalle técnico verificado contra el código implementado.
 
-### Problema
+### Decisión: implementado dentro del monolito, no como microservicio
 
-¿El motor de medallas se construye como microservicio separado
-(`ELearning.Gamification`, tal como lo planteaba el blueprint original en
-la Sección 2 y en 3.2.5) o dentro del monolito?
-
-### Decisión: implementado dentro del monolito
+El blueprint original de este documento (Sección 2 y 3.2.5) planeaba un
+proyecto `ELearning.Gamification` independiente. Esa opción se descartó
+antes de escribir código, y ese proyecto de scaffolding fue eliminado del
+repositorio y de la solución .NET.
 
 Se evaluó microservicio vs. monolito con apoyo de Opus 5 antes de escribir
 código (sesión de diseño 2026-09-26/27), y se optó por el monolito, en
