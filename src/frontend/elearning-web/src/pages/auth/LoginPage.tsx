@@ -10,13 +10,15 @@ export default function LoginPage() {
 
   return (
     <AuthLayout
-      title="Bienvenido de nuevo"
-      subtitle="Ingresa a tu cuenta para continuar"
+      title="Inicia sesión"
+      subtitle="Continúa con tus cursos donde los dejaste."
       notice={
         justRegistered ? (
-          <Alert tone="success">Cuenta creada. Revisa tu email para verificarla antes de ingresar.</Alert>
+          <Alert tone="success" title="Cuenta creada">
+            Revisa tu correo para verificarla antes de ingresar.
+          </Alert>
         ) : justReset ? (
-          <Alert tone="success">Contraseña actualizada. Ya puedes ingresar.</Alert>
+          <Alert tone="success">Contraseña actualizada. Ya puedes iniciar sesión.</Alert>
         ) : undefined
       }
       footer={
