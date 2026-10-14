@@ -20,6 +20,7 @@ import AdminCoursesPage from './pages/admin/AdminCoursesPage';
 import AdminCountriesPage from './pages/admin/AdminCountriesPage';
 import AdminCourseFormPage from './pages/admin/AdminCourseFormPage';
 import { AdminQuizzesPage } from './pages/admin/AdminQuizzesPage';
+import DesignSystemPage from './pages/dev/DesignSystemPage';
 // import UnauthorizedPage    from './pages/UnauthorizedPage';
 
 const queryClient = new QueryClient({
@@ -83,6 +84,7 @@ export default function App() {
           </Route>
 
           {/* ── Utilidades ─────────────────────────────────────────────────── */}
+          {import.meta.env.DEV && <Route path="/design-system" element={<DesignSystemPage />} />}
           <Route path="/unauthorized" element={<div>No tienes permisos</div>} />
           <Route path="/" element={<LoginPage />} />
           <Route path="*" element={<div>404</div>} />
