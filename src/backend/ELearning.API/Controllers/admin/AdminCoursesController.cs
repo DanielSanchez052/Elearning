@@ -67,7 +67,8 @@ public class AdminCoursesController(
             ThumbnailUrl: request.ThumbnailUrl,
             IsGlobal: request.IsGlobal,
             CreatedBy: User.GetUserId(),
-            CreatorCountryId: User.GetCountryId()
+            CreatorCountryId: User.GetCountryId(),
+            CreatorRole: User.GetRole()
         );
 
         var result = await createCourseHandler.HandleAsync(cmd, HttpContext.RequestAborted);
@@ -84,7 +85,8 @@ public class AdminCoursesController(
             ThumbnailUrl: request.ThumbnailUrl,
             IsGlobal: request.IsGlobal,
             RequesterId: User.GetUserId(),
-            RequesterRole: User.GetRole()
+            RequesterRole: User.GetRole(),
+            RequesterCountryId: User.GetCountryId()
         );
 
         var result = await updateCourseHandler.HandleAsync(cmd, HttpContext.RequestAborted);
@@ -97,7 +99,8 @@ public class AdminCoursesController(
         var cmd = new ToggleCourseStatusCommand(
             CourseId: id,
             RequesterId: User.GetUserId(),
-            RequesterRole: User.GetRole()
+            RequesterRole: User.GetRole(),
+            RequesterCountryId: User.GetCountryId()
         );
 
         var result = await toggleStatusHandler.HandleAsync(cmd, HttpContext.RequestAborted);
@@ -110,7 +113,8 @@ public class AdminCoursesController(
         var cmd = new DeleteCourseCommand(
             CourseId: id,
             RequesterId: User.GetUserId(),
-            RequesterRole: User.GetRole()
+            RequesterRole: User.GetRole(),
+            RequesterCountryId: User.GetCountryId()
         );
 
         var result = await deleteCourseHandler.HandleAsync(cmd, HttpContext.RequestAborted);
@@ -124,7 +128,8 @@ public class AdminCoursesController(
             CourseId: id,
             CountryIds: request.CountryIds,
             RequesterId: User.GetUserId(),
-            RequesterRole: User.GetRole()
+            RequesterRole: User.GetRole(),
+            RequesterCountryId: User.GetCountryId()
         );
 
         var result = await assignCountriesHandler.HandleAsync(cmd, HttpContext.RequestAborted);
@@ -141,7 +146,8 @@ public class AdminCoursesController(
             ContentUrl: request.ContentUrl,
             IsRequired: request.IsRequired,
             RequesterId: User.GetUserId(),
-            RequesterRole: User.GetRole()
+            RequesterRole: User.GetRole(),
+            RequesterCountryId: User.GetCountryId()
         );
 
         var result = await createLessonHandler.HandleAsync(cmd, HttpContext.RequestAborted);
@@ -157,7 +163,8 @@ public class AdminCoursesController(
             ContentUrl: request.ContentUrl,
             IsRequired: request.IsRequired,
             RequesterId: User.GetUserId(),
-            RequesterRole: User.GetRole()
+            RequesterRole: User.GetRole(),
+            RequesterCountryId: User.GetCountryId()
         );
 
         var result = await updateLessonHandler.HandleAsync(cmd, HttpContext.RequestAborted);
@@ -170,7 +177,8 @@ public class AdminCoursesController(
         var cmd = new DeleteLessonCommand(
             LessonId: lessonId,
             RequesterId: User.GetUserId(),
-            RequesterRole: User.GetRole()
+            RequesterRole: User.GetRole(),
+            RequesterCountryId: User.GetCountryId()
         );
 
         var result = await deleteLessonHandler.HandleAsync(cmd, HttpContext.RequestAborted);
@@ -184,7 +192,8 @@ public class AdminCoursesController(
             CourseId: courseId,
             Orders: request.Orders,
             RequesterId: User.GetUserId(),
-            RequesterRole: User.GetRole()
+            RequesterRole: User.GetRole(),
+            RequesterCountryId: User.GetCountryId()
         );
 
         var result = await reorderLessonsHandler.HandleAsync(cmd, HttpContext.RequestAborted);

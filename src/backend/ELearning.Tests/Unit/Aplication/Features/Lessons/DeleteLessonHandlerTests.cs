@@ -23,7 +23,7 @@ public class DeleteLessonHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(It.IsAny<Guid>(), default))
             .ReturnsAsync((Lesson?)null);
 
-        var result = await _handler.HandleAsync(new DeleteLessonCommand(Guid.NewGuid(), Guid.NewGuid(), "instructor"));
+        var result = await _handler.HandleAsync(new DeleteLessonCommand(Guid.NewGuid(), Guid.NewGuid(), "instructor", 57));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
@@ -43,7 +43,7 @@ public class DeleteLessonHandlerTests
             .Setup(r => r.GetByIdAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var result = await _handler.HandleAsync(new DeleteLessonCommand(lesson.Id, Guid.NewGuid(), "instructor"));
+        var result = await _handler.HandleAsync(new DeleteLessonCommand(lesson.Id, Guid.NewGuid(), "instructor", 57));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
@@ -63,7 +63,7 @@ public class DeleteLessonHandlerTests
             .Setup(r => r.GetByIdAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var result = await _handler.HandleAsync(new DeleteLessonCommand(lesson.Id, ownerId, "instructor"));
+        var result = await _handler.HandleAsync(new DeleteLessonCommand(lesson.Id, ownerId, "instructor", 57));
 
         Assert.True(result.IsSuccess);
         _lessonsMock.Verify(r => r.DeleteAsync(lesson, default), Times.Once);

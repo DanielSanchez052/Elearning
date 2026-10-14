@@ -17,7 +17,8 @@ public class CreateQuizQuestionValidatorTests
             MaxAttempts: 3,
             IsRequired: true,
             RequesterId: Guid.NewGuid(),
-            RequesterRole: "admin");
+            RequesterRole: "admin",
+            RequesterCountryId: 1);
 
     [Fact]
     public void Validate_WithoutLessonIdAndCourseId_HasFkError()

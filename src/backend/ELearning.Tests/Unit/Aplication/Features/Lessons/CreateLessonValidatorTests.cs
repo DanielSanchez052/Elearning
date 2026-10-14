@@ -15,7 +15,8 @@ public class CreateLessonValidatorTests
             ContentUrl: "https://cdn.test/video.mp4",
             IsRequired: true,
             RequesterId: Guid.NewGuid(),
-            RequesterRole: "instructor");
+            RequesterRole: "instructor",
+            RequesterCountryId: 57);
 
     [Fact]
     public void Validate_EmptyCourseId_HasCourseIdError()

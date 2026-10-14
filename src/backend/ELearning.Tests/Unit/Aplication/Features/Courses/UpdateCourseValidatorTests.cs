@@ -15,7 +15,8 @@ public class UpdateCourseValidatorTests
             ThumbnailUrl: "https://cdn.test/thumb.png",
             IsGlobal: false,
             RequesterId: Guid.NewGuid(),
-            RequesterRole: "instructor");
+            RequesterRole: "instructor",
+            RequesterCountryId: 57);
 
     [Fact]
     public void Validate_EmptyCourseId_HasCourseIdError()

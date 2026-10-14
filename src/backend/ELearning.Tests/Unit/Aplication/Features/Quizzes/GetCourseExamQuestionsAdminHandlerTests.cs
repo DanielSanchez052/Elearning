@@ -20,7 +20,7 @@ public class GetCourseExamQuestionsAdminHandlerTests
     [Fact]
     public async Task HandleAsync_EmptyCourseId_ReturnsValidationFailure()
     {
-        var result = await _handler.HandleAsync(new GetCourseExamQuestionsAdminQuery(Guid.Empty, AdminId, "admin"));
+        var result = await _handler.HandleAsync(new GetCourseExamQuestionsAdminQuery(Guid.Empty, AdminId, "superadmin", 1));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -35,7 +35,7 @@ public class GetCourseExamQuestionsAdminHandlerTests
             .Setup(r => r.GetQuestionsByCourseAsync(courseId, default))
             .ReturnsAsync(Array.Empty<QuizQuestion>());
 
-        var result = await _handler.HandleAsync(new GetCourseExamQuestionsAdminQuery(courseId, AdminId, "admin"));
+        var result = await _handler.HandleAsync(new GetCourseExamQuestionsAdminQuery(courseId, AdminId, "superadmin", 1));
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value);
@@ -56,7 +56,7 @@ public class GetCourseExamQuestionsAdminHandlerTests
             .Setup(r => r.GetQuestionsByCourseAsync(courseId, default))
             .ReturnsAsync([question]);
 
-        var result = await _handler.HandleAsync(new GetCourseExamQuestionsAdminQuery(courseId, AdminId, "admin"));
+        var result = await _handler.HandleAsync(new GetCourseExamQuestionsAdminQuery(courseId, AdminId, "superadmin", 1));
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value);

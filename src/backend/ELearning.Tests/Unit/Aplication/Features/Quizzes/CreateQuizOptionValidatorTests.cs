@@ -14,7 +14,8 @@ public class CreateQuizOptionValidatorTests
             IsCorrect: false,
             OrderIndex: 1,
             RequesterId: Guid.NewGuid(),
-            RequesterRole: "admin");
+            RequesterRole: "admin",
+            RequesterCountryId: 1);
 
     [Fact]
     public void Validate_EmptyQuestionId_HasQuestionIdError()

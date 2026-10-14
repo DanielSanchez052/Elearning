@@ -31,7 +31,7 @@ public class ToggleCourseStatusHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(It.IsAny<Guid>(), default))
             .ReturnsAsync((Course?)null);
 
-        var result = await _handler.HandleAsync(new ToggleCourseStatusCommand(Guid.NewGuid(), Guid.NewGuid(), "instructor"));
+        var result = await _handler.HandleAsync(new ToggleCourseStatusCommand(Guid.NewGuid(), Guid.NewGuid(), "instructor", 57));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
@@ -45,7 +45,7 @@ public class ToggleCourseStatusHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var result = await _handler.HandleAsync(new ToggleCourseStatusCommand(course.Id, Guid.NewGuid(), "instructor"));
+        var result = await _handler.HandleAsync(new ToggleCourseStatusCommand(course.Id, Guid.NewGuid(), "instructor", 57));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
@@ -63,7 +63,7 @@ public class ToggleCourseStatusHandlerTests
             .Setup(r => r.GetByCourseAsync(course.Id, default))
             .ReturnsAsync([]);
 
-        var result = await _handler.HandleAsync(new ToggleCourseStatusCommand(course.Id, course.CreatedBy, "instructor"));
+        var result = await _handler.HandleAsync(new ToggleCourseStatusCommand(course.Id, course.CreatedBy, "instructor", 57));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Conflict, result.ErrorType);
@@ -82,7 +82,7 @@ public class ToggleCourseStatusHandlerTests
             .Setup(r => r.GetByCourseAsync(course.Id, default))
             .ReturnsAsync([lesson]);
 
-        var result = await _handler.HandleAsync(new ToggleCourseStatusCommand(course.Id, course.CreatedBy, "instructor"));
+        var result = await _handler.HandleAsync(new ToggleCourseStatusCommand(course.Id, course.CreatedBy, "instructor", 57));
 
         Assert.True(result.IsSuccess);
         Assert.True(course.IsActive);
@@ -98,7 +98,7 @@ public class ToggleCourseStatusHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var result = await _handler.HandleAsync(new ToggleCourseStatusCommand(course.Id, course.CreatedBy, "instructor"));
+        var result = await _handler.HandleAsync(new ToggleCourseStatusCommand(course.Id, course.CreatedBy, "instructor", 57));
 
         Assert.True(result.IsSuccess);
         Assert.False(course.IsActive);

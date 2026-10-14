@@ -14,7 +14,8 @@ public class UpdateLessonValidatorTests
             ContentUrl: "https://cdn.test/new.mp4",
             IsRequired: true,
             RequesterId: Guid.NewGuid(),
-            RequesterRole: "instructor");
+            RequesterRole: "instructor",
+            RequesterCountryId: 57);
 
     [Fact]
     public void Validate_EmptyLessonId_HasLessonIdError()

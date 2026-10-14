@@ -15,7 +15,8 @@ public sealed record CreateQuizQuestionCommand(
     int MaxAttempts,
     bool IsRequired,
     Guid RequesterId,
-    string RequesterRole
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand<Guid>;
 
 public sealed class CreateQuizQuestionHandler : ICommandHandler<CreateQuizQuestionCommand, Guid>
@@ -47,7 +48,7 @@ public sealed class CreateQuizQuestionHandler : ICommandHandler<CreateQuizQuesti
             if (lesson is null)
                 return Result.NotFound<Guid>($"Lección con id '{cmd.LessonId}' no encontrada");
 
-            if (!await QuizAuthoringAccess.CanManageCourseAsync(lesson.CourseId, cmd.RequesterId, cmd.RequesterRole, _courses, ct))
+            if (!await QuizAuthoringAccess.CanManageCourseAsync(lesson.CourseId, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId, _courses, ct))
                 return Result.Forbidden<Guid>(QuizAuthoringAccess.ForbiddenMessage);
 
             var question = QuizQuestion.CreatePerLesson(
@@ -73,7 +74,7 @@ public sealed class CreateQuizQuestionHandler : ICommandHandler<CreateQuizQuesti
             if (course is null)
                 return Result.NotFound<Guid>($"Curso con id '{cmd.CourseId}' no encontrado");
 
-            if (!QuizAuthoringAccess.CanManage(course, cmd.RequesterId, cmd.RequesterRole))
+            if (!QuizAuthoringAccess.CanManage(course, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId))
                 return Result.Forbidden<Guid>(QuizAuthoringAccess.ForbiddenMessage);
 
             var question = QuizQuestion.CreateCourseExam(

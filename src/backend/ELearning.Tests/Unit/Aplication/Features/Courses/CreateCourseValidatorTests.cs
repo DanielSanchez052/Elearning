@@ -14,7 +14,8 @@ public class CreateCourseValidatorTests
             ThumbnailUrl: "https://cdn.test/thumb.png",
             IsGlobal: false,
             CreatedBy: Guid.NewGuid(),
-            CreatorCountryId: 1);
+            CreatorCountryId: 1,
+            CreatorRole: "instructor");
 
     [Theory]
     [InlineData(null)]

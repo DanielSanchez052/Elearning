@@ -23,7 +23,7 @@ public class CreateLessonHandlerTests
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default))
             .ReturnsAsync((Course?)null);
 
-        var cmd = new CreateLessonCommand(Guid.NewGuid(), "Lección", "video", "v.mp4", true, Guid.NewGuid(), "instructor");
+        var cmd = new CreateLessonCommand(Guid.NewGuid(), "Lección", "video", "v.mp4", true, Guid.NewGuid(), "instructor", 57);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -40,7 +40,7 @@ public class CreateLessonHandlerTests
             .Setup(r => r.GetByIdAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var cmd = new CreateLessonCommand(course.Id, "Lección", "video", "v.mp4", true, Guid.NewGuid(), "instructor");
+        var cmd = new CreateLessonCommand(course.Id, "Lección", "video", "v.mp4", true, Guid.NewGuid(), "instructor", 57);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -65,7 +65,7 @@ public class CreateLessonHandlerTests
             .Callback<Lesson, CancellationToken>((l, _) => created = l)
             .Returns(Task.CompletedTask);
 
-        var cmd = new CreateLessonCommand(course.Id, "  Intro  ", "VIDEO", "v.mp4", true, ownerId, "instructor");
+        var cmd = new CreateLessonCommand(course.Id, "  Intro  ", "VIDEO", "v.mp4", true, ownerId, "instructor", 57);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.True(result.IsSuccess);
@@ -86,7 +86,7 @@ public class CreateLessonHandlerTests
             .Setup(r => r.GetByIdAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var cmd = new CreateLessonCommand(course.Id, "Quiz Capítulo 1", "quiz", null, true, ownerId, "instructor");
+        var cmd = new CreateLessonCommand(course.Id, "Quiz Capítulo 1", "quiz", null, true, ownerId, "instructor", 57);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);

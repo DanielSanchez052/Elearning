@@ -1,4 +1,5 @@
 ﻿using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Common.Authorization;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
@@ -12,7 +13,8 @@ public sealed record CreateLessonCommand(
     string? ContentUrl,
     bool IsRequired,
     Guid RequesterId,
-    string RequesterRole
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand<Guid>;
 
 public sealed class CreateLessonHandler : ICommandHandler<CreateLessonCommand, Guid>
@@ -36,9 +38,8 @@ public sealed class CreateLessonHandler : ICommandHandler<CreateLessonCommand, G
         if (course is null)
             return Result.NotFound<Guid>($"Curso con id '{cmd.CourseId}' no encontrado.");
 
-        var requesterRole = Enum.Parse<UserRole>(cmd.RequesterRole, ignoreCase: true);
-        if (requesterRole == UserRole.Instructor && course.CreatedBy != cmd.RequesterId)
-            return Result.Forbidden<Guid>("Solo el instructor que creó el curso puede agregar lecciones.");
+        if (!CourseAccess.CanManage(course, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId))
+            return Result.Forbidden<Guid>(CourseAccess.ForbiddenMessage);
 
         var lessonType = Enum.Parse<LessonType>(cmd.Type, ignoreCase: true);
 

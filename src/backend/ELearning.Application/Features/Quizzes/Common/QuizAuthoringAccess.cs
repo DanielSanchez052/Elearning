@@ -1,92 +1,73 @@
+using ELearning.Application.Common.Authorization;
 using ELearning.Domain.Entities;
-using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Quizzes.Common;
 
 /// <summary>
-/// Reglas de acceso para la gestión de quizzes desde el panel de administración.
-/// Admin y super admin gestionan cualquier quiz; el instructor solo los de cursos
-/// que él creó (misma regla que cursos y lecciones). Cualquier otro rol queda fuera.
+/// Acceso a la gestión de quizzes desde el panel de administración: se puede gestionar
+/// un quiz si se puede gestionar su curso (ver <see cref="CourseAccess"/>). Resuelve el
+/// curso a partir de la lección o la pregunta, y evita las consultas para el superadmin.
 /// </summary>
 internal static class QuizAuthoringAccess
 {
     public const string ForbiddenMessage =
-        "Solo el instructor que creó el curso puede gestionar sus quizzes.";
+        "No tienes permiso para gestionar los quizzes de este curso.";
 
-    public static bool CanManage(Course course, Guid requesterId, string requesterRole) =>
-        ParseRole(requesterRole) switch
-        {
-            UserRole.Admin or UserRole.SuperAdmin => true,
-            UserRole.Instructor => course.CreatedBy == requesterId,
-            _ => false
-        };
+    public static bool CanManage(Course course, Guid requesterId, string requesterRole, int requesterCountryId) =>
+        CourseAccess.CanManage(course, requesterId, requesterRole, requesterCountryId);
 
     public static async Task<bool> CanManageCourseAsync(
-        Guid courseId, Guid requesterId, string requesterRole,
+        Guid courseId, Guid requesterId, string requesterRole, int requesterCountryId,
         ICourseRepository courses, CancellationToken ct)
     {
-        var role = ParseRole(requesterRole);
-        if (role is UserRole.Admin or UserRole.SuperAdmin)
+        if (CourseAccess.IsSuperAdmin(requesterRole))
             return true;
-        if (role is not UserRole.Instructor)
-            return false;
 
         var course = await courses.GetByIdAsync(courseId, ct);
-        return course is not null && course.CreatedBy == requesterId;
+        return course is not null
+            && CourseAccess.CanManage(course, requesterId, requesterRole, requesterCountryId);
     }
 
     public static async Task<bool> CanManageLessonAsync(
-        Guid lessonId, Guid requesterId, string requesterRole,
+        Guid lessonId, Guid requesterId, string requesterRole, int requesterCountryId,
         ICourseRepository courses, ILessonRepository lessons, CancellationToken ct)
     {
-        var role = ParseRole(requesterRole);
-        if (role is UserRole.Admin or UserRole.SuperAdmin)
+        if (CourseAccess.IsSuperAdmin(requesterRole))
             return true;
-        if (role is not UserRole.Instructor)
-            return false;
 
         var lesson = await lessons.GetByIdAsync(lessonId, ct);
         return lesson is not null
-            && await CanManageCourseAsync(lesson.CourseId, requesterId, requesterRole, courses, ct);
+            && await CanManageCourseAsync(lesson.CourseId, requesterId, requesterRole, requesterCountryId, courses, ct);
     }
 
     /// <summary>
     /// Una pregunta pertenece a un curso directamente (examen final) o a través de su lección.
     /// </summary>
     public static Task<bool> CanManageQuestionAsync(
-        QuizQuestion question, Guid requesterId, string requesterRole,
+        QuizQuestion question, Guid requesterId, string requesterRole, int requesterCountryId,
         ICourseRepository courses, ILessonRepository lessons, CancellationToken ct)
     {
         if (question.CourseId is { } courseId)
-            return CanManageCourseAsync(courseId, requesterId, requesterRole, courses, ct);
+            return CanManageCourseAsync(courseId, requesterId, requesterRole, requesterCountryId, courses, ct);
         if (question.LessonId is { } lessonId)
-            return CanManageLessonAsync(lessonId, requesterId, requesterRole, courses, lessons, ct);
+            return CanManageLessonAsync(lessonId, requesterId, requesterRole, requesterCountryId, courses, lessons, ct);
 
         return Task.FromResult(false);
     }
 
     /// <summary>
-    /// Variante para opciones: solo carga la pregunta cuando hace falta comprobar la propiedad.
+    /// Variante para opciones: solo carga la pregunta cuando hace falta comprobar el acceso.
     /// </summary>
     public static async Task<bool> CanManageQuestionAsync(
-        Guid questionId, Guid requesterId, string requesterRole,
+        Guid questionId, Guid requesterId, string requesterRole, int requesterCountryId,
         IQuizRepository quizzes, ICourseRepository courses, ILessonRepository lessons, CancellationToken ct)
     {
-        var role = ParseRole(requesterRole);
-        if (role is UserRole.Admin or UserRole.SuperAdmin)
+        if (CourseAccess.IsSuperAdmin(requesterRole))
             return true;
-        if (role is not UserRole.Instructor)
-            return false;
 
         var question = await quizzes.GetQuestionByIdAsync(questionId, ct);
         return question is not null
-            && await CanManageQuestionAsync(question, requesterId, requesterRole, courses, lessons, ct);
+            && await CanManageQuestionAsync(question, requesterId, requesterRole, requesterCountryId, courses, lessons, ct);
     }
-
-    // Solo nombres de rol: Enum.TryParse también aceptaría valores numéricos ("1" → Admin).
-    private static UserRole? ParseRole(string requesterRole) =>
-        Enum.GetValues<UserRole>()
-            .Cast<UserRole?>()
-            .FirstOrDefault(r => string.Equals(r.ToString(), requesterRole, StringComparison.OrdinalIgnoreCase));
 }

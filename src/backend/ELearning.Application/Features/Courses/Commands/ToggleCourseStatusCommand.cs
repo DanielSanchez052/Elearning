@@ -1,4 +1,5 @@
 ﻿using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Common.Authorization;
 using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 
@@ -7,7 +8,8 @@ namespace ELearning.Application.Features.Courses.Commands;
 public sealed record ToggleCourseStatusCommand(
     Guid CourseId,
     Guid RequesterId,
-    string RequesterRole
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand;
 
 public sealed class ToggleCourseStatusHandler : ICommandHandler<ToggleCourseStatusCommand>
@@ -31,9 +33,8 @@ public sealed class ToggleCourseStatusHandler : ICommandHandler<ToggleCourseStat
         if (course is null)
             return Result.NotFound($"Curso con id '{cmd.CourseId}' no encontrado.");
 
-        var requesterRole = Enum.Parse<UserRole>(cmd.RequesterRole, ignoreCase: true);
-        if (requesterRole == UserRole.Instructor && course.CreatedBy != cmd.RequesterId)
-            return Result.Forbidden("Solo el instructor que creó el curso puede publicarlo.");
+        if (!CourseAccess.CanManage(course, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId))
+            return Result.Forbidden(CourseAccess.ForbiddenMessage);
 
         // Al publicar, verificar que el curso tiene al menos una lección
         if (!course.IsActive)

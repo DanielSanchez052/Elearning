@@ -12,7 +12,8 @@ public class AssignCourseCountriesValidatorTests
             CourseId: Guid.NewGuid(),
             CountryIds: [1, 2],
             RequesterId: Guid.NewGuid(),
-            RequesterRole: "admin");
+            RequesterRole: "admin",
+            RequesterCountryId: 57);
 
     [Fact]
     public void Validate_EmptyCourseId_HasCourseIdError()

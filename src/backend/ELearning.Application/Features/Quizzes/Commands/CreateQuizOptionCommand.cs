@@ -11,7 +11,8 @@ public sealed record CreateQuizOptionCommand(
     bool IsCorrect,
     int OrderIndex,
     Guid RequesterId,
-    string RequesterRole
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand<Guid>;
 
 public sealed class CreateQuizOptionHandler : ICommandHandler<CreateQuizOptionCommand, Guid>
@@ -42,7 +43,7 @@ public sealed class CreateQuizOptionHandler : ICommandHandler<CreateQuizOptionCo
         if (question is null)
             return Result.NotFound<Guid>("Pregunta no encontrada");
 
-        if (!await QuizAuthoringAccess.CanManageQuestionAsync(question, cmd.RequesterId, cmd.RequesterRole, _courses, _lessons, ct))
+        if (!await QuizAuthoringAccess.CanManageQuestionAsync(question, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId, _courses, _lessons, ct))
             return Result.Forbidden<Guid>(QuizAuthoringAccess.ForbiddenMessage);
 
         var option = QuizOption.Create(cmd.QuestionId, cmd.OptionText, cmd.IsCorrect, cmd.OrderIndex);

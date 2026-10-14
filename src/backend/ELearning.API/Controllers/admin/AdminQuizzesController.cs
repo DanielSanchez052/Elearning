@@ -30,7 +30,7 @@ public class AdminQuizzesController(
     [HttpGet("lessons/{lessonId:guid}")]
     public async Task<IActionResult> GetLessonQuizQuestions(Guid lessonId, CancellationToken ct)
     {
-        var query = new GetLessonQuizQuestionsAdminQuery(lessonId, User.GetUserId(), User.GetRole());
+        var query = new GetLessonQuizQuestionsAdminQuery(lessonId, User.GetUserId(), User.GetRole(), User.GetCountryId());
         var result = await getLessonQuizQuestionsHandler.HandleAsync(query, ct);
         return this.ToActionResult(result);
     }
@@ -40,7 +40,7 @@ public class AdminQuizzesController(
     [HttpGet("courses/{courseId:guid}/exam")]
     public async Task<IActionResult> GetCourseExamQuestions(Guid courseId, CancellationToken ct)
     {
-        var query = new GetCourseExamQuestionsAdminQuery(courseId, User.GetUserId(), User.GetRole());
+        var query = new GetCourseExamQuestionsAdminQuery(courseId, User.GetUserId(), User.GetRole(), User.GetCountryId());
         var result = await getCourseExamQuestionsHandler.HandleAsync(query, ct);
         return this.ToActionResult(result);
     }
@@ -62,7 +62,8 @@ public class AdminQuizzesController(
             request.MaxAttempts,
             request.IsRequired,
             User.GetUserId(),
-            User.GetRole()
+            User.GetRole(),
+            User.GetCountryId()
         );
 
         var result = await createQuestionHandler.HandleAsync(cmd, ct);
@@ -81,7 +82,8 @@ public class AdminQuizzesController(
             request.MaxAttempts,
             request.IsRequired,
             User.GetUserId(),
-            User.GetRole()
+            User.GetRole(),
+            User.GetCountryId()
         );
 
         var result = await updateQuestionHandler.HandleAsync(cmd, ct);
@@ -93,7 +95,7 @@ public class AdminQuizzesController(
     [HttpDelete("questions/{questionId:guid}")]
     public async Task<IActionResult> DeleteQuestion(Guid questionId, CancellationToken ct)
     {
-        var cmd = new DeleteQuizQuestionCommand(questionId, User.GetUserId(), User.GetRole());
+        var cmd = new DeleteQuizQuestionCommand(questionId, User.GetUserId(), User.GetRole(), User.GetCountryId());
         var result = await deleteQuestionHandler.HandleAsync(cmd, ct);
         return this.ToActionResult(result);
     }
@@ -111,7 +113,8 @@ public class AdminQuizzesController(
             request.IsCorrect,
             request.OrderIndex,
             User.GetUserId(),
-            User.GetRole()
+            User.GetRole(),
+            User.GetCountryId()
         );
 
         var result = await createOptionHandler.HandleAsync(cmd, ct);
@@ -123,7 +126,7 @@ public class AdminQuizzesController(
     [HttpPut("questions/{questionId:guid}/options/{optionId:guid}")]
     public async Task<IActionResult> UpdateOption(Guid questionId, Guid optionId, [FromBody] UpdateQuizOptionRequest request, CancellationToken ct)
     {
-        var cmd = new UpdateQuizOptionCommand(optionId, request.OptionText, request.IsCorrect, User.GetUserId(), User.GetRole());
+        var cmd = new UpdateQuizOptionCommand(optionId, request.OptionText, request.IsCorrect, User.GetUserId(), User.GetRole(), User.GetCountryId());
         var result = await updateOptionHandler.HandleAsync(cmd, ct);
         return this.ToActionResult(result);
     }
@@ -133,7 +136,7 @@ public class AdminQuizzesController(
     [HttpDelete("questions/{questionId:guid}/options/{optionId:guid}")]
     public async Task<IActionResult> DeleteOption(Guid questionId, Guid optionId, CancellationToken ct)
     {
-        var cmd = new DeleteQuizOptionCommand(optionId, User.GetUserId(), User.GetRole());
+        var cmd = new DeleteQuizOptionCommand(optionId, User.GetUserId(), User.GetRole(), User.GetCountryId());
         var result = await deleteOptionHandler.HandleAsync(cmd, ct);
         return this.ToActionResult(result);
     }

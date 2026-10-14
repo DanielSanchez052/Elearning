@@ -26,7 +26,7 @@ public class CreateQuizQuestionHandlerTests
             .ReturnsAsync((Lesson?)null);
 
         var result = await _handler.HandleAsync(new CreateQuizQuestionCommand(
-            Guid.NewGuid(), null, (int)QuizType.PerLesson, "Pregunta", 60m, 3, true, AdminId, "admin"));
+            Guid.NewGuid(), null, (int)QuizType.PerLesson, "Pregunta", 60m, 3, true, AdminId, "superadmin", 1));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
@@ -41,7 +41,7 @@ public class CreateQuizQuestionHandlerTests
             .ReturnsAsync((Course?)null);
 
         var result = await _handler.HandleAsync(new CreateQuizQuestionCommand(
-            null, Guid.NewGuid(), (int)QuizType.CourseExam, "Pregunta", 70m, 3, true, AdminId, "admin"));
+            null, Guid.NewGuid(), (int)QuizType.CourseExam, "Pregunta", 70m, 3, true, AdminId, "superadmin", 1));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
@@ -66,7 +66,7 @@ public class CreateQuizQuestionHandlerTests
             .Returns(Task.CompletedTask);
 
         var result = await _handler.HandleAsync(new CreateQuizQuestionCommand(
-            lesson.Id, null, (int)QuizType.PerLesson, "Pregunta", 60m, 3, true, AdminId, "admin"));
+            lesson.Id, null, (int)QuizType.PerLesson, "Pregunta", 60m, 3, true, AdminId, "superadmin", 1));
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(created);
@@ -95,7 +95,7 @@ public class CreateQuizQuestionHandlerTests
             .Returns(Task.CompletedTask);
 
         var result = await _handler.HandleAsync(new CreateQuizQuestionCommand(
-            null, course.Id, (int)QuizType.CourseExam, "Pregunta de examen", 70m, 2, false, AdminId, "admin"));
+            null, course.Id, (int)QuizType.CourseExam, "Pregunta de examen", 70m, 2, false, AdminId, "superadmin", 1));
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(created);
@@ -109,7 +109,7 @@ public class CreateQuizQuestionHandlerTests
     public async Task HandleAsync_InvalidQuizType_ReturnsValidationFailure()
     {
         var result = await _handler.HandleAsync(new CreateQuizQuestionCommand(
-            Guid.NewGuid(), Guid.NewGuid(), 99, "Pregunta", 60m, 3, true, AdminId, "admin"));
+            Guid.NewGuid(), Guid.NewGuid(), 99, "Pregunta", 60m, 3, true, AdminId, "superadmin", 1));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -123,7 +123,7 @@ public class CreateQuizQuestionHandlerTests
     public async Task HandleAsync_PerLesson_NullLessonId_ReturnsValidationFailureInsteadOfThrowing()
     {
         var result = await _handler.HandleAsync(new CreateQuizQuestionCommand(
-            null, Guid.NewGuid(), (int)QuizType.PerLesson, "Pregunta", 60m, 3, true, AdminId, "admin"));
+            null, Guid.NewGuid(), (int)QuizType.PerLesson, "Pregunta", 60m, 3, true, AdminId, "superadmin", 1));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -135,7 +135,7 @@ public class CreateQuizQuestionHandlerTests
     public async Task HandleAsync_CourseExam_NullCourseId_ReturnsValidationFailureInsteadOfThrowing()
     {
         var result = await _handler.HandleAsync(new CreateQuizQuestionCommand(
-            Guid.NewGuid(), null, (int)QuizType.CourseExam, "Pregunta", 60m, 3, true, AdminId, "admin"));
+            Guid.NewGuid(), null, (int)QuizType.CourseExam, "Pregunta", 60m, 3, true, AdminId, "superadmin", 1));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);

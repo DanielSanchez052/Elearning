@@ -8,7 +8,8 @@ namespace ELearning.Application.Features.Quizzes.Commands;
 public sealed record DeleteQuizOptionCommand(
     Guid OptionId,
     Guid RequesterId,
-    string RequesterRole
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand;
 
 public sealed class DeleteQuizOptionHandler : ICommandHandler<DeleteQuizOptionCommand>
@@ -33,7 +34,7 @@ public sealed class DeleteQuizOptionHandler : ICommandHandler<DeleteQuizOptionCo
         if (option is null)
             return Result.NotFound("Opción no encontrada");
 
-        if (!await QuizAuthoringAccess.CanManageQuestionAsync(option.QuestionId, cmd.RequesterId, cmd.RequesterRole, _quizzes, _courses, _lessons, ct))
+        if (!await QuizAuthoringAccess.CanManageQuestionAsync(option.QuestionId, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId, _quizzes, _courses, _lessons, ct))
             return Result.Forbidden(QuizAuthoringAccess.ForbiddenMessage);
 
         var options = await _quizzes.GetOptionsByQuestionAsync(option.QuestionId, ct);

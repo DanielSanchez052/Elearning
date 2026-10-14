@@ -9,7 +9,8 @@ public sealed record UpdateQuizOptionCommand(
     string OptionText,
     bool IsCorrect,
     Guid RequesterId,
-    string RequesterRole
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand;
 
 public sealed class UpdateQuizOptionHandler : ICommandHandler<UpdateQuizOptionCommand>
@@ -37,7 +38,7 @@ public sealed class UpdateQuizOptionHandler : ICommandHandler<UpdateQuizOptionCo
         if (option is null)
             return Result.NotFound("Opción no encontrada");
 
-        if (!await QuizAuthoringAccess.CanManageQuestionAsync(option.QuestionId, cmd.RequesterId, cmd.RequesterRole, _quizzes, _courses, _lessons, ct))
+        if (!await QuizAuthoringAccess.CanManageQuestionAsync(option.QuestionId, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId, _quizzes, _courses, _lessons, ct))
             return Result.Forbidden(QuizAuthoringAccess.ForbiddenMessage);
 
         option.Update(cmd.OptionText, cmd.IsCorrect);

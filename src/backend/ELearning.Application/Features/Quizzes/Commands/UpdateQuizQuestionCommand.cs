@@ -11,7 +11,8 @@ public sealed record UpdateQuizQuestionCommand(
     int MaxAttempts,
     bool IsRequired,
     Guid RequesterId,
-    string RequesterRole
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand;
 
 public sealed class UpdateQuizQuestionHandler : ICommandHandler<UpdateQuizQuestionCommand>
@@ -45,7 +46,7 @@ public sealed class UpdateQuizQuestionHandler : ICommandHandler<UpdateQuizQuesti
         if (question is null)
             return Result.NotFound("Pregunta no encontrada");
 
-        if (!await QuizAuthoringAccess.CanManageQuestionAsync(question, cmd.RequesterId, cmd.RequesterRole, _courses, _lessons, ct))
+        if (!await QuizAuthoringAccess.CanManageQuestionAsync(question, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId, _courses, _lessons, ct))
             return Result.Forbidden(QuizAuthoringAccess.ForbiddenMessage);
 
         question.UpdateQuestion(cmd.QuestionText, cmd.PassScore, cmd.MaxAttempts, cmd.IsRequired);

@@ -1,4 +1,5 @@
 ﻿using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Common.Authorization;
 using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 
@@ -8,7 +9,8 @@ public sealed record AssignCourseCountriesCommand(
     Guid CourseId,
     List<int> CountryIds,  // lista completa — reemplaza la asignación actual
     Guid RequesterId,
-    string RequesterRole
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand;
 
 public sealed class AssignCourseCountriesHandler : ICommandHandler<AssignCourseCountriesCommand>
@@ -32,9 +34,11 @@ public sealed class AssignCourseCountriesHandler : ICommandHandler<AssignCourseC
         if (course is null)
             return Result.NotFound($"Curso con id '{cmd.CourseId}' no encontrado.");
 
-        var requesterRole = Enum.Parse<UserRole>(cmd.RequesterRole, ignoreCase: true);
-        if (requesterRole == UserRole.Instructor && course.CreatedBy != cmd.RequesterId)
-            return Result.Forbidden("Solo el instructor que creó el curso puede asignar países.");
+        if (!CourseAccess.CanManage(course, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId))
+            return Result.Forbidden(CourseAccess.ForbiddenMessage);
+
+        if (!CourseAccess.CanAssignCountries(course, cmd.CountryIds, cmd.RequesterRole, cmd.RequesterCountryId))
+            return Result.Forbidden(CourseAccess.CountriesForbiddenMessage);
 
         // Cursos globales no necesitan asignación de países
         if (course.IsGlobal)

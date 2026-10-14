@@ -21,7 +21,7 @@ public class UpdateQuizOptionHandlerTests
     public async Task HandleAsync_EmptyOptionId_ReturnsValidationFailure()
     {
         var result = await _handler.HandleAsync(new UpdateQuizOptionCommand(
-            Guid.Empty, "Texto", true, AdminId, "admin"));
+            Guid.Empty, "Texto", true, AdminId, "superadmin", 1));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -32,7 +32,7 @@ public class UpdateQuizOptionHandlerTests
     public async Task HandleAsync_EmptyOptionText_ReturnsValidationFailure()
     {
         var result = await _handler.HandleAsync(new UpdateQuizOptionCommand(
-            Guid.NewGuid(), "   ", true, AdminId, "admin"));
+            Guid.NewGuid(), "   ", true, AdminId, "superadmin", 1));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -46,7 +46,7 @@ public class UpdateQuizOptionHandlerTests
             .ReturnsAsync((QuizOption?)null);
 
         var result = await _handler.HandleAsync(new UpdateQuizOptionCommand(
-            Guid.NewGuid(), "Texto", true, AdminId, "admin"));
+            Guid.NewGuid(), "Texto", true, AdminId, "superadmin", 1));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
@@ -69,7 +69,7 @@ public class UpdateQuizOptionHandlerTests
             .Returns(Task.CompletedTask);
 
         var result = await _handler.HandleAsync(new UpdateQuizOptionCommand(
-            option.Id, "Actualizada", true, AdminId, "admin"));
+            option.Id, "Actualizada", true, AdminId, "superadmin", 1));
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Actualizada", option.OptionText);

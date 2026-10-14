@@ -8,7 +8,8 @@ namespace ELearning.Application.Features.Quizzes.Queries;
 public sealed record GetCourseExamQuestionsAdminQuery(
     Guid CourseId,
     Guid RequesterId,
-    string RequesterRole
+    string RequesterRole,
+    int RequesterCountryId
 ) : IQuery<IReadOnlyList<QuizQuestionAdminDto>>;
 
 public sealed class GetCourseExamQuestionsAdminHandler : IQueryHandler<GetCourseExamQuestionsAdminQuery, IReadOnlyList<QuizQuestionAdminDto>>
@@ -27,8 +28,8 @@ public sealed class GetCourseExamQuestionsAdminHandler : IQueryHandler<GetCourse
         if (query.CourseId == Guid.Empty)
             return Result.ValidationFailure<IReadOnlyList<QuizQuestionAdminDto>>("CourseId es requerido");
 
-        // Incluye IsCorrect: un instructor solo puede ver las respuestas de sus propios cursos
-        if (!await QuizAuthoringAccess.CanManageCourseAsync(query.CourseId, query.RequesterId, query.RequesterRole, _courses, ct))
+        // Incluye IsCorrect: solo quien puede gestionar el curso ve las respuestas
+        if (!await QuizAuthoringAccess.CanManageCourseAsync(query.CourseId, query.RequesterId, query.RequesterRole, query.RequesterCountryId, _courses, ct))
             return Result.Forbidden<IReadOnlyList<QuizQuestionAdminDto>>(QuizAuthoringAccess.ForbiddenMessage);
 
         var questions = await _quizzes.GetQuestionsByCourseAsync(query.CourseId, ct);

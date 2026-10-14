@@ -7,7 +7,8 @@ namespace ELearning.Application.Features.Quizzes.Commands;
 public sealed record DeleteQuizQuestionCommand(
     Guid QuestionId,
     Guid RequesterId,
-    string RequesterRole
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand;
 
 public sealed class DeleteQuizQuestionHandler : ICommandHandler<DeleteQuizQuestionCommand>
@@ -32,7 +33,7 @@ public sealed class DeleteQuizQuestionHandler : ICommandHandler<DeleteQuizQuesti
         if (question is null)
             return Result.NotFound("Pregunta no encontrada");
 
-        if (!await QuizAuthoringAccess.CanManageQuestionAsync(question, cmd.RequesterId, cmd.RequesterRole, _courses, _lessons, ct))
+        if (!await QuizAuthoringAccess.CanManageQuestionAsync(question, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId, _courses, _lessons, ct))
             return Result.Forbidden(QuizAuthoringAccess.ForbiddenMessage);
 
         // Solo bloqueamos si borrar dejaría una lección OBLIGATORIA sin preguntas
