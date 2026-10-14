@@ -17,11 +17,11 @@ export const buttonVariants = cva(
         // Acento suave de marca: filtros activos, acciones destacadas no principales
         soft: 'border border-brand/30 bg-brand/20 text-brand-foreground hover:bg-brand/30',
         // Confirmación positiva: completar, aprobar
-        success: 'bg-success text-white hover:bg-success/90',
+        success: 'bg-success-strong text-white hover:bg-success-strong/90',
         // Acción destructiva discreta: eliminar en tablas, salir
         danger: 'text-destructive-foreground hover:bg-destructive/10',
         // Acción destructiva principal: confirmar eliminación
-        destructive: 'bg-destructive text-white hover:bg-destructive/90',
+        destructive: 'bg-destructive-strong text-white hover:bg-destructive-strong/90',
       },
       size: {
         sm: 'rounded-lg px-3 py-1.5 text-xs',

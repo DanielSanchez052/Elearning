@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { CloseButton } from './CloseButton';
 import { useDialogBehavior } from './useDialogBehavior';
@@ -18,7 +18,8 @@ interface DrawerProps {
  */
 export function Drawer({ open, onClose, title, children, width = 'w-96' }: DrawerProps) {
   const titleId = useId();
-  useDialogBehavior(open, onClose);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior(open, onClose, panelRef);
 
   if (!open) return null;
 
@@ -29,10 +30,12 @@ export function Drawer({ open, onClose, title, children, width = 'w-96' }: Drawe
 
       {/* Panel */}
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={cn('relative flex h-full flex-col border-l border-border bg-sidebar shadow-2xl', width)}
+        className={cn('relative flex h-full max-w-full flex-col border-l border-border bg-sidebar shadow-2xl focus:outline-none', width)}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-6 py-4">

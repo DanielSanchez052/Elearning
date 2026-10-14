@@ -8,15 +8,18 @@ export default function UnauthorizedPage() {
   const navigate = useNavigate();
 
   return (
-    <AppRoot className="flex min-h-screen items-center justify-center px-4 py-10">
-      <StateBlock
-        className="w-full max-w-lg"
-        icon={LockIcon}
-        title="No tienes permisos para ver esta sección"
-        text="Si crees que es un error, pide a un administrador que revise tu rol."
-        action={isLoggedIn ? 'Ir a mi dashboard' : 'Iniciar sesión'}
-        onAction={() => navigate(isLoggedIn ? '/dashboard' : '/login')}
-      />
+    <AppRoot className="min-h-screen">
+      <main className="flex min-h-screen items-center justify-center px-4 py-10">
+        <StateBlock
+          titleAs="h1"
+          className="w-full max-w-lg"
+          icon={LockIcon}
+          title="No tienes permisos para ver esta sección"
+          text="Si crees que es un error, pide a un administrador que revise tu rol."
+          action={isLoggedIn ? 'Ir a mi dashboard' : 'Iniciar sesión'}
+          onAction={() => navigate(isLoggedIn ? '/dashboard' : '/login')}
+        />
+      </main>
     </AppRoot>
   );
 }

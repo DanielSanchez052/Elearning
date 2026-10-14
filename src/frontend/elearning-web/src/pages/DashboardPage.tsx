@@ -282,7 +282,7 @@ export default function DashboardPage() {
                           size="sm"
                           onClick={() => certificateDownload.download(certificate)}
                           disabled={certificateDownload.downloadingId === certificate.id}
-                          aria-label={`Descargar certificado de ${certificate.courseName}`}
+                          aria-label={`PDF: descargar el certificado de ${certificate.courseName}`}
                         >
                           <DownloadIcon /> PDF
                         </Button>

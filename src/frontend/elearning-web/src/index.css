@@ -61,12 +61,14 @@
     /* Estados */
     --color-success: var(--success);
     --color-success-foreground: var(--success-foreground);
+    --color-success-strong: var(--success-strong);
     --color-warning: var(--warning);
     --color-warning-foreground: var(--warning-foreground);
     --color-info: var(--info);
     --color-info-foreground: var(--info-foreground);
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
+    --color-destructive-strong: var(--destructive-strong);
 
     /* Bordes y foco */
     --color-border: var(--border);
@@ -105,7 +107,7 @@
     --foreground: #ffffff;        /* títulos y texto principal */
     --foreground-soft: #d4d4d8;   /* zinc-300 — cuerpo de texto y labels */
     --muted-foreground: #a1a1aa;  /* zinc-400 — texto secundario */
-    --subtle-foreground: #71717a; /* zinc-500 — metadatos, ayudas */
+    --subtle-foreground: #85858e; /* metadatos, ayudas — 4.5:1 mínimo sobre card y secondary (WCAG AA) */
     --placeholder: #52525b;       /* zinc-600 */
     --card-foreground: var(--foreground);
     --popover-foreground: var(--foreground);
@@ -134,6 +136,9 @@
     --info-foreground: #60a5fa;       /* blue-400 */
     --destructive: #ef4444;           /* red-500 */
     --destructive-foreground: #f87171;/* red-400 */
+    /* Fondos sólidos de botón con texto blanco (≥ 4.5:1, WCAG AA) */
+    --success-strong: #047857;        /* emerald-700 */
+    --destructive-strong: #dc2626;    /* red-600 */
 
     /* Bordes y foco */
     --border: rgb(255 255 255 / 6%);

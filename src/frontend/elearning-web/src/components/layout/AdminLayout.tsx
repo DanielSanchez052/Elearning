@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { ROLES, type UserRole } from '@/types/user.types';
@@ -40,7 +40,8 @@ export default function AdminLayout() {
   // El panel móvil se cierra solo al cambiar de ruta.
   const drawerOpen = drawer.open && drawer.path === location.pathname;
   const closeDrawer = () => setDrawer({ open: false, path: location.pathname });
-  useDialogBehavior(drawerOpen, closeDrawer);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior(drawerOpen, closeDrawer, drawerRef);
 
   const visibleItems = navItems.filter((item) => (user?.role ? item.roles.includes(user.role) : false));
   const roleLabel = user ? ROLES[user.role] ?? user.role : '';
@@ -108,7 +109,7 @@ export default function AdminLayout() {
   return (
     <AppRoot className="flex min-h-screen flex-col md:flex-row">
       {/* Barra superior solo en móvil */}
-      <div className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-sidebar px-4 md:hidden">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-sidebar px-4 md:hidden">
         <Button
           variant="ghost"
           size="icon"
@@ -120,7 +121,7 @@ export default function AdminLayout() {
           <MenuIcon />
         </Button>
         <p className="text-sm font-semibold text-foreground">Administración</p>
-      </div>
+      </header>
 
       {/* Sidebar fija en escritorio */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
@@ -131,15 +132,17 @@ export default function AdminLayout() {
       {drawerOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-overlay backdrop-blur-sm" onClick={closeDrawer} aria-hidden="true" />
-          <aside
+          <div
+            ref={drawerRef}
+            tabIndex={-1}
             id="admin-sidebar"
             role="dialog"
             aria-modal="true"
             aria-label="Menú de administración"
-            className="relative flex h-full w-64 max-w-[85vw] flex-col border-r border-border bg-sidebar shadow-2xl"
+            className="relative flex h-full w-64 max-w-[85vw] flex-col border-r border-border bg-sidebar shadow-2xl focus:outline-none"
           >
             {sidebar}
-          </aside>
+          </div>
         </div>
       )}
 

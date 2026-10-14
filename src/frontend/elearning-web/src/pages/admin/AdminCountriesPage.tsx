@@ -175,7 +175,7 @@ function CreateCountryModal({ onClose }: { onClose: () => void }) {
     >
       <form id="create-country-form" onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
         <Field label="Nombre" error={errors.name?.message}>
-          <Input {...register('name')} placeholder="Ej. Ecuador" autoFocus />
+          <Input {...register('name')} placeholder="Ej. Ecuador" />
         </Field>
         <Field label="Código ISO" hint="3 letras (ISO 3166-1 alpha-3), p. ej. COL, MEX." error={errors.code?.message}>
           <Input {...register('code')} placeholder="ECU" maxLength={3} className="font-mono uppercase" />

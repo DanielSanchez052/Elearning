@@ -1,11 +1,11 @@
-import { useId, type ReactNode } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import { CloseButton } from './CloseButton';
 import { useDialogBehavior } from './useDialogBehavior';
 
 const panelVariants = cva(
-  'flex max-h-[calc(100vh-2rem)] w-full flex-col rounded-2xl border border-input bg-card shadow-2xl',
+  'flex max-h-[calc(100vh-2rem)] w-full flex-col rounded-2xl border border-input bg-card shadow-2xl focus:outline-none',
   {
     variants: {
       size: {
@@ -39,7 +39,8 @@ export type ModalProps = VariantProps<typeof panelVariants> & {
  */
 export function Modal({ open, onClose, title, description, footer, children, size, className }: ModalProps) {
   const titleId = useId();
-  useDialogBehavior(open, onClose);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior(open, onClose, panelRef);
 
   if (!open) return null;
 
@@ -49,6 +50,8 @@ export function Modal({ open, onClose, title, description, footer, children, siz
       onClick={onClose}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

@@ -18,6 +18,8 @@ export type StateBlockProps = {
   compact?: boolean;
   /** Borde punteado alrededor (por defecto true). */
   bordered?: boolean;
+  /** Elemento del título: p (por defecto) o un encabezado cuando el bloque es el contenido principal de la página. */
+  titleAs?: 'p' | 'h1' | 'h2' | 'h3';
   className?: string;
 };
 
@@ -36,6 +38,7 @@ export function StateBlock({
   actionVariant,
   compact = false,
   bordered = true,
+  titleAs: Title = 'p',
   className,
 }: StateBlockProps) {
   const isError = tipo === 'error';
@@ -62,9 +65,9 @@ export function StateBlock({
         <Icon className="size-6" />
       </span>
       <div className="max-w-md space-y-1">
-        <p className="text-base font-semibold text-foreground">
+        <Title className="text-base font-semibold text-foreground">
           {title ?? (isError ? 'No pudimos cargar esta sección' : 'Aún no hay nada aquí')}
-        </p>
+        </Title>
         {body && <p className="text-sm text-muted-foreground">{body}</p>}
       </div>
       {label && (
