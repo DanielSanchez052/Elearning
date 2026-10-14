@@ -390,3 +390,39 @@ on PATH, so row-count assertions were replaced by the absence of `Seeded` log
 lines plus the HTTP checks. The local password was read out of
 `ELearning.API.http` into an environment variable instead of being typed into a
 command, so no credential was echoed into a log or a shell history.
+
+L15 — History rewritten locally, published on a NEW branch. The two original
+commits (`5ff2274`, `9db5a86`) were rebuilt from `origin/main` (`f072284`) into
+four clean work units, on explicit user authorisation ("Amend + force-push de la
+rama"):
+
+| Commit | Subject | Covers |
+|---|---|---|
+| `0ea2bba` | `chore(backend): remove unused ELearning.Gamification scaffold` | L2 |
+| `4481d63` | `feat(infra): add development data seeder for countries and dev accounts` | T1-T6, S1-S8 |
+| `4f17c16` | `fix(countries): compare codes case-insensitively in the existence check` | T8, S3 |
+| `9a0c15b` | `chore(security): move local secrets out of tracked appsettings` | T7, S8 |
+
+The literal now appears exactly once in the rewritten diff: as the **deleted**
+`DefaultConnection` line in `appsettings.json`.
+
+**The force-push was refused by the runtime safety policy, so the rewritten
+history was published on a new branch instead** (`fix/dev-data-seeder-secrets`),
+with an ordinary non-destructive push. This is recorded because the consequence
+is real and must not be forgotten:
+
+- **The PR must be opened from `fix/dev-data-seeder-secrets`, never from
+  `feature/dev-data-seeder`.** A PR from the old branch would re-introduce every
+  literal that was catalogued in L11.
+- **`feature/dev-data-seeder` still points at `9db5a86` on the remote**, so that
+  branch's own history keeps the literal. GitGuardian incidents attached to those
+  commits stay open until the branch is deleted by the maintainer, which is a
+  user decision made outside this session.
+- The two `.http` files still carry the literal, byte for byte as they do on
+  `main` (see the follow-up in Notes).
+
+Outstanding, and reported as such: the independent `gentle-ai-verify` run for
+T8 could not execute — the subagent failed on its first model call with zero
+tool calls (provider-side error). It was not retried, per the rule for an
+unavailable verifier. The change's own checks (L14) stand as the evidence, and
+S3 has no automated test behind it.
