@@ -150,9 +150,12 @@ en el repositorio. Sin `DevSeed:Password` no se crea ninguna cuenta.
 | `superadmin@elearning.com` | superadmin |
 
 Estas son las cuentas que usa `src/backend/ELearning.API/ELearning.API.http`.
-Ese archivo trae un valor de ejemplo en sus logins: si configurás un
-`DevSeed:Password` distinto, actualizá los logins del `.http` o parametrizalos
-con variables de entorno.
+
+Los archivos `.http` no versionan contraseñas ni tokens: los logins leen
+`DEV_SEED_PASSWORD` desde un `.env` local (gitignorado) con el mismo valor que
+pusiste en `DevSeed:Password`, y los tokens de los demás `.http` se pegan
+después de hacer login. Si usás JetBrains, podés definir ese valor en
+`http-client.private.env.json` (también gitignorado).
 
 ### Tests
 
