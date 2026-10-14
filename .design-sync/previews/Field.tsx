@@ -1,4 +1,4 @@
-import { Field, Input, Select, Textarea } from '@elearning/ui';
+import { Field, Input, SearchInput, Select, Textarea } from '@elearning/ui';
 
 export const WithHint = () => (
   <div className="w-96">
@@ -29,6 +29,14 @@ export const Form = () => (
     </Field>
     <Field label="Descripción" hint="Máximo 500 caracteres.">
       <Textarea rows={3} placeholder="Cuéntanos sobre ti" />
+    </Field>
+  </div>
+);
+
+export const RenderProp = () => (
+  <div className="w-96">
+    <Field label="Buscar curso" hint="Para controles que no son un Input directo, usa una función: recibe id y atributos aria.">
+      {(control) => <SearchInput {...control} placeholder="Excel Avanzado" />}
     </Field>
   </div>
 );

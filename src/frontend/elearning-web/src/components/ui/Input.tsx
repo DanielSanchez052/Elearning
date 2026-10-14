@@ -37,34 +37,48 @@ export function Label({ className, ...props }: ComponentProps<'label'>) {
   return <label className={cn('mb-1.5 block text-sm font-medium text-foreground-soft', className)} {...props} />;
 }
 
+/** Atributos que Field asigna al control para enlazarlo con su Label y su mensaje. */
+export type FieldControlProps = {
+  id: string;
+  'aria-invalid': true | undefined;
+  'aria-describedby': string | undefined;
+};
+
 type FieldProps = {
   label: string;
-  /** Un único Input, Select o Textarea; Field le asigna id y atributos de accesibilidad. */
-  children: ReactElement<ComponentProps<'input'>>;
+  /**
+   * Un único Input, Select o Textarea (Field le asigna id y atributos de accesibilidad), o una función que
+   * recibe esos atributos para controles que no son un elemento directo (SearchInput, componentes envueltos).
+   */
+  children: ReactElement<ComponentProps<'input'>> | ((control: FieldControlProps) => ReactNode);
   hint?: ReactNode;
   error?: string;
+  /** id del control; necesario solo con la forma de función si quieres fijarlo. */
+  id?: string;
   className?: string;
 };
 
 /**
  * Campo de formulario completo: Label + un único Input/Select/Textarea hijo + texto de ayuda (`hint`) o de error (`error`).
- * Asigna id, aria-invalid y aria-describedby al control automáticamente.
+ * Asigna id, aria-invalid y aria-describedby al control automáticamente; con `children` como función,
+ * los recibe como argumento para aplicarlos tú.
  * @category Forms
  */
-export function Field({ label, children, hint, error, className }: FieldProps) {
+export function Field({ label, children, hint, error, id: idProp, className }: FieldProps) {
   const generatedId = useId();
-  const id = children.props.id ?? generatedId;
+  const id = idProp ?? (typeof children === 'function' ? undefined : children.props.id) ?? generatedId;
   const messageId = `${id}-message`;
   const message = error ?? hint;
+  const control: FieldControlProps = {
+    id,
+    'aria-invalid': error ? true : undefined,
+    'aria-describedby': message ? messageId : undefined,
+  };
 
   return (
     <div className={className}>
       <Label htmlFor={id}>{label}</Label>
-      {cloneElement(children, {
-        id,
-        'aria-invalid': error ? true : undefined,
-        'aria-describedby': message ? messageId : undefined,
-      })}
+      {typeof children === 'function' ? children(control) : cloneElement(children, control)}
       {message && (
         <p
           id={messageId}
