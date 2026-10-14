@@ -183,7 +183,7 @@ export default function DashboardPage() {
           ) : null}
 
           <div className="grid gap-6 md:grid-cols-3">
-            <Card className="md:col-span-2">
+            <Card className="min-w-0 md:col-span-2">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-foreground">Mis cursos</h2>
@@ -214,7 +214,7 @@ export default function DashboardPage() {
               )}
             </Card>
 
-            <div className="flex flex-col gap-6">
+            <div className="flex min-w-0 flex-col gap-6">
               <Card>
                 <div className="flex items-center justify-between gap-2">
                   <h2 className="text-lg font-semibold text-foreground">Medallas</h2>

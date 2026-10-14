@@ -1,184 +1,169 @@
-import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useMyEnrollments } from '@/hooks/useEnrollments';
-import { useMyCertificates } from '@/hooks/useCertificates';
+import { useDownloadCertificate, useMyCertificates } from '@/hooks/useCertificates';
 import { useMyBadges } from '@/hooks/useBadges';
-import { certificatesApi } from '@/api/certificates';
-import { getApiErrorMessage } from '@/lib/axios';
-import type { CertificateDto } from '@/types/certificate.types';
+import { Avatar, Badge, Button, Card, Skeleton, StateBlock } from '@/components/ui';
+import { AwardIcon, CheckCircleIcon, DownloadIcon, GraduationCapIcon, MailIcon } from '@/components/ui/icons';
+import { ButtonLink } from '@/components/ButtonLink';
+import { badgeIcon } from '@/components/gamification/badgeIcon';
+import { enrollmentStatusKey } from '@/lib/enrollment';
+import { formatDate } from '@/lib/format';
+import { roleTone } from '@/lib/roles';
+import { ROLES } from '@/types/user.types';
 
-// El status de la inscripción puede llegar como código numérico o como string,
-// según la config del serializador JSON del backend (mismo criterio que
-// `getEnrollmentStatusLabel` en CourseDetailPage.tsx).
-function isCompletedStatus(status: unknown) {
-  return status === 1 || status === 'Completed';
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString();
+/** Estados de carga y error de una sección del perfil. */
+function SectionState({ isLoading, isError, onRetry }: { isLoading: boolean; isError: boolean; onRetry: () => void }) {
+  if (isLoading) return <Skeleton className="mt-4 h-24 rounded-xl" />;
+  if (isError)
+    return (
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">No pudimos cargar esta sección.</p>
+        <Button variant="secondary" size="sm" onClick={onRetry}>
+          Reintentar
+        </Button>
+      </div>
+    );
+  return null;
 }
 
 export const ProfilePage = () => {
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const navigate = useNavigate();
   const enrollmentsQuery = useMyEnrollments();
   const certificatesQuery = useMyCertificates();
   const badgesQuery = useMyBadges();
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const certificateDownload = useDownloadCertificate();
 
-  const completedEnrollments = (enrollmentsQuery.data ?? []).filter((e) =>
-    isCompletedStatus(e.status)
-  );
+  if (!user) return null;
 
-  const handleDownload = async (certificate: CertificateDto) => {
-    setDownloadError(null);
-    setDownloadingId(certificate.id);
-    try {
-      const response = await certificatesApi.downloadCertificate(
-        certificate.certificateUrl
-      );
-      const blobUrl = window.URL.createObjectURL(response.data);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `certificado-${certificate.courseName}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-      setDownloadError(getApiErrorMessage(error));
-    } finally {
-      setDownloadingId(null);
-    }
-  };
+  const completed = (enrollmentsQuery.data ?? []).filter((e) => enrollmentStatusKey(e.status) === 'completed');
+  const badges = badgesQuery.data ?? [];
+  const certificates = certificatesQuery.data ?? [];
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-6 py-8">
-      <h1 className="text-4xl font-bold mb-4">Mi Perfil</h1>
-
-      <div className="max-w-2xl bg-white text-gray-900 rounded shadow p-6 mb-8">
-        <h2 className="text-2xl font-bold mb-4">Información Personal</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-gray-600">Nombre</p>
-            <p className="font-bold">{user?.fullName}</p>
-          </div>
-          <div>
-            <p className="text-gray-600">Email</p>
-            <p className="font-bold">{user?.email}</p>
-          </div>
-          <div>
-            <p className="text-gray-600">Rol</p>
-            <p className="font-bold">{user?.role}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-2xl bg-white text-gray-900 rounded shadow p-6 mb-8">
-        <h2 className="text-xl font-bold mb-4">Cursos completados</h2>
-        {enrollmentsQuery.isLoading ? (
-          <p className="text-gray-600">Cargando cursos...</p>
-        ) : enrollmentsQuery.isError ? (
-          <p className="text-gray-600">
-            No se pudieron cargar tus cursos completados.
-          </p>
-        ) : completedEnrollments.length === 0 ? (
-          <p className="text-gray-600">No hay cursos completados aún</p>
-        ) : (
-          <ul className="divide-y">
-            {completedEnrollments.map((enrollment) => (
-              <li
-                key={enrollment.enrollmentId}
-                className="py-3 flex items-center gap-4"
-              >
-                <div className="w-14 h-14 rounded bg-gray-100 overflow-hidden flex-shrink-0">
-                  {enrollment.courseThumbnailUrl && (
-                    <img
-                      src={enrollment.courseThumbnailUrl}
-                      alt={enrollment.courseTitle}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                </div>
-                <div>
-                  <p className="font-bold">{enrollment.courseTitle}</p>
-                  {enrollment.completedAt && (
-                    <p className="text-gray-600 text-sm">
-                      Completado el {formatDate(enrollment.completedAt)}
-                    </p>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white text-gray-900 rounded shadow p-6">
-          <h2 className="text-xl font-bold mb-4">Badges</h2>
-          {badgesQuery.isLoading ? (
-            <p className="text-gray-600">Cargando badges...</p>
-          ) : badgesQuery.isError ? (
-            <p className="text-gray-600">No se pudieron cargar tus badges.</p>
-          ) : (badgesQuery.data ?? []).length === 0 ? (
-            <p className="text-gray-600">No hay badges aún</p>
-          ) : (
-            <ul className="divide-y">
-              {(badgesQuery.data ?? []).map((badge) => (
-                <li key={badge.id} className="py-3">
-                  <p className="font-bold">{badge.name}</p>
-                  {badge.courseTitle && (
-                    <p className="text-sm">{badge.courseTitle}</p>
-                  )}
-                  {badge.description && (
-                    <p className="text-gray-600 text-sm">{badge.description}</p>
-                  )}
-                  <p className="text-gray-600 text-sm">
-                    Obtenido el {formatDate(badge.obtainedAt)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="bg-white text-gray-900 rounded shadow p-6">
-          <h2 className="text-xl font-bold mb-4">Certificados</h2>
-          {certificatesQuery.isLoading ? (
-            <p className="text-gray-600">Cargando certificados...</p>
-          ) : certificatesQuery.isError ? (
-            <p className="text-gray-600">
-              No se pudieron cargar tus certificados.
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6 md:gap-6 md:px-6 md:py-8">
+      <Card>
+        <div className="flex flex-wrap items-center gap-4 md:gap-5">
+          <Avatar name={user.fullName} size="lg" />
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-semibold text-foreground md:text-2xl">{user.fullName}</h1>
+            <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+              <MailIcon className="size-4 shrink-0" aria-hidden="true" /> <span className="truncate">{user.email}</span>
+              {user.country && <span className="text-subtle-foreground">· {user.country}</span>}
             </p>
-          ) : (certificatesQuery.data ?? []).length === 0 ? (
-            <p className="text-gray-600">No hay certificados aún</p>
+          </div>
+          <Badge tone={roleTone[user.role]}>{ROLES[user.role] ?? user.role}</Badge>
+        </div>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-3 md:gap-6">
+        <Card className="min-w-0 md:col-span-2">
+          <h2 className="text-lg font-semibold text-foreground">Cursos completados</h2>
+          <SectionState isLoading={enrollmentsQuery.isLoading} isError={enrollmentsQuery.isError} onRetry={() => enrollmentsQuery.refetch()} />
+          {enrollmentsQuery.isSuccess &&
+            (completed.length === 0 ? (
+              <StateBlock
+                className="mt-4"
+                compact
+                icon={GraduationCapIcon}
+                title="Aún no completas ningún curso"
+                text="Cuando completes las lecciones requeridas de un curso, aparecerá aquí."
+                action="Explorar cursos"
+                onAction={() => navigate('/courses')}
+              />
+            ) : (
+              <ul className="mt-3 divide-y divide-border">
+                {completed.map((e) => (
+                  <li key={e.enrollmentId} className="flex items-center gap-4 py-3">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success-foreground">
+                      <CheckCircleIcon className="size-5" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">{e.courseTitle}</p>
+                      <p className="text-xs text-subtle-foreground">
+                        {e.completedAt ? `Completado el ${formatDate(e.completedAt)} · ` : ''}
+                        {e.completedLessons} / {e.requiredLessons} lecciones
+                      </p>
+                    </div>
+                    <ButtonLink to={`/courses/${e.courseId}`} variant="ghost" size="sm">
+                      Ver curso
+                    </ButtonLink>
+                  </li>
+                ))}
+              </ul>
+            ))}
+        </Card>
+
+        <Card>
+          <h2 className="text-lg font-semibold text-foreground">Medallas</h2>
+          <SectionState isLoading={badgesQuery.isLoading} isError={badgesQuery.isError} onRetry={() => badgesQuery.refetch()} />
+          {badgesQuery.isSuccess &&
+            (badges.length === 0 ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Aún no tienes medallas. Inicia sesión, completa un curso o aprueba un examen final al primer intento para ganarlas.
+              </p>
+            ) : (
+              <ul className="mt-4 space-y-4">
+                {badges.map((badge) => {
+                  const Icon = badgeIcon(badge.code);
+                  return (
+                    <li key={badge.id} className="flex items-start gap-3">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning-foreground">
+                        <Icon className="size-5" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">{badge.name}</p>
+                        {badge.description && <p className="text-xs text-muted-foreground">{badge.description}</p>}
+                        {badge.courseTitle && <p className="text-xs text-muted-foreground">{badge.courseTitle}</p>}
+                        <p className="mt-0.5 text-xs text-subtle-foreground">{formatDate(badge.obtainedAt)}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ))}
+        </Card>
+      </div>
+
+      <Card>
+        <h2 className="text-lg font-semibold text-foreground">Certificados</h2>
+        <SectionState isLoading={certificatesQuery.isLoading} isError={certificatesQuery.isError} onRetry={() => certificatesQuery.refetch()} />
+        {certificatesQuery.isSuccess &&
+          (certificates.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">Aprueba el examen final de un curso para obtener tu primer certificado.</p>
           ) : (
-            <ul className="divide-y">
-              {(certificatesQuery.data ?? []).map((certificate) => (
-                <li key={certificate.id} className="py-3">
-                  <p className="font-bold">{certificate.courseName}</p>
-                  <p className="text-gray-600 text-sm">
-                    Completado el {formatDate(certificate.completedAt)}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => handleDownload(certificate)}
-                    disabled={downloadingId === certificate.id}
-                    className="mt-2 text-sm font-medium text-indigo-600 hover:text-indigo-500 disabled:opacity-60"
-                  >
-                    {downloadingId === certificate.id
-                      ? 'Descargando...'
-                      : 'Descargar certificado'}
-                  </button>
+            <ul className="mt-4 grid gap-3 md:grid-cols-2">
+              {certificates.map((certificate) => (
+                <li key={certificate.id}>
+                  <Card variant="subtle" padding="sm">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success-foreground">
+                        <AwardIcon className="size-5" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground">{certificate.courseName}</p>
+                        <p className="text-xs text-subtle-foreground">Completado el {formatDate(certificate.completedAt)}</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                        onClick={() => certificateDownload.download(certificate)}
+                        disabled={certificateDownload.downloadingId === certificate.id}
+                      >
+                        <DownloadIcon /> {certificateDownload.downloadingId === certificate.id ? 'Descargando…' : 'Descargar PDF'}
+                      </Button>
+                    </div>
+                  </Card>
                 </li>
               ))}
             </ul>
-          )}
-          {downloadError && (
-            <p className="text-red-600 text-sm mt-2">{downloadError}</p>
-          )}
-        </div>
-      </div>
-    </div>
+          ))}
+        {certificateDownload.error && (
+          <p className="mt-3 text-xs text-destructive-foreground" role="alert">{certificateDownload.error}</p>
+        )}
+      </Card>
+    </main>
   );
 };
