@@ -6,12 +6,12 @@ export default function RegisterPage() {
   return (
     <AuthLayout
       title="Crea tu cuenta"
-      subtitle="Accede a cursos de tu región"
+      subtitle="Verás los cursos globales y los de tu país."
       footer={
         <>
           ¿Ya tienes cuenta?{' '}
           <Link to="/login" className="font-medium text-brand-foreground hover:text-foreground">
-            Ingresa aquí
+            Inicia sesión
           </Link>
         </>
       }
