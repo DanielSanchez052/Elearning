@@ -26,6 +26,7 @@ import { BookOpenIcon, EyeIcon, GlobeIcon, ListChecksIcon, PencilIcon, PlusIcon,
 import { ButtonLink } from '@/components/ButtonLink';
 import { CourseThumbnail } from '@/components/courses/CourseThumbnail';
 import { getApiErrorMessage } from '../../lib/axios';
+import { canManageListedCourse } from '@/lib/courseAccess';
 import type { CourseSummaryDto } from '../../types/course.types';
 
 const PAGE_SIZE = 20;
@@ -68,7 +69,8 @@ export default function AdminCoursesPage() {
     pageSize: PAGE_SIZE,
   });
 
-  const { data: countries } = useAdminCountries();
+  // El filtro por país solo lo usa el superadmin; el resto ya ve únicamente los cursos de su alcance.
+  const { data: countries } = useAdminCountries({ enabled: isSuperAdmin });
   const toggle = useToggleCourseStatus();
   const [rowError, setRowError] = useState('');
 
@@ -104,11 +106,9 @@ export default function AdminCoursesPage() {
           <h1 className="text-2xl font-semibold text-foreground">Cursos</h1>
           <p className="mt-1 text-sm text-muted-foreground">{scopeText}</p>
         </div>
-        {!isInstructor && (
-          <ButtonLink to="/admin/courses/new">
-            <PlusIcon /> Nuevo curso
-          </ButtonLink>
-        )}
+        <ButtonLink to="/admin/courses/new">
+          <PlusIcon /> Nuevo curso
+        </ButtonLink>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -169,8 +169,8 @@ export default function AdminCoursesPage() {
               bordered={false}
               icon={BookOpenIcon}
               title="Todavía no hay cursos"
-              text={isInstructor ? 'Cuando te asignen cursos, aparecerán aquí.' : 'Crea el primer curso, agrega sus lecciones y publícalo cuando esté listo.'}
-              action={isInstructor ? undefined : 'Nuevo curso'}
+              text="Crea el primer curso, agrega sus lecciones y publícalo cuando esté listo."
+              action="Nuevo curso"
               onAction={() => navigate('/admin/courses/new')}
             />
           )
@@ -228,26 +228,36 @@ export default function AdminCoursesPage() {
                         </TableCell>
                         <TableCell className="py-3">
                           <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleToggle(course)}
-                              disabled={toggle.isPending && toggle.variables === course.id}
-                            >
-                              {course.isActive ? 'Despublicar' : 'Publicar'}
-                            </Button>
+                            {canManageListedCourse(user, course) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleToggle(course)}
+                                disabled={toggle.isPending && toggle.variables === course.id}
+                              >
+                                {course.isActive ? 'Despublicar' : 'Publicar'}
+                              </Button>
+                            )}
                             <ButtonLink to={`/courses/${course.id}`} variant="ghost" size="icon" aria-label={`Ver ${course.title}`} title="Ver como estudiante">
                               <EyeIcon />
                             </ButtonLink>
-                            <ButtonLink to={`/admin/courses/${course.id}/edit`} variant="ghost" size="icon" aria-label={`Editar ${course.title}`} title="Editar">
-                              <PencilIcon />
-                            </ButtonLink>
-                            <ButtonLink to={`/admin/courses/${course.id}/quizzes`} variant="ghost" size="icon" aria-label={`Examen final de ${course.title}`} title="Examen final">
-                              <ListChecksIcon />
-                            </ButtonLink>
-                            <Button variant="danger" size="icon" aria-label={`Eliminar ${course.title}`} title="Eliminar" onClick={() => setToDelete(course)}>
-                              <TrashIcon />
-                            </Button>
+                            {canManageListedCourse(user, course) ? (
+                              <>
+                                <ButtonLink to={`/admin/courses/${course.id}/edit`} variant="ghost" size="icon" aria-label={`Editar ${course.title}`} title="Editar">
+                                  <PencilIcon />
+                                </ButtonLink>
+                                <ButtonLink to={`/admin/courses/${course.id}/quizzes`} variant="ghost" size="icon" aria-label={`Examen final de ${course.title}`} title="Examen final">
+                                  <ListChecksIcon />
+                                </ButtonLink>
+                                <Button variant="danger" size="icon" aria-label={`Eliminar ${course.title}`} title="Eliminar" onClick={() => setToDelete(course)}>
+                                  <TrashIcon />
+                                </Button>
+                              </>
+                            ) : (
+                              <span className="px-2 text-xs text-subtle-foreground" title="Los cursos globales solo los gestiona el superadmin">
+                                Solo lectura
+                              </span>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

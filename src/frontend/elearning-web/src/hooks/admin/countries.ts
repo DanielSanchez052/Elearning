@@ -10,11 +10,13 @@ export const countriesKeys = {
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 
-export function useAdminCountries() {
+// `/admin/countries` es solo para admin y superadmin: pasa `enabled: false` para el resto de roles.
+export function useAdminCountries({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: countriesKeys.all,
     queryFn: () => countriesApi.getCountries().then((r) => r.data),
     staleTime: 1000 * 60 * 5,
+    enabled,
   });
 }
 

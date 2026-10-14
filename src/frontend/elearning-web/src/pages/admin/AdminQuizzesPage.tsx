@@ -14,8 +14,10 @@ import { ListQuestions } from '@/components/admin/ListQuestions';
 import { QuestionComposerModal, type QuestionComposerSubmit } from '@/components/admin/QuestionComposerModal';
 import { useCourseDetail } from '@/hooks/useCourses';
 import { Alert, Button, Modal, Skeleton, StateBlock } from '@/components/ui';
-import { ArrowLeftIcon, ListChecksIcon, PlusIcon, TrashIcon } from '@/components/ui/icons';
+import { ArrowLeftIcon, ListChecksIcon, PlusIcon, ShieldIcon, TrashIcon } from '@/components/ui/icons';
 import { getApiErrorMessage } from '@/lib/axios';
+import { canManageCourse, courseAccessDeniedReason } from '@/lib/courseAccess';
+import { useAuthStore } from '@/store/authStore';
 import type { CreateQuizOptionRequest, CreateQuizQuestionRequest, UpdateQuizQuestionRequest } from '@/types/quiz.types';
 
 type ModalState = { kind: 'create' } | { kind: 'edit'; questionId: string } | { kind: 'delete'; questionId: string } | null;
@@ -28,6 +30,7 @@ export function AdminQuizzesPage() {
   const [notice, setNotice] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
 
   const courseDetail = useCourseDetail(courseId);
+  const user = useAuthStore((s) => s.user);
   const lessons = courseDetail.data?.lessons ?? [];
   const lessonOptions = lessons.map((lesson) => ({
     id: lesson.id,
@@ -37,8 +40,10 @@ export function AdminQuizzesPage() {
   }));
 
   // Queries
-  const lessonQuizzes = useAdminLessonQuizzes(lessonId || '', !!lessonId);
-  const courseExam = useAdminCourseExam(courseId, !!courseId && !lessonId);
+  // Las preguntas incluyen las respuestas: solo se piden cuando se sabe que el usuario gestiona el curso.
+  const canManage = !!courseDetail.data && canManageCourse(user, courseDetail.data);
+  const lessonQuizzes = useAdminLessonQuizzes(lessonId || '', canManage && !!lessonId);
+  const courseExam = useAdminCourseExam(courseId, canManage && !!courseId && !lessonId);
   const activeQuery = lessonId ? lessonQuizzes : courseExam;
   const questions = activeQuery.data ?? [];
 
@@ -148,6 +153,21 @@ export function AdminQuizzesPage() {
       }`
     : null;
 
+  if (courseDetail.data && !canManage) {
+    return (
+      <div className="flex flex-col gap-6 px-4 py-8 sm:px-8">
+        <Link to="/admin/courses" className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeftIcon className="size-4" aria-hidden="true" /> Cursos
+        </Link>
+        <StateBlock
+          icon={ShieldIcon}
+          title="No puedes gestionar las evaluaciones de este curso"
+          text={courseAccessDeniedReason(user, courseDetail.data)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 px-4 py-8 sm:px-8">
       <Link
@@ -175,7 +195,9 @@ export function AdminQuizzesPage() {
       )}
 
       <div className="max-w-4xl">
-        {activeQuery.isLoading ? (
+        {courseDetail.isError ? (
+          <StateBlock tipo="error" title="No pudimos cargar el curso" onAction={() => courseDetail.refetch()} />
+        ) : courseDetail.isLoading || activeQuery.isLoading ? (
           <div className="flex flex-col gap-4" aria-busy="true">
             <Skeleton className="h-48 rounded-2xl" />
             <Skeleton className="h-48 rounded-2xl" />
