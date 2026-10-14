@@ -1,275 +1,267 @@
 import { useEffect, useRef, useState } from 'react';
 import type { LessonDto } from '@/types/course.types';
 import { useMarkLessonComplete } from '@/hooks/useEnrollments';
+import { Alert, Badge, Button, Card, ProgressBar, StateBlock } from '@/components/ui';
+import {
+  ArrowLeftIcon,
+  CheckCircleIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  DownloadIcon,
+  FileTextIcon,
+  InfoIcon,
+  ListChecksIcon,
+  LockIcon,
+  PlayCircleIcon,
+  VideoIcon,
+} from '@/components/ui/icons';
+import { requiredLessonsLabel } from '@/lib/enrollment';
+import { cn } from '@/lib/utils';
+import type { LessonRowStatus } from './LessonRow';
+
+const typeMeta: Record<string, { label: string; Icon: typeof VideoIcon }> = {
+  video: { label: 'Video', Icon: VideoIcon },
+  pdf: { label: 'PDF', Icon: FileTextIcon },
+  quiz: { label: 'Quiz', Icon: ListChecksIcon },
+};
 
 interface LessonPlayerProps {
   courseId: string;
-  lesson: LessonDto;
   courseTitle: string;
-  allLessons: LessonDto[];
-  completedLessonIds?: string[];
+  lesson: LessonDto;
+  /** Lecciones del curso ya ordenadas. */
+  lessons: LessonDto[];
+  completedLessonIds: string[];
+  completedRequired: number;
+  totalRequired: number;
+  statusOf: (lesson: LessonDto) => LessonRowStatus;
   onClose: () => void;
-  onNavigate: (lesson: LessonDto) => void;
+  /** Abre una lección: el reproductor para video/PDF o la evaluación para un quiz. */
+  onOpenLesson: (lesson: LessonDto) => void;
 }
 
+/**
+ * Reproductor de lecciones (Reproductor del rediseño): contenido (video MP4 o PDF), datos de la lección,
+ * marcar como completada, anterior/siguiente y la lista «Contenido del curso» con el progreso.
+ */
 export default function LessonPlayer({
   courseId,
-  lesson,
   courseTitle,
-  allLessons,
-  completedLessonIds = [],
+  lesson,
+  lessons,
+  completedLessonIds,
+  completedRequired,
+  totalRequired,
+  statusOf,
   onClose,
-  onNavigate,
+  onOpenLesson,
 }: LessonPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const markLessonComplete = useMarkLessonComplete();
-  const [completionFeedback, setCompletionFeedback] = useState('');
+  // El aviso pertenece a una lección: al cambiar de lección deja de mostrarse sin resetear estado en un efecto.
+  const [feedback, setFeedback] = useState<{ lessonId: string; ok: boolean; text: string } | null>(null);
+  const [listOpen, setListOpen] = useState(false);
 
-  const isLessonAlreadyCompleted = completedLessonIds.includes(lesson.id);
+  const isCompleted = completedLessonIds.includes(lesson.id);
+  const index = lessons.findIndex((l) => l.id === lesson.id);
+  const prev = index > 0 ? lessons[index - 1] : null;
+  const next = index >= 0 && index < lessons.length - 1 ? lessons[index + 1] : null;
+  const canGoNext = next ? statusOf(next) !== 'locked' : false;
+  const meta = typeMeta[lesson.type] ?? typeMeta.video;
+  const hasContent = Boolean(lesson.contentUrl) && (lesson.type === 'video' || lesson.type === 'pdf');
+  const shownFeedback = feedback?.lessonId === lesson.id ? feedback : null;
 
   const handleMarkComplete = async () => {
-    if (lesson.type === 'quiz' || isLessonAlreadyCompleted || markLessonComplete.isPending) {
-      return;
-    }
-
+    if (lesson.type === 'quiz' || isCompleted || markLessonComplete.isPending) return;
     try {
-      await markLessonComplete.mutateAsync({
-        courseId,
+      const result = await markLessonComplete.mutateAsync({ courseId, lessonId: lesson.id });
+      setFeedback({
         lessonId: lesson.id,
+        ok: true,
+        text: result.data.courseCompleted ? '¡Completaste todas las lecciones requeridas del curso!' : 'Lección marcada como completada.',
       });
-      setCompletionFeedback('Lección marcada como completada.');
     } catch {
-      setCompletionFeedback('No se pudo marcar la lección. Intenta nuevamente.');
+      setFeedback({ lessonId: lesson.id, ok: false, text: 'No se pudo marcar la lección. Intenta nuevamente.' });
     }
   };
 
+  // Reiniciar el video y subir al inicio al cambiar de lección.
   useEffect(() => {
-    setCompletionFeedback('');
-  }, [lesson.id]);
-
-  // Cerrar con Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [onClose]);
-
-  // Reiniciar video al cambiar de lección
-  useEffect(() => {
+    window.scrollTo({ top: 0 });
     if (videoRef.current) {
       videoRef.current.load();
-      videoRef.current.play().catch(() => { });
+      videoRef.current.play().catch(() => {});
     }
   }, [lesson.id]);
 
-  // Solo lecciones reproducibles en el sidebar
-  const playableLessons = allLessons.filter((l) => l.type !== 'quiz');
-  const currentIndex = playableLessons.findIndex((l) => l.id === lesson.id);
-  const prevLesson = currentIndex > 0 ? playableLessons[currentIndex - 1] : null;
-  const nextLesson = currentIndex < playableLessons.length - 1 ? playableLessons[currentIndex + 1] : null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-[#08080d] flex flex-col">
-
-      {/* Topbar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] flex-shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1.5 text-zinc-400 hover:text-white transition-colors text-sm flex-shrink-0"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Cerrar
-          </button>
-          <span className="text-white/20">|</span>
-          <span className="text-zinc-500 text-sm truncate hidden sm:block">{courseTitle}</span>
-          <span className="text-white/20 hidden sm:block">›</span>
-          <span className="text-white text-sm font-medium truncate">{lesson.title}</span>
-        </div>
-
-        {/* Navegación prev/next */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={() => prevLesson && onNavigate(prevLesson)}
-            disabled={!prevLesson}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-zinc-400 text-xs disabled:opacity-30 hover:bg-white/[0.08] transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Anterior
-          </button>
-          <button
-            onClick={() => nextLesson && onNavigate(nextLesson)}
-            disabled={!nextLesson}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-zinc-400 text-xs disabled:opacity-30 hover:bg-white/[0.08] transition-colors"
-          >
-            Siguiente
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <button type="button" onClick={onClose} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+          <ArrowLeftIcon className="size-4" aria-hidden="true" /> {courseTitle}
+        </button>
+        <span className="text-subtle-foreground" aria-hidden="true">/</span>
+        <span className="text-foreground-soft">
+          Lección {index + 1} de {lessons.length}
+        </span>
       </div>
 
-      {/* Body — reproductor + sidebar */}
-      <div className="flex flex-1 overflow-hidden">
-
-        {/* Contenido principal */}
-        <div className="flex-1 flex items-center justify-center bg-black overflow-hidden">
-          {lesson.type === 'video' && lesson.contentUrl ? (
-            <div className="w-full h-full flex flex-col">
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-5 md:col-span-2">
+          {!hasContent ? (
+            <StateBlock
+              icon={meta.Icon}
+              title="Esta lección aún no tiene contenido"
+              text="El instructor todavía no ha subido el archivo. Puedes continuar con la siguiente lección."
+              action={next && canGoNext ? 'Siguiente lección' : undefined}
+              actionVariant="secondary"
+              onAction={() => next && onOpenLesson(next)}
+            />
+          ) : lesson.type === 'video' ? (
+            <div className="overflow-hidden rounded-2xl border border-border bg-sunken">
               <video
                 ref={videoRef}
                 controls
                 onEnded={handleMarkComplete}
-                className="max-h-full max-w-full w-full"
-                style={{ maxHeight: 'calc(100vh - 110px)' }}
+                className="aspect-video w-full bg-sunken"
               >
-                <source src={lesson.contentUrl} type="video/mp4" />
+                <source src={lesson.contentUrl ?? undefined} type="video/mp4" />
                 Tu navegador no soporta la reproducción de video.
               </video>
-
-              <div className="border-t border-white/[0.06] bg-[#0d0d14] px-4 py-3 flex items-center justify-between gap-3">
-                <p className="text-xs text-zinc-500">
-                  {isLessonAlreadyCompleted
-                    ? 'Esta lección ya fue completada.'
-                    : 'Al terminar el video se marca automáticamente como completada.'}
-                </p>
-                <button
-                  onClick={handleMarkComplete}
-                  disabled={isLessonAlreadyCompleted || markLessonComplete.isPending}
-                  className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50 transition"
-                >
-                  {isLessonAlreadyCompleted
-                    ? 'Completada'
-                    : markLessonComplete.isPending
-                      ? 'Guardando...'
-                      : 'Marcar completada'}
-                </button>
-              </div>
             </div>
-          ) : lesson.type === 'pdf' && lesson.contentUrl ? (
-            <PdfViewer
-              url={lesson.contentUrl}
-              isCompleted={isLessonAlreadyCompleted}
-              isSaving={markLessonComplete.isPending}
-              onMarkComplete={handleMarkComplete}
-            />
           ) : (
-            <div className="text-center text-zinc-500 text-sm">
-              Contenido no disponible.
+            <div className="overflow-hidden rounded-2xl border border-border bg-sunken">
+              <div className="flex items-center gap-2 border-b border-border bg-card px-4 py-2">
+                <span className="text-xs text-foreground-soft">Documento PDF</span>
+                <div className="flex-1" />
+                <a
+                  href={lesson.contentUrl ?? undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  <DownloadIcon className="size-4" aria-hidden="true" /> Descargar
+                </a>
+              </div>
+              <iframe
+                src={`${lesson.contentUrl}#toolbar=1&navpanes=0`}
+                title={`PDF: ${lesson.title}`}
+                className="block h-[70vh] w-full border-0 bg-sunken"
+              />
             </div>
           )}
 
-          {completionFeedback && (
-            <div className="absolute bottom-4 left-4 rounded-lg border border-white/[0.1] bg-[#111118]/90 px-3 py-2 text-xs text-zinc-300">
-              {completionFeedback}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge>
+                <meta.Icon /> {meta.label}
+              </Badge>
+              <Badge>{lesson.isRequired ? 'Requerida' : 'Opcional'}</Badge>
+              {isCompleted && (
+                <Badge tone="success">
+                  <CheckCircleIcon /> Completada
+                </Badge>
+              )}
             </div>
-          )}
-        </div>
-
-        {/* Sidebar — lista de lecciones */}
-        <div className="w-72 flex-shrink-0 border-l border-white/[0.06] overflow-y-auto bg-[#0d0d14]">
-          <div className="p-4 border-b border-white/[0.06]">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-              Lecciones del curso
-            </p>
-            <p className="text-xs text-zinc-600 mt-0.5">
-              {currentIndex + 1} de {playableLessons.length}
-            </p>
+            <h1 className="text-2xl font-semibold text-foreground">{lesson.title}</h1>
           </div>
 
-          <div className="p-2 space-y-1">
-            {playableLessons.map((l, index) => {
-              const isActive = l.id === lesson.id;
-              return (
-                <button
-                  key={l.id}
-                  onClick={() => onNavigate(l)}
-                  className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl text-left transition-all ${isActive
-                      ? 'bg-indigo-600/20 border border-indigo-500/30'
-                      : 'hover:bg-white/[0.04] border border-transparent'
-                    }`}
-                >
-                  {/* Índice o ícono de reproducción */}
-                  <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 ${isActive ? 'bg-indigo-500' : 'bg-white/[0.06]'
-                    }`}>
-                    {isActive ? (
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    ) : (
-                      <span className="text-xs text-zinc-500">{index + 1}</span>
-                    )}
-                  </div>
+          {shownFeedback && <Alert tone={shownFeedback.ok ? 'success' : 'danger'}>{shownFeedback.text}</Alert>}
 
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-medium leading-snug ${isActive ? 'text-indigo-300' : 'text-zinc-300'
-                      }`}>
-                      {l.title}
-                    </p>
-                    <p className="text-xs text-zinc-600 mt-0.5 capitalize">{l.type}</p>
-                  </div>
-                </button>
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
+            {hasContent && !isCompleted && lesson.type === 'video' && (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <InfoIcon className="size-4" aria-hidden="true" /> Se marcará como completada al terminar el video.
+              </p>
+            )}
+            {hasContent && !isCompleted && (
+              <Button variant="success" onClick={handleMarkComplete} disabled={markLessonComplete.isPending}>
+                <CheckIcon /> {markLessonComplete.isPending ? 'Guardando…' : 'Marcar completada'}
+              </Button>
+            )}
+            <div className="flex-1" />
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => prev && onOpenLesson(prev)} disabled={!prev}>
+                <ChevronLeftIcon /> Anterior
+              </Button>
+              <Button variant="secondary" onClick={() => next && onOpenLesson(next)} disabled={!canGoNext}>
+                Siguiente <ChevronRightIcon />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <Card padding="none" className="self-start overflow-hidden">
+          <div className="space-y-3 border-b border-border px-5 py-4">
+            <button
+              type="button"
+              onClick={() => setListOpen((o) => !o)}
+              aria-expanded={listOpen}
+              aria-controls="lesson-player-list"
+              className="flex w-full items-center justify-between gap-2 text-left md:pointer-events-none"
+            >
+              <span className="text-sm font-semibold text-foreground">Contenido del curso</span>
+              <span className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                {index + 1} de {lessons.length}
+                <ChevronDownIcon className={cn('size-4 transition-transform md:hidden', listOpen && 'rotate-180')} aria-hidden="true" />
+              </span>
+            </button>
+            <ProgressBar
+              value={totalRequired ? Math.round((completedRequired / totalRequired) * 100) : 0}
+              size="sm"
+              tone="success"
+              label={requiredLessonsLabel(completedRequired, totalRequired)}
+            />
+          </div>
+          <ol id="lesson-player-list" className={cn('divide-y divide-border md:block', !listOpen && 'hidden')}>
+            {lessons.map((l) => {
+              const status = statusOf(l);
+              const isCurrent = l.id === lesson.id;
+              const locked = status === 'locked';
+              const Icon = status === 'done' ? CheckCircleIcon : locked ? LockIcon : isCurrent ? PlayCircleIcon : ClockIcon;
+              const typeLabel = typeMeta[l.type]?.label ?? l.type;
+              return (
+                <li key={l.id}>
+                  <button
+                    type="button"
+                    disabled={locked || isCurrent}
+                    onClick={() => onOpenLesson(l)}
+                    aria-current={isCurrent ? 'step' : undefined}
+                    className={cn(
+                      'flex w-full items-center gap-3 px-5 py-3 text-left transition-colors disabled:cursor-default',
+                      isCurrent ? 'bg-brand/10' : !locked && 'hover:bg-secondary'
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        'size-4 shrink-0',
+                        status === 'done' ? 'text-success-foreground' : isCurrent ? 'text-brand-foreground' : 'text-subtle-foreground'
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={cn(
+                          'block truncate text-sm',
+                          isCurrent ? 'font-medium text-brand-foreground' : locked ? 'text-muted-foreground' : 'text-foreground-soft'
+                        )}
+                      >
+                        {l.title}
+                      </span>
+                      <span className="block text-xs text-subtle-foreground">
+                        {typeLabel}
+                        {isCurrent ? ' · Lección actual' : locked ? ' · Bloqueada' : ''}
+                      </span>
+                    </span>
+                  </button>
+                </li>
               );
             })}
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
-}
-
-// ── PDF Viewer ────────────────────────────────────────────────────────────────
-
-function PdfViewer({
-  url,
-  isCompleted,
-  isSaving,
-  onMarkComplete,
-}: {
-  url: string;
-  isCompleted: boolean;
-  isSaving: boolean;
-  onMarkComplete: () => void;
-}) {
-  const [loading, setLoading] = useState(true);
-
-  // Usamos iframe nativo para el MVP — no requiere dependencias adicionales.
-  // Para el MVP 2 puedes reemplazarlo con react-pdf para más control.
-  return (
-    <div className="w-full h-full flex flex-col">
-      <iframe
-        src={`${url}#toolbar=1&navpanes=0`}
-        className="flex-1 w-full border-0"
-        title="Visor de PDF"
-        onLoad={() => setLoading(false)}
-      />
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-          <div className="text-zinc-400 text-sm">Cargando PDF...</div>
-        </div>
-      )}
-
-      <div className="border-t border-white/[0.06] bg-[#0d0d14] px-4 py-3 flex items-center justify-between gap-3">
-        <p className="text-xs text-zinc-500">
-          {isCompleted
-            ? 'Esta lección ya fue completada.'
-            : 'Cuando termines de leer, marca la lección como completada.'}
-        </p>
-        <button
-          onClick={onMarkComplete}
-          disabled={isCompleted || isSaving}
-          className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50 transition"
-        >
-          {isCompleted ? 'Completada' : isSaving ? 'Guardando...' : 'Marcar completada'}
-        </button>
+          </ol>
+        </Card>
       </div>
     </div>
   );

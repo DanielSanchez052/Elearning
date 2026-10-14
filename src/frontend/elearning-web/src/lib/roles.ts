@@ -6,3 +6,11 @@ export function adminHomeFor(role: UserRole | undefined): string | null {
   if (role === 'instructor') return '/admin/courses';
   return null;
 }
+
+/** Tono de Badge por rol (rediseño): estudiante neutral, instructor info, admin warning, superadmin danger. */
+export const roleTone: Record<UserRole, 'neutral' | 'info' | 'warning' | 'danger'> = {
+  student: 'neutral',
+  instructor: 'info',
+  admin: 'warning',
+  superadmin: 'danger',
+};
