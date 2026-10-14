@@ -2,7 +2,10 @@ import axios, { AxiosError } from 'axios';
 import type { ApiError } from '../types';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'https://localhost:7001/api',
+  // Fallback para un clon nuevo: el puerto del perfil http de la API
+  // (src/backend/ELearning.API/Properties/launchSettings.json). Se puede
+  // sobreescribir con VITE_API_URL en un .env local (gitignorado).
+  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:5277/api',
   headers: {
     'Content-Type': 'application/json',
   },
