@@ -1,5 +1,10 @@
 @ELearning.API_HostAddress = http://localhost:5277
 
+### La contraseña de las cuentas demo sale de `DevSeed:Password` (user-secrets) y
+### no se versiona. Definila en un `.env` local (gitignorado) así:
+###   DEV_SEED_PASSWORD=<tu-password>
+@password = {{$dotenv DEV_SEED_PASSWORD}}
+
 GET {{ELearning.API_HostAddress}}/openapi/v1.json
 Accept: application/json
 
@@ -11,7 +16,7 @@ Content-type: application/json
 
 {
   "Email": "student@elearning.com",
-  "Password": "Admin123*"
+  "Password": "{{password}}"
 }
 
 ###
@@ -22,7 +27,7 @@ Content-type: application/json
 
 {
   "Email": "instructor@elearning.com",
-  "Password": "Admin123*"
+  "Password": "{{password}}"
 }
 
 ###
@@ -33,7 +38,7 @@ Content-type: application/json
 
 {
   "Email": "superadmin@elearning.com",
-  "Password": "Admin123*"
+  "Password": "{{password}}"
 }
 
 ###
@@ -44,5 +49,5 @@ Content-type: application/json
 
 {
   "Email": "admin@elearning.com",
-  "Password": "Admin123*"
+  "Password": "{{password}}"
 }

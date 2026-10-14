@@ -62,6 +62,7 @@ appsettings.*.json
 !appsettings.Development.json
 *.env
 *.env.*
+http-client.private.env.json
 
 # Test results
 TestResults/
