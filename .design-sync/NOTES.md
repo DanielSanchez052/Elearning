@@ -26,7 +26,8 @@
 - Ninguno pendiente: los `[GRID_OVERFLOW]` se resolvieron con `cardMode`.
 
 ## Re-sync risks
-- **Pendiente de sincronizar (fases 4 y 5 del rediseño):** el proyecto de Claude Design no refleja todavía estos cambios del DS: `Table` (contenedor `relative`), `StateBlock` (`titleAs`, ya en `dtsPropsFor`), `--subtle-foreground` más claro (#85858e, AA), tokens `--success-strong`/`--destructive-strong` para los botones `success`/`destructive`, y foco gestionado en `Modal`/`Drawer`. Como cambian `index.css` y `styleSha`, la próxima sincronización recalificará los 26 componentes.
+- Sincronizado tras la fase 5 del rediseño (`Table` relative, `StateBlock.titleAs`, `--subtle-foreground` #85858e, `--success-strong`/`--destructive-strong`, foco en `Modal`/`Drawer`).
+- **Los estilos de `Button` viven en `components/ui/button-variants.ts`.** Al cambiar solo ese archivo, el driver no marcó `Button` ni `Modal` como `changed` (sus vistas previas no cambiaron). Si se toca `button-variants.ts`, haz una revisión puntual: `package-capture.mjs --components Button,Modal --spot-check-components Button,Modal`.
 - Los componentes de dominio (`components/courses`: CourseCard, CourseThumbnail, LessonRow) **no se publican** en ElearningUI (usan react-router y tipos de la app). Las plantillas `templates/elearning-redesign/` del proyecto los recrean con clases; si el rediseño cambia, recuérdalo al comparar.
 - El proyecto de Claude Design contiene archivos que no produce este build (`templates/`, `uploads/`, `_shots/`): son del trabajo de diseño, nunca los borres en una reconciliación.
 - `dtsPropsFor` está escrito a mano: se desincroniza en silencio si cambian las props de esos componentes.
