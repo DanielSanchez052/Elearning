@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { ProtectedRoute, PublicRoute, RoleRoute } from './components/RouteGuards';
 
 import LoginPage from './pages/auth/LoginPage';
@@ -13,6 +14,7 @@ import CourseDetailPage from './pages/courses/CourseDetailPage';
 import QuizSessionPage from './pages/quiz/QuizSessionPage';
 import { ProfilePage } from './pages/Profile';
 
+import StudentLayout from './components/layout/StudentLayout';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
@@ -21,15 +23,16 @@ import AdminCountriesPage from './pages/admin/AdminCountriesPage';
 import AdminCourseFormPage from './pages/admin/AdminCourseFormPage';
 import { AdminQuizzesPage } from './pages/admin/AdminQuizzesPage';
 import DesignSystemPage from './pages/dev/DesignSystemPage';
-// import UnauthorizedPage    from './pages/UnauthorizedPage';
+import NotFoundPage from './pages/NotFoundPage';
+import UnauthorizedPage from './pages/UnauthorizedPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       // No reintentar en errores 4xx — son errores del cliente, no transitorios
-      retry: (failureCount, error: any) => {
-        const status = error?.response?.status;
-        if (status >= 400 && status < 500) return false;
+      retry: (failureCount, error) => {
+        const status = isAxiosError(error) ? error.response?.status : undefined;
+        if (status !== undefined && status >= 400 && status < 500) return false;
         return failureCount < 2;
       },
       staleTime: 1000 * 60 * 5, // 5 minutos de caché por defecto
@@ -54,12 +57,15 @@ export default function App() {
 
           {/* ── Rutas protegidas — requieren autenticación ─────────────────── */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/courses" element={<CatalogPage />} />
-            <Route path="/courses/:id" element={<CourseDetailPage />} />
-            <Route path="/courses/:id/lessons/:lessonId/quiz" element={<QuizSessionPage />} />
-            <Route path="/courses/:id/exam" element={<QuizSessionPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
+            {/* Área del estudiante: barra superior común */}
+            <Route element={<StudentLayout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/courses" element={<CatalogPage />} />
+              <Route path="/courses/:id" element={<CourseDetailPage />} />
+              <Route path="/courses/:id/lessons/:lessonId/quiz" element={<QuizSessionPage />} />
+              <Route path="/courses/:id/exam" element={<QuizSessionPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
 
             {/* ── Solo instructores, admins y super_admin ─────────────────── */}
             <Route element={<RoleRoute allowedRoles={['instructor', 'admin', 'superadmin']} />}>
@@ -85,9 +91,10 @@ export default function App() {
 
           {/* ── Utilidades ─────────────────────────────────────────────────── */}
           {import.meta.env.DEV && <Route path="/design-system" element={<DesignSystemPage />} />}
-          <Route path="/unauthorized" element={<div>No tienes permisos</div>} />
-          <Route path="/" element={<LoginPage />} />
-          <Route path="*" element={<div>404</div>} />
+          <Route path="/unauthorized" element={<UnauthorizedPage />} />
+          {/* ProtectedRoute manda al login si no hay sesión */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
 
         </Routes>
       </BrowserRouter>

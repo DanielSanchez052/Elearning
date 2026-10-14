@@ -5,7 +5,9 @@ import {
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
 } from '../../hooks/useNotifications';
-import type { NotificationDto } from '../../api/notifications';
+import { Button, Skeleton } from '@/components/ui';
+import { BellIcon } from '@/components/ui/icons';
+import { cn } from '@/lib/utils';
 
 interface NotificationPanelProps {
   onClose: () => void;
@@ -24,11 +26,12 @@ function formatNotificationDate(value: string) {
   if (diffHours < 24) return `Hace ${diffHours} h`;
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 7) return `Hace ${diffDays} d`;
-  return date.toLocaleDateString();
+  return date.toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** Dropdown de notificaciones de la barra superior: marcar como leída una o todas, con estado vacío. */
 export const NotificationPanel = ({ onClose, containerRef }: NotificationPanelProps) => {
-  const { data: notifications, isLoading } = useNotifications();
+  const { data: notifications, isLoading, isError, refetch } = useNotifications();
   const markAsRead = useMarkNotificationRead();
   const markAllAsRead = useMarkAllNotificationsRead();
 
@@ -52,64 +55,77 @@ export const NotificationPanel = ({ onClose, containerRef }: NotificationPanelPr
     };
   }, [onClose, containerRef]);
 
-  const hasUnread = (notifications ?? []).some((n) => !n.isRead);
-
-  const handleNotificationClick = (notification: NotificationDto) => {
-    if (!notification.isRead) {
-      markAsRead.mutate(notification.id);
-    }
-  };
+  const items = notifications ?? [];
+  const hasUnread = items.some((n) => !n.isRead);
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] rounded-lg border border-white/[0.08] bg-[#111118] shadow-xl z-50">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.08]">
-        <h3 className="text-sm font-semibold text-white">Notificaciones</h3>
+    <div
+      role="dialog"
+      aria-label="Notificaciones"
+      className="absolute top-full right-0 z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border-strong bg-card shadow-2xl"
+    >
+      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+        <p className="text-sm font-semibold text-foreground">Notificaciones</p>
         {hasUnread && (
-          <button
-            type="button"
-            onClick={() => markAllAsRead.mutate()}
-            disabled={markAllAsRead.isPending}
-            className="text-xs text-indigo-400 hover:text-indigo-300 transition disabled:opacity-60"
-          >
+          <Button variant="ghost" size="sm" onClick={() => markAllAsRead.mutate()} disabled={markAllAsRead.isPending}>
             Marcar todas como leídas
-          </button>
+          </Button>
         )}
       </div>
 
-      <div className="max-h-96 overflow-y-auto">
-        {isLoading ? (
-          <p className="px-4 py-6 text-center text-sm text-zinc-400">Cargando notificaciones...</p>
-        ) : (notifications ?? []).length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-zinc-400">No tienes notificaciones</p>
-        ) : (
-          <ul className="divide-y divide-white/[0.06]">
-            {(notifications ?? []).map((notification) => (
-              <li key={notification.id}>
-                <button
-                  type="button"
-                  onClick={() => handleNotificationClick(notification)}
-                  className={`w-full text-left px-4 py-3 transition hover:bg-white/[0.04] ${
-                    notification.isRead ? '' : 'bg-indigo-500/[0.06]'
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    {!notification.isRead && (
-                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-indigo-400" />
-                    )}
-                    <div className={`min-w-0 flex-1 ${notification.isRead ? 'pl-3.5' : ''}`}>
-                      <p className="text-sm font-medium text-white truncate">{notification.title}</p>
-                      <p className="text-xs text-zinc-400 mt-0.5 line-clamp-2">{notification.message}</p>
-                      <p className="text-[11px] text-zinc-500 mt-1">
-                        {formatNotificationDate(notification.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {isLoading ? (
+        <div className="flex flex-col gap-3 px-4 py-4" aria-busy="true">
+          <Skeleton className="h-12 rounded-lg" />
+          <Skeleton className="h-12 rounded-lg" />
+          <Skeleton className="h-12 rounded-lg" />
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-center gap-3 px-6 py-8 text-center">
+          <p className="text-sm text-muted-foreground">No pudimos cargar tus notificaciones.</p>
+          <Button variant="secondary" size="sm" onClick={() => refetch()}>
+            Reintentar
+          </Button>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+          <span className="flex size-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+            <BellIcon className="size-5" aria-hidden="true" />
+          </span>
+          <p className="text-sm font-medium text-foreground">Sin notificaciones</p>
+          <p className="text-xs text-muted-foreground">Te avisaremos de nuevas lecciones, medallas y certificados.</p>
+        </div>
+      ) : (
+        <ul className="max-h-96 divide-y divide-border overflow-y-auto">
+          {items.map((notification) => (
+            <li key={notification.id} className="flex gap-3 px-4 py-3">
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'mt-1.5 block size-1.5 shrink-0 rounded-full',
+                  notification.isRead ? 'bg-transparent' : 'bg-primary'
+                )}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground">{notification.title}</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">{notification.message}</p>
+                <div className="mt-1.5 flex items-center justify-between gap-2">
+                  <span className="text-xs text-subtle-foreground">{formatNotificationDate(notification.createdAt)}</span>
+                  {!notification.isRead && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => markAsRead.mutate(notification.id)}
+                      disabled={markAsRead.isPending && markAsRead.variables === notification.id}
+                    >
+                      Marcar como leída
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };

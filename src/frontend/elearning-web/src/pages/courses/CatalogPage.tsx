@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCourseCatalog } from '@/hooks/useCourses';
-import AppHeader from '@/components/layout/AppHeader';
 import type { CourseSummaryDto } from '@/types/course.types';
 
 export default function CatalogPage() {
@@ -23,8 +22,7 @@ export default function CatalogPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
-      <AppHeader />
+    <div className="flex-1 bg-[#0a0a0f] text-white">
 
       {/* Header */}
       <div className="border-b border-white/[0.06] bg-[#0a0a0f]/80">

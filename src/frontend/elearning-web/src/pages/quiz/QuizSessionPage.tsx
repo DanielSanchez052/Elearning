@@ -291,7 +291,7 @@ export default function QuizSessionPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="flex-1 bg-[#0a0a0f] flex items-center justify-center">
         <p className="text-zinc-400">Cargando evaluación...</p>
       </div>
     );
@@ -305,7 +305,7 @@ export default function QuizSessionPage() {
     // network/server error with no prior attempts still gets the bare-error fallback.
     if (attempts.length === 0) {
       return (
-        <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
+        <div className="flex-1 bg-[#0a0a0f] flex items-center justify-center p-6">
           <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#111118] p-8 text-center">
             <p className="text-zinc-300 mb-2">{startError}</p>
             <Link to={`/courses/${courseId}`} className="text-indigo-400 hover:text-indigo-300 text-sm">
@@ -317,7 +317,7 @@ export default function QuizSessionPage() {
     }
 
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
+      <div className="flex-1 bg-[#0a0a0f] flex items-center justify-center p-6">
         <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#111118] p-8">
           <p className="text-zinc-300 mb-4 text-center">{startError}</p>
           <h2 className="text-sm font-semibold text-zinc-400 mb-3">Intentos anteriores</h2>
@@ -362,7 +362,7 @@ export default function QuizSessionPage() {
 
   if (!questions.length) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
+      <div className="flex-1 bg-[#0a0a0f] flex items-center justify-center p-6">
         <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#111118] p-8 text-center">
           <p className="text-zinc-300 mb-2">No hay preguntas configuradas para esta evaluación.</p>
           <Link to={`/courses/${courseId}`} className="text-indigo-400 hover:text-indigo-300 text-sm">
@@ -374,7 +374,7 @@ export default function QuizSessionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="flex-1 bg-[#0a0a0f] text-white">
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>

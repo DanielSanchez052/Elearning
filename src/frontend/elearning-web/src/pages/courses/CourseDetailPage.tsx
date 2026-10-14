@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import AppHeader from '@/components/layout/AppHeader';
 import { useCourseDetail } from '@/hooks/useCourses';
 import { useCourseExam, useCourseExamResults } from '@/hooks/quizzes';
 import { useCourseProgress, useEnrollInCourse } from '@/hooks/useEnrollments';
@@ -45,7 +44,7 @@ export default function CourseDetailPage() {
 
   if (isError || !course) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="flex-1 bg-[#0a0a0f] flex items-center justify-center">
         <div className="text-center space-y-3">
           <p className="text-zinc-400 text-sm">Curso no encontrado.</p>
           <Link to="/courses" className="text-indigo-400 text-sm hover:text-indigo-300 transition-colors">
@@ -65,8 +64,7 @@ export default function CourseDetailPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-[#0a0a0f] text-white">
-        <AppHeader />
+      <div className="flex-1 bg-[#0a0a0f] text-white">
 
         {/* Breadcrumb */}
         <div className="border-b border-white/[0.06]">
@@ -423,7 +421,7 @@ function getLessonIcon(type: LessonDto['type']) {
 
 function CourseDetailSkeleton() {
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
+    <div className="flex-1 bg-[#0a0a0f]">
       <div className="border-b border-white/[0.06] h-10" />
       <div className="max-w-5xl mx-auto px-6 py-10 space-y-8 animate-pulse">
         <div className="flex gap-8">
