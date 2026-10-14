@@ -1,6 +1,5 @@
 ﻿using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Common.Authorization;
-using ELearning.Application.Common.Exceptions;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Interfaces.Repositories;
 

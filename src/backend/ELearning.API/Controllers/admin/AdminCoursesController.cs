@@ -5,6 +5,7 @@ using ELearning.Application.Features.Courses.Commands;
 using ELearning.Application.Features.Courses.DTOs;
 using ELearning.Application.Features.Courses.Queries;
 using ELearning.Application.Features.Lessons.Commands;
+using ELearning.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,7 +13,7 @@ namespace ELearning.API.Controllers;
 
 [ApiController]
 [Route("api/admin/courses")]
-[Authorize(Roles = "instructor,admin,superadmin")]
+[Authorize(Roles = RoleNames.Staff)]
 public class AdminCoursesController(
     IQueryHandler<GetAdminCourseListQuery, PagedResult<CourseSummaryDto>> getAdminListHandler,
     ICommandHandler<CreateCourseCommand, Guid> createCourseHandler,
@@ -35,13 +36,12 @@ public class AdminCoursesController(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var requesterRole = User.GetRole();
-
-        var effectiveInstructorId = requesterRole == "instructor"
+        // El instructor solo ve sus cursos y el admin los de su país; el superadmin filtra libremente.
+        var effectiveInstructorId = User.IsInstructor()
             ? User.GetUserId()
             : instructorId;
 
-        var effectiveCountryId = User.IsAdmin() && !User.IsSuperAdmin()
+        var effectiveCountryId = User.IsAdmin()
             ? User.GetCountryId()
             : countryId;
 

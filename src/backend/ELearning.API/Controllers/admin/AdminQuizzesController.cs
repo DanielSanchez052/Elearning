@@ -4,6 +4,7 @@ using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Quizzes.Commands;
 using ELearning.Application.Features.Quizzes.DTOs;
 using ELearning.Application.Features.Quizzes.Queries;
+using ELearning.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,7 +12,7 @@ namespace ELearning.API.Controllers.admin;
 
 [ApiController]
 [Route("api/admin/quizzes")]
-[Authorize(Roles = "admin,superadmin,instructor")]
+[Authorize(Roles = RoleNames.Staff)]
 public class AdminQuizzesController(
     ICommandHandler<CreateQuizQuestionCommand, Guid> createQuestionHandler,
     ICommandHandler<UpdateQuizQuestionCommand> updateQuestionHandler,

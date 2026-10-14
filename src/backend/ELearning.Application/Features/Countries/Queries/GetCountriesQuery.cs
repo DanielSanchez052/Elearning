@@ -4,7 +4,6 @@ using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Countries.Queries;
 
-// Este Query tal vez se pueda dividir en dos: uno para admin (que muestra todos) y otro para público (que muestra solo activos). Por ahora lo dejo con un flag, pero si se complica se puede dividir.
 
 public sealed record GetCountriesQuery(
     bool OnlyActive = false  // false = todos (admin), true = solo activos (público)

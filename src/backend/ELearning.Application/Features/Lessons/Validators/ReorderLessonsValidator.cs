@@ -18,7 +18,6 @@ public sealed class ReorderLessonsValidator : IValidator<ReorderLessonsCommand>
         if (cmd.Orders?.Any(o => o.NewOrder < 1) == true)
             result.AddError(nameof(cmd.Orders), "Los índices de orden deben ser mayores a 0.");
 
-        // Verificar que no hay índices duplicados
         var duplicates = cmd.Orders?
             .GroupBy(o => o.NewOrder)
             .Where(g => g.Count() > 1)

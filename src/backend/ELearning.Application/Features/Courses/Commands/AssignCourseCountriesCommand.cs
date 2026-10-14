@@ -1,6 +1,5 @@
 ﻿using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Common.Authorization;
-using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Courses.Commands;
@@ -46,7 +45,6 @@ public sealed class AssignCourseCountriesHandler : ICommandHandler<AssignCourseC
                 "El curso es global y está disponible en todos los países. " +
                 "Cambia IsGlobal a false antes de asignar países específicos.");
 
-        // Verificar que todos los países existen y están activos
         foreach (var countryId in cmd.CountryIds.Distinct())
         {
             var country = await _countries.GetByIdAsync(countryId, ct);

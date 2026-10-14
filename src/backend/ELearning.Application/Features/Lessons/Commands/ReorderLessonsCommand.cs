@@ -1,6 +1,5 @@
 ﻿using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Common.Authorization;
-using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Lessons.Commands;
@@ -39,7 +38,6 @@ public sealed class ReorderLessonsHandler : ICommandHandler<ReorderLessonsComman
         if (!CourseAccess.CanManage(course, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId))
             return Result.Forbidden(CourseAccess.ForbiddenMessage);
 
-        // Verificar que todas las lecciones pertenecen al curso
         var currentLessons = await _lessons.GetByCourseAsync(cmd.CourseId, ct);
         var currentIds = currentLessons.Select(l => l.Id).ToHashSet();
 

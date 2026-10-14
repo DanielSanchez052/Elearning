@@ -2,9 +2,6 @@
 using ELearning.Application.Common.Authorization;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Interfaces.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace ELearning.Application.Features.Courses.Commands;
 

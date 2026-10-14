@@ -1,7 +1,6 @@
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Quizzes.Common;
 using ELearning.Domain.Interfaces.Repositories;
-using System.Linq;
 
 namespace ELearning.Application.Features.Quizzes.Commands;
 

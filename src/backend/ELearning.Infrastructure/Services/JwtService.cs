@@ -1,4 +1,5 @@
-﻿using ELearning.Domain.Entities;
+﻿using ELearning.Domain.Constants;
+using ELearning.Domain.Entities;
 using ELearning.Domain.Interfaces.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -22,7 +23,7 @@ public class JwtService : IJwtService
         _secretKey = jwt["SecretKey"] ?? throw new InvalidOperationException("Jwt:SecretKey no está configurado.");
         _issuer = jwt["Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer no está configurado.");
         _audience = jwt["Audience"] ?? throw new InvalidOperationException("Jwt:Audience no está configurado.");
-        _expiresInMinutes = int.Parse(jwt["ExpiresInMinutes"] ?? "60");
+        _expiresInMinutes = int.Parse(jwt["ExpirationMinutes"] ?? "60");
     }
 
     public (string Token, DateTime ExpiresAt) GenerateAccessToken(User user)
@@ -34,7 +35,7 @@ public class JwtService : IJwtService
             new Claim(JwtRegisteredClaimNames.Sub,   user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Name,  user.FullName),
-            new Claim(ClaimTypes.Role,               user.Role.ToString().ToLowerInvariant()),
+            new Claim(ClaimTypes.Role,               user.Role.ToRoleName()),
             new Claim("country_id",                  user.CountryId.ToString()),
             // Jti permite invalidar tokens individuales en el futuro si se implementa
             // una blacklist en Redis

@@ -3,6 +3,7 @@ using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Countries.Commands;
 using ELearning.Application.Features.Countries.Dtos;
 using ELearning.Application.Features.Countries.Queries;
+using ELearning.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +11,7 @@ namespace ELearning.API.Controllers;
 
 [ApiController]
 [Route("api/admin/countries")]
-[Authorize(Roles = "admin,superadmin")]
+[Authorize(Roles = RoleNames.Admins)]
 public class AdminCountriesController(
     ICommandHandler<CreateCountryCommand, int> createCountryHandler,
     ICommandHandler<ToggleCountryStatusCommand> toggleCountryHandler,
@@ -37,7 +38,7 @@ public class AdminCountriesController(
     }
 
     [HttpPost]
-    [Authorize(Roles = "superadmin")]
+    [Authorize(Roles = RoleNames.SuperAdmin)]
     public async Task<IActionResult> CreateCountry([FromBody] CreateCountryCommand cmd)
     {
         var result = await createCountryHandler.HandleAsync(cmd, HttpContext.RequestAborted);
@@ -45,7 +46,7 @@ public class AdminCountriesController(
     }
 
     [HttpPatch("{id:int}/toggle-status")]
-    [Authorize(Roles = "superadmin")]
+    [Authorize(Roles = RoleNames.SuperAdmin)]
     public async Task<IActionResult> ToggleCountryStatus(int id)
     {
         var result = await toggleCountryHandler.HandleAsync(

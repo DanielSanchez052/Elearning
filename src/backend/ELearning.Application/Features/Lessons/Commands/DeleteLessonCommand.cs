@@ -1,6 +1,5 @@
 ﻿using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Common.Authorization;
-using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Lessons.Commands;

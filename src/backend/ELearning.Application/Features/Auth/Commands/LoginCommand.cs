@@ -2,6 +2,7 @@ using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Auth.DTOs.AuthResponse;
 using ELearning.Application.Features.Auth.DTOs.User;
 using ELearning.Application.Features.Gamification.Services;
+using ELearning.Domain.Constants;
 using ELearning.Domain.Interfaces.Repositories;
 using ELearning.Domain.Interfaces.Services;
 
@@ -58,7 +59,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, LoginResponseDt
                 Id: user.Id,
                 FullName: user.FullName,
                 Email: user.Email,
-                Role: user.Role.ToString().ToLowerInvariant(),
+                Role: user.Role.ToRoleName(),
                 Country: user.Country?.Name ?? string.Empty
             )
         );

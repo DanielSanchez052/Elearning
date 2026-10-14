@@ -1,5 +1,6 @@
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Auth.DTOs.User;
+using ELearning.Domain.Constants;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Auth.Queries.GetCurrentUser;
@@ -31,7 +32,7 @@ public sealed class GetCurrentUserHandler : IQueryHandler<GetCurrentUserQuery, U
             Id: user.Id,
             FullName: user.FullName,
             Email: user.Email,
-            Role: user.Role.ToString().ToLowerInvariant(),
+            Role: user.Role.ToRoleName(),
             Country: user.Country.Name,
             CountryId: user.CountryId,
             CreatedAt: user.CreatedAt,

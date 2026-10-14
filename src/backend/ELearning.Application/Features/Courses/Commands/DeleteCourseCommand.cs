@@ -1,6 +1,5 @@
 ﻿using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Common.Authorization;
-using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Courses.Commands;
@@ -32,7 +31,6 @@ public sealed class DeleteCourseHandler : ICommandHandler<DeleteCourseCommand>
         if (!CourseAccess.CanManage(course, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId))
             return Result.Forbidden(CourseAccess.ForbiddenMessage);
 
-        // No se puede eliminar un curso publicado con estudiantes inscritos
         if (course.IsActive && course.Enrollments.Any())
             return Result.Conflict(
                 "No puedes eliminar un curso publicado con estudiantes inscritos. " +

@@ -33,13 +33,17 @@ Los cursos se crean asignados al país del creador (`country_id` del JWT).
   - Frontend: el 404 muestra "Este curso no está disponible", y al inscribirse se vuelve a pedir el detalle para traer los enlaces.
 - **Inscripción con control de país** (`EnrollInCourseCommand`): solo en cursos disponibles en el país del usuario (`CourseAccess.IsAvailableIn`); si no, 404 como el detalle (antes un curso inactivo daba 409). Cualquier rol puede inscribirse (decisión del 2026-10-14).
 
+- **Limpieza de roles y autorización**:
+  - Nombres de rol centralizados en `ELearning.Domain/Constants/RoleNames.cs` (`Student`, `Instructor`, `Admin`, `SuperAdmin`, combinaciones `Admins` y `Staff`, `ToRoleName()` y `TryParse`, que no acepta valores numéricos). Se usan en `[Authorize(Roles = ...)]`, el JWT, los DTO de usuario, `CourseAccess`, el cambio de rol y el filtro de usuarios por rol.
+  - Helpers de `ClaimsPrincipal`: `IsAdmin()` ya no incluye al superadmin; se quitaron los que no se usaban (`IsStudent`, `HasAdminAccess`, `GetEmail`). `GetAdminList` usa `User.IsInstructor()`.
+  - Eliminado `AuthorizationExtensions` (todo comentado y con un `AddAuthorization()` duplicado) y los controladores vacíos `LessonsController` y `ReportsController`.
+  - `JwtService` leía `Jwt:ExpiresInMinutes`, pero la configuración define `Jwt:ExpirationMinutes`; funcionaba solo porque el valor por defecto coincidía (60).
+  - Fuera comentarios que repetían el código, un TODO especulativo y `using` sin uso en handlers y validadores.
+
 ## Pendientes
 
-### 1. Limpieza menor
-- `AdminCoursesController.GetAdminList` compara `requesterRole == "instructor"` en vez de usar `User.IsInstructor()`.
-- `AuthorizationExtensions.AddAuthorizationPolicies` tiene todas las políticas comentadas (con roles `Teacher` que no existen). Decidir si se eliminan o si se pasa a políticas con nombre (`StaffOnly`, `AdminOnly`) en lugar de cadenas `Roles = "..."` repetidas.
-- Los roles están como cadenas sueltas en `[Authorize(Roles = ...)]`, `ChangeUserRoleValidator`, etc. Valorar constantes compartidas para evitar otro desajuste como el de `super_admin`.
-- El `country_id` viene del JWT: si un superadmin cambia el país de un usuario, las reglas usan el país antiguo hasta que el usuario vuelva a iniciar sesión.
+### 1. Claims del token desactualizados
+El rol y el país viajan en el JWT (60 minutos). Si un superadmin cambia el rol o el país de un usuario, sus permisos siguen siendo los antiguos hasta que el token expira y vuelve a entrar. Esto es más delicado con los cambios de rol, por ejemplo al quitarle el rol de admin a alguien. Opciones: aceptarlo y documentarlo, acortar la vida del token o invalidar los tokens del usuario al cambiarle el rol o el país (por ejemplo con un sello de seguridad en el usuario comprobado en cada petición).
 
 ### 2. Siguientes partes de la revisión
 - Mismo repaso para **admin** y **superadmin** en usuarios y países.

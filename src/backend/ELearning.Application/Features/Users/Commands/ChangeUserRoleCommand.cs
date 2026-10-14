@@ -1,4 +1,5 @@
 using ELearning.Application.Common.Abstractions;
+using ELearning.Domain.Constants;
 using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 
@@ -22,8 +23,11 @@ public sealed class ChangeUserRoleHandler : ICommandHandler<ChangeUserRoleComman
 
     public async Task<Result> HandleAsync(ChangeUserRoleCommand cmd, CancellationToken ct = default)
     {
-        var newRole = Enum.Parse<UserRole>(cmd.NewRole, ignoreCase: true);
-        var requesterRole = Enum.Parse<UserRole>(cmd.RequesterRole, ignoreCase: true);
+        // El validador ya garantiza un NewRole válido; el rol del solicitante viene del token.
+        if (!RoleNames.TryParse(cmd.NewRole, out var newRole))
+            return Result.ValidationFailure("Rol inválido.");
+        if (!RoleNames.TryParse(cmd.RequesterRole, out var requesterRole))
+            return Result.Forbidden("Rol del solicitante no reconocido.");
 
         if (requesterRole == UserRole.Admin && newRole is not (UserRole.Student or UserRole.Instructor))
             return Result.Forbidden("Un Admin solo puede asignar los roles Student e Instructor.");

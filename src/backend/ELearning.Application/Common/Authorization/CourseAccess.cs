@@ -1,3 +1,4 @@
+using ELearning.Domain.Constants;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Enums;
 
@@ -54,9 +55,6 @@ public static class CourseAccess
     public static bool IsSuperAdmin(string requesterRole) =>
         ParseRole(requesterRole) == UserRole.SuperAdmin;
 
-    // Solo nombres de rol: Enum.TryParse también aceptaría valores numéricos ("1" → Admin).
-    public static UserRole? ParseRole(string requesterRole) =>
-        Enum.GetValues<UserRole>()
-            .Cast<UserRole?>()
-            .FirstOrDefault(r => string.Equals(r.ToString(), requesterRole, StringComparison.OrdinalIgnoreCase));
+    private static UserRole? ParseRole(string requesterRole) =>
+        RoleNames.TryParse(requesterRole, out var role) ? role : null;
 }
