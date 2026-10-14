@@ -13,9 +13,6 @@ export const notificationsApi = {
   getUserNotifications: () =>
     axios.get<NotificationDto[]>('/notifications'),
 
-  createNotification: (data: any) =>
-    axios.post('/notifications', data),
-
   markNotificationRead: (notificationId: string) =>
     axios.put(`/notifications/${notificationId}/mark-read`),
 

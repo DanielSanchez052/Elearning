@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
  */
 export function Table({ className, ...props }: ComponentProps<'table'>) {
   return (
-    <div className="w-full overflow-x-auto">
+    // relative: contiene los elementos absolutos (p. ej. textos sr-only de cabecera) para que no ensanchen la página.
+    <div className="relative w-full overflow-x-auto">
       <table className={cn('w-full text-left text-sm', className)} {...props} />
     </div>
   );
