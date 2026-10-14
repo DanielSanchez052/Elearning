@@ -13,7 +13,9 @@ public class UpdateQuizQuestionValidatorTests
             QuestionText: "Pregunta actualizada",
             PassScore: 70,
             MaxAttempts: 3,
-            IsRequired: true);
+            IsRequired: true,
+            RequesterId: Guid.NewGuid(),
+            RequesterRole: "admin");
 
     [Fact]
     public void Validate_EmptyQuestionId_HasQuestionIdError()

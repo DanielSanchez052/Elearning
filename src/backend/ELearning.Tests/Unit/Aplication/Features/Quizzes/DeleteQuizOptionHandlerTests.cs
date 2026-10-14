@@ -9,15 +9,18 @@ namespace ELearning.Tests.Unit.Aplication.Features.Quizzes;
 public class DeleteQuizOptionHandlerTests
 {
     private readonly Mock<IQuizRepository> _quizzesMock = new();
+    private readonly Mock<ICourseRepository> _coursesMock = new();
+    private readonly Mock<ILessonRepository> _lessonsMock = new();
+    private static readonly Guid AdminId = Guid.NewGuid();
     private readonly DeleteQuizOptionHandler _handler;
 
     public DeleteQuizOptionHandlerTests() =>
-        _handler = new DeleteQuizOptionHandler(_quizzesMock.Object);
+        _handler = new DeleteQuizOptionHandler(_quizzesMock.Object, _coursesMock.Object, _lessonsMock.Object);
 
     [Fact]
     public async Task HandleAsync_EmptyOptionId_ReturnsValidationFailure()
     {
-        var result = await _handler.HandleAsync(new DeleteQuizOptionCommand(Guid.Empty));
+        var result = await _handler.HandleAsync(new DeleteQuizOptionCommand(Guid.Empty, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -31,7 +34,7 @@ public class DeleteQuizOptionHandlerTests
             .Setup(r => r.GetOptionByIdAsync(It.IsAny<Guid>(), default))
             .ReturnsAsync((QuizOption?)null);
 
-        var result = await _handler.HandleAsync(new DeleteQuizOptionCommand(Guid.NewGuid()));
+        var result = await _handler.HandleAsync(new DeleteQuizOptionCommand(Guid.NewGuid(), AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
@@ -58,7 +61,7 @@ public class DeleteQuizOptionHandlerTests
             .Setup(r => r.SaveChangesAsync(default))
             .Returns(Task.CompletedTask);
 
-        var result = await _handler.HandleAsync(new DeleteQuizOptionCommand(option.Id));
+        var result = await _handler.HandleAsync(new DeleteQuizOptionCommand(option.Id, AdminId, "admin"));
 
         Assert.True(result.IsSuccess);
         _quizzesMock.Verify(r => r.DeleteOptionAsync(option.Id, default), Times.Once);
@@ -78,7 +81,7 @@ public class DeleteQuizOptionHandlerTests
             .Setup(r => r.GetOptionsByQuestionAsync(questionId, default))
             .ReturnsAsync(new List<QuizOption> { option });
 
-        var result = await _handler.HandleAsync(new DeleteQuizOptionCommand(option.Id));
+        var result = await _handler.HandleAsync(new DeleteQuizOptionCommand(option.Id, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -100,7 +103,7 @@ public class DeleteQuizOptionHandlerTests
             .Setup(r => r.GetOptionsByQuestionAsync(questionId, default))
             .ReturnsAsync(new List<QuizOption> { correctOption, incorrectOption });
 
-        var result = await _handler.HandleAsync(new DeleteQuizOptionCommand(correctOption.Id));
+        var result = await _handler.HandleAsync(new DeleteQuizOptionCommand(correctOption.Id, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);

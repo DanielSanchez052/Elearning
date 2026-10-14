@@ -9,16 +9,19 @@ namespace ELearning.Tests.Unit.Aplication.Features.Quizzes;
 public class UpdateQuizQuestionHandlerTests
 {
     private readonly Mock<IQuizRepository> _quizzesMock = new();
+    private readonly Mock<ICourseRepository> _coursesMock = new();
+    private readonly Mock<ILessonRepository> _lessonsMock = new();
+    private static readonly Guid AdminId = Guid.NewGuid();
     private readonly UpdateQuizQuestionHandler _handler;
 
     public UpdateQuizQuestionHandlerTests() =>
-        _handler = new UpdateQuizQuestionHandler(_quizzesMock.Object);
+        _handler = new UpdateQuizQuestionHandler(_quizzesMock.Object, _coursesMock.Object, _lessonsMock.Object);
 
     [Fact]
     public async Task HandleAsync_EmptyQuestionId_ReturnsValidationFailure()
     {
         var result = await _handler.HandleAsync(new UpdateQuizQuestionCommand(
-            Guid.Empty, "Texto", 60m, 3, true));
+            Guid.Empty, "Texto", 60m, 3, true, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -29,7 +32,7 @@ public class UpdateQuizQuestionHandlerTests
     public async Task HandleAsync_EmptyQuestionText_ReturnsValidationFailure()
     {
         var result = await _handler.HandleAsync(new UpdateQuizQuestionCommand(
-            Guid.NewGuid(), "   ", 60m, 3, true));
+            Guid.NewGuid(), "   ", 60m, 3, true, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -41,7 +44,7 @@ public class UpdateQuizQuestionHandlerTests
     public async Task HandleAsync_PassScoreOutOfRange_ReturnsValidationFailure(decimal passScore)
     {
         var result = await _handler.HandleAsync(new UpdateQuizQuestionCommand(
-            Guid.NewGuid(), "Texto", passScore, 3, true));
+            Guid.NewGuid(), "Texto", passScore, 3, true, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -51,7 +54,7 @@ public class UpdateQuizQuestionHandlerTests
     public async Task HandleAsync_MaxAttemptsZero_ReturnsValidationFailure()
     {
         var result = await _handler.HandleAsync(new UpdateQuizQuestionCommand(
-            Guid.NewGuid(), "Texto", 60m, 0, true));
+            Guid.NewGuid(), "Texto", 60m, 0, true, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -65,7 +68,7 @@ public class UpdateQuizQuestionHandlerTests
             .ReturnsAsync((QuizQuestion?)null);
 
         var result = await _handler.HandleAsync(new UpdateQuizQuestionCommand(
-            Guid.NewGuid(), "Texto", 60m, 3, true));
+            Guid.NewGuid(), "Texto", 60m, 3, true, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
@@ -88,7 +91,7 @@ public class UpdateQuizQuestionHandlerTests
             .Returns(Task.CompletedTask);
 
         var result = await _handler.HandleAsync(new UpdateQuizQuestionCommand(
-            question.Id, "Actualizado", 80m, 5, false));
+            question.Id, "Actualizado", 80m, 5, false, AdminId, "admin"));
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Actualizado", question.QuestionText);

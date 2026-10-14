@@ -72,12 +72,14 @@ public static class ClaimsPrincipalExtensions
 
     // ── Helpers de rol ────────────────────────────────────────────────────────
     // Evitan hacer string comparisons dispersas por todo el código del controlador.
+    // Los nombres deben coincidir con el claim que emite JwtService:
+    // UserRole.ToString().ToLowerInvariant() → "superadmin", no "super_admin".
 
     public static bool IsSuperAdmin(this ClaimsPrincipal user) =>
-        user.IsInRole("super_admin");
+        user.IsInRole("superadmin");
 
     public static bool IsAdmin(this ClaimsPrincipal user) =>
-        user.IsInRole("admin") || user.IsInRole("super_admin");
+        user.IsInRole("admin") || user.IsInRole("superadmin");
 
     public static bool IsInstructor(this ClaimsPrincipal user) =>
         user.IsInRole("instructor");
@@ -87,7 +89,7 @@ public static class ClaimsPrincipalExtensions
 
     /// <summary>
     /// Verifica si el usuario tiene acceso administrativo
-    /// (admin o super_admin).
+    /// (admin o superadmin).
     /// </summary>
     public static bool HasAdminAccess(this ClaimsPrincipal user) =>
         user.IsAdmin();

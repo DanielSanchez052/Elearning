@@ -11,15 +11,17 @@ public class DeleteQuizQuestionHandlerTests
 {
     private readonly Mock<IQuizRepository> _quizzesMock = new();
     private readonly Mock<ILessonRepository> _lessonsMock = new();
+    private readonly Mock<ICourseRepository> _coursesMock = new();
+    private static readonly Guid AdminId = Guid.NewGuid();
     private readonly DeleteQuizQuestionHandler _handler;
 
     public DeleteQuizQuestionHandlerTests() =>
-        _handler = new DeleteQuizQuestionHandler(_quizzesMock.Object, _lessonsMock.Object);
+        _handler = new DeleteQuizQuestionHandler(_quizzesMock.Object, _lessonsMock.Object, _coursesMock.Object);
 
     [Fact]
     public async Task HandleAsync_EmptyQuestionId_ReturnsValidationFailure()
     {
-        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(Guid.Empty));
+        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(Guid.Empty, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -33,7 +35,7 @@ public class DeleteQuizQuestionHandlerTests
             .Setup(r => r.GetQuestionByIdAsync(It.IsAny<Guid>(), default))
             .ReturnsAsync((QuizQuestion?)null);
 
-        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(Guid.NewGuid()));
+        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(Guid.NewGuid(), AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
@@ -60,7 +62,7 @@ public class DeleteQuizQuestionHandlerTests
             .Setup(r => r.SaveChangesAsync(default))
             .Returns(Task.CompletedTask);
 
-        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(question.Id));
+        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(question.Id, AdminId, "admin"));
 
         Assert.True(result.IsSuccess);
         _quizzesMock.Verify(r => r.DeleteQuestionAsync(question.Id, default), Times.Once);
@@ -83,7 +85,7 @@ public class DeleteQuizQuestionHandlerTests
             .Setup(r => r.GetQuestionsByLessonAsync(lesson.Id, default))
             .ReturnsAsync(new List<QuizQuestion> { question });
 
-        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(question.Id));
+        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(question.Id, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -110,7 +112,7 @@ public class DeleteQuizQuestionHandlerTests
             .Setup(r => r.SaveChangesAsync(default))
             .Returns(Task.CompletedTask);
 
-        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(question.Id));
+        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(question.Id, AdminId, "admin"));
 
         Assert.True(result.IsSuccess);
         _quizzesMock.Verify(r => r.GetQuestionsByLessonAsync(It.IsAny<Guid>(), default), Times.Never);
@@ -134,7 +136,7 @@ public class DeleteQuizQuestionHandlerTests
             .Setup(r => r.SaveChangesAsync(default))
             .Returns(Task.CompletedTask);
 
-        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(question.Id));
+        var result = await _handler.HandleAsync(new DeleteQuizQuestionCommand(question.Id, AdminId, "admin"));
 
         Assert.True(result.IsSuccess);
         _quizzesMock.Verify(r => r.GetQuestionsByCourseAsync(It.IsAny<Guid>(), default), Times.Never);

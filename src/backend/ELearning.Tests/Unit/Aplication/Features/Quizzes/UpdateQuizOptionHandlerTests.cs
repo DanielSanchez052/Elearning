@@ -9,16 +9,19 @@ namespace ELearning.Tests.Unit.Aplication.Features.Quizzes;
 public class UpdateQuizOptionHandlerTests
 {
     private readonly Mock<IQuizRepository> _quizzesMock = new();
+    private readonly Mock<ICourseRepository> _coursesMock = new();
+    private readonly Mock<ILessonRepository> _lessonsMock = new();
+    private static readonly Guid AdminId = Guid.NewGuid();
     private readonly UpdateQuizOptionHandler _handler;
 
     public UpdateQuizOptionHandlerTests() =>
-        _handler = new UpdateQuizOptionHandler(_quizzesMock.Object);
+        _handler = new UpdateQuizOptionHandler(_quizzesMock.Object, _coursesMock.Object, _lessonsMock.Object);
 
     [Fact]
     public async Task HandleAsync_EmptyOptionId_ReturnsValidationFailure()
     {
         var result = await _handler.HandleAsync(new UpdateQuizOptionCommand(
-            Guid.Empty, "Texto", true));
+            Guid.Empty, "Texto", true, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -29,7 +32,7 @@ public class UpdateQuizOptionHandlerTests
     public async Task HandleAsync_EmptyOptionText_ReturnsValidationFailure()
     {
         var result = await _handler.HandleAsync(new UpdateQuizOptionCommand(
-            Guid.NewGuid(), "   ", true));
+            Guid.NewGuid(), "   ", true, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -43,7 +46,7 @@ public class UpdateQuizOptionHandlerTests
             .ReturnsAsync((QuizOption?)null);
 
         var result = await _handler.HandleAsync(new UpdateQuizOptionCommand(
-            Guid.NewGuid(), "Texto", true));
+            Guid.NewGuid(), "Texto", true, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
@@ -66,7 +69,7 @@ public class UpdateQuizOptionHandlerTests
             .Returns(Task.CompletedTask);
 
         var result = await _handler.HandleAsync(new UpdateQuizOptionCommand(
-            option.Id, "Actualizada", true));
+            option.Id, "Actualizada", true, AdminId, "admin"));
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Actualizada", option.OptionText);

@@ -9,16 +9,19 @@ namespace ELearning.Tests.Unit.Aplication.Features.Quizzes;
 public class CreateQuizOptionHandlerTests
 {
     private readonly Mock<IQuizRepository> _quizzesMock = new();
+    private readonly Mock<ICourseRepository> _coursesMock = new();
+    private readonly Mock<ILessonRepository> _lessonsMock = new();
+    private static readonly Guid AdminId = Guid.NewGuid();
     private readonly CreateQuizOptionHandler _handler;
 
     public CreateQuizOptionHandlerTests() =>
-        _handler = new CreateQuizOptionHandler(_quizzesMock.Object);
+        _handler = new CreateQuizOptionHandler(_quizzesMock.Object, _coursesMock.Object, _lessonsMock.Object);
 
     [Fact]
     public async Task HandleAsync_EmptyQuestionId_ReturnsValidationFailure()
     {
         var result = await _handler.HandleAsync(new CreateQuizOptionCommand(
-            Guid.Empty, "Opcion", true, 1));
+            Guid.Empty, "Opcion", true, 1, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -29,7 +32,7 @@ public class CreateQuizOptionHandlerTests
     public async Task HandleAsync_EmptyOptionText_ReturnsValidationFailure()
     {
         var result = await _handler.HandleAsync(new CreateQuizOptionCommand(
-            Guid.NewGuid(), "  ", true, 1));
+            Guid.NewGuid(), "  ", true, 1, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -39,7 +42,7 @@ public class CreateQuizOptionHandlerTests
     public async Task HandleAsync_OrderIndexZeroOrLess_ReturnsValidationFailure()
     {
         var result = await _handler.HandleAsync(new CreateQuizOptionCommand(
-            Guid.NewGuid(), "Opcion", true, 0));
+            Guid.NewGuid(), "Opcion", true, 0, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -53,7 +56,7 @@ public class CreateQuizOptionHandlerTests
             .ReturnsAsync((QuizQuestion?)null);
 
         var result = await _handler.HandleAsync(new CreateQuizOptionCommand(
-            Guid.NewGuid(), "Opcion", true, 1));
+            Guid.NewGuid(), "Opcion", true, 1, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
@@ -78,7 +81,7 @@ public class CreateQuizOptionHandlerTests
             .Returns(Task.CompletedTask);
 
         var result = await _handler.HandleAsync(new CreateQuizOptionCommand(
-            question.Id, "Opcion correcta", true, 2));
+            question.Id, "Opcion correcta", true, 2, AdminId, "admin"));
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(created);

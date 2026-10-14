@@ -12,7 +12,9 @@ public class CreateQuizOptionValidatorTests
             QuestionId: Guid.NewGuid(),
             OptionText: "Respuesta A",
             IsCorrect: false,
-            OrderIndex: 1);
+            OrderIndex: 1,
+            RequesterId: Guid.NewGuid(),
+            RequesterRole: "admin");
 
     [Fact]
     public void Validate_EmptyQuestionId_HasQuestionIdError()

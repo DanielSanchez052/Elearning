@@ -10,15 +10,18 @@ namespace ELearning.Tests.Unit.Aplication.Features.Quizzes;
 public class GetLessonQuizQuestionsAdminHandlerTests
 {
     private readonly Mock<IQuizRepository> _quizzesMock = new();
+    private readonly Mock<ICourseRepository> _coursesMock = new();
+    private readonly Mock<ILessonRepository> _lessonsMock = new();
+    private static readonly Guid AdminId = Guid.NewGuid();
     private readonly GetLessonQuizQuestionsAdminHandler _handler;
 
     public GetLessonQuizQuestionsAdminHandlerTests() =>
-        _handler = new GetLessonQuizQuestionsAdminHandler(_quizzesMock.Object);
+        _handler = new GetLessonQuizQuestionsAdminHandler(_quizzesMock.Object, _coursesMock.Object, _lessonsMock.Object);
 
     [Fact]
     public async Task HandleAsync_EmptyLessonId_ReturnsValidationFailure()
     {
-        var result = await _handler.HandleAsync(new GetLessonQuizQuestionsAdminQuery(Guid.Empty));
+        var result = await _handler.HandleAsync(new GetLessonQuizQuestionsAdminQuery(Guid.Empty, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -33,7 +36,7 @@ public class GetLessonQuizQuestionsAdminHandlerTests
             .Setup(r => r.GetQuestionsByLessonAsync(lessonId, default))
             .ReturnsAsync(Array.Empty<QuizQuestion>());
 
-        var result = await _handler.HandleAsync(new GetLessonQuizQuestionsAdminQuery(lessonId));
+        var result = await _handler.HandleAsync(new GetLessonQuizQuestionsAdminQuery(lessonId, AdminId, "admin"));
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value);
@@ -54,7 +57,7 @@ public class GetLessonQuizQuestionsAdminHandlerTests
             .Setup(r => r.GetQuestionsByLessonAsync(lessonId, default))
             .ReturnsAsync([question]);
 
-        var result = await _handler.HandleAsync(new GetLessonQuizQuestionsAdminQuery(lessonId));
+        var result = await _handler.HandleAsync(new GetLessonQuizQuestionsAdminQuery(lessonId, AdminId, "admin"));
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value);

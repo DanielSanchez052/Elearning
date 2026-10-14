@@ -1,26 +1,35 @@
 using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Features.Quizzes.Common;
 using ELearning.Application.Features.Quizzes.DTOs;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Quizzes.Queries;
 
 public sealed record GetCourseExamQuestionsAdminQuery(
-    Guid CourseId
+    Guid CourseId,
+    Guid RequesterId,
+    string RequesterRole
 ) : IQuery<IReadOnlyList<QuizQuestionAdminDto>>;
 
 public sealed class GetCourseExamQuestionsAdminHandler : IQueryHandler<GetCourseExamQuestionsAdminQuery, IReadOnlyList<QuizQuestionAdminDto>>
 {
     private readonly IQuizRepository _quizzes;
+    private readonly ICourseRepository _courses;
 
-    public GetCourseExamQuestionsAdminHandler(IQuizRepository quizzes)
+    public GetCourseExamQuestionsAdminHandler(IQuizRepository quizzes, ICourseRepository courses)
     {
         _quizzes = quizzes;
+        _courses = courses;
     }
 
     public async Task<Result<IReadOnlyList<QuizQuestionAdminDto>>> HandleAsync(GetCourseExamQuestionsAdminQuery query, CancellationToken ct = default)
     {
         if (query.CourseId == Guid.Empty)
             return Result.ValidationFailure<IReadOnlyList<QuizQuestionAdminDto>>("CourseId es requerido");
+
+        // Incluye IsCorrect: un instructor solo puede ver las respuestas de sus propios cursos
+        if (!await QuizAuthoringAccess.CanManageCourseAsync(query.CourseId, query.RequesterId, query.RequesterRole, _courses, ct))
+            return Result.Forbidden<IReadOnlyList<QuizQuestionAdminDto>>(QuizAuthoringAccess.ForbiddenMessage);
 
         var questions = await _quizzes.GetQuestionsByCourseAsync(query.CourseId, ct);
 

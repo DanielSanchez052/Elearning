@@ -10,15 +10,17 @@ namespace ELearning.Tests.Unit.Aplication.Features.Quizzes;
 public class GetCourseExamQuestionsAdminHandlerTests
 {
     private readonly Mock<IQuizRepository> _quizzesMock = new();
+    private readonly Mock<ICourseRepository> _coursesMock = new();
+    private static readonly Guid AdminId = Guid.NewGuid();
     private readonly GetCourseExamQuestionsAdminHandler _handler;
 
     public GetCourseExamQuestionsAdminHandlerTests() =>
-        _handler = new GetCourseExamQuestionsAdminHandler(_quizzesMock.Object);
+        _handler = new GetCourseExamQuestionsAdminHandler(_quizzesMock.Object, _coursesMock.Object);
 
     [Fact]
     public async Task HandleAsync_EmptyCourseId_ReturnsValidationFailure()
     {
-        var result = await _handler.HandleAsync(new GetCourseExamQuestionsAdminQuery(Guid.Empty));
+        var result = await _handler.HandleAsync(new GetCourseExamQuestionsAdminQuery(Guid.Empty, AdminId, "admin"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Validation, result.ErrorType);
@@ -33,7 +35,7 @@ public class GetCourseExamQuestionsAdminHandlerTests
             .Setup(r => r.GetQuestionsByCourseAsync(courseId, default))
             .ReturnsAsync(Array.Empty<QuizQuestion>());
 
-        var result = await _handler.HandleAsync(new GetCourseExamQuestionsAdminQuery(courseId));
+        var result = await _handler.HandleAsync(new GetCourseExamQuestionsAdminQuery(courseId, AdminId, "admin"));
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value);
@@ -54,7 +56,7 @@ public class GetCourseExamQuestionsAdminHandlerTests
             .Setup(r => r.GetQuestionsByCourseAsync(courseId, default))
             .ReturnsAsync([question]);
 
-        var result = await _handler.HandleAsync(new GetCourseExamQuestionsAdminQuery(courseId));
+        var result = await _handler.HandleAsync(new GetCourseExamQuestionsAdminQuery(courseId, AdminId, "admin"));
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value);
