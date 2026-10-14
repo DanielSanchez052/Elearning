@@ -1,12 +1,10 @@
 import { useAuthStore } from '@/store/authStore';
-import AppHeader from '@/components/layout/AppHeader';
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0f] to-[#1a1a2e]">
-      <AppHeader />
+    <div className="flex-1 bg-gradient-to-br from-[#0a0a0f] to-[#1a1a2e]">
       <div className="max-w-7xl mx-auto p-8">
         {/* Header */}
         <div className="mb-12 flex items-start justify-between">

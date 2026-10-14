@@ -55,7 +55,7 @@ export default function AdminCoursesPage() {
         </div>
         {!isInstructor && (
           <Link
-            to="/courses/new"
+            to="/admin/courses/new"
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

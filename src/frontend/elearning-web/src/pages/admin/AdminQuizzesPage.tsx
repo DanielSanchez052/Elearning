@@ -241,7 +241,7 @@ export function AdminQuizzesPage() {
               <p className="text-zinc-400">{pageContext}</p>
             </div>
             <button
-              onClick={() => navigate(`/admin/courses/${courseId}`)}
+              onClick={() => navigate(`/admin/courses/${courseId}/edit`)}
               className="px-4 py-2 text-zinc-400 hover:text-white transition"
             >
               ← Volver
