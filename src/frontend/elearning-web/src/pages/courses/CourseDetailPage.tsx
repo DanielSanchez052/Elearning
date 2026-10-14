@@ -364,6 +364,7 @@ function CourseDetailContent({ course }: { course: CourseDetailDto }) {
 
 export default function CourseDetailPage() {
   const { id = '' } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const courseQuery = useCourseDetail(id);
   const course = courseQuery.data;
 
@@ -373,6 +374,17 @@ export default function CourseDetailPage() {
       {!course && <BackToCatalog />}
       {courseQuery.isLoading ? (
         <CourseDetailSkeleton />
+      ) : httpStatus(courseQuery.error) === 404 ? (
+        // La API responde 404 tanto si no existe como si no está disponible para el usuario
+        // (borrador o de otro país), sin distinguirlos.
+        <StateBlock
+          icon={BookOpenIcon}
+          title="Este curso no está disponible"
+          text="Puede que ya no esté publicado o que no esté disponible en tu país."
+          action="Ver catálogo"
+          actionVariant="secondary"
+          onAction={() => navigate('/courses')}
+        />
       ) : courseQuery.isError || !course ? (
         <StateBlock
           tipo="error"

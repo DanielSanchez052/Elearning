@@ -24,22 +24,25 @@ Los cursos se crean asignados al país del creador (`country_id` del JWT).
   - El instructor vuelve a tener el botón "Nuevo curso" (antes estaba oculto) y ya no pide `/admin/countries`, que le daba 403.
   - Listado: los cursos que el usuario no puede gestionar (los globales para el admin) se muestran como "Solo lectura".
   - Editar un curso o sus quizzes sin permiso muestra un aviso en lugar del editor, y las preguntas (con respuestas) no se piden.
+- **Detalle de curso con restricciones** (`GET /api/courses/{id}`, `GetCourseDetailQuery`):
+  - Quien gestiona el curso (`CourseAccess.CanManage`) lo ve en cualquier estado.
+  - Quien está inscrito lo sigue viendo aunque se despublique o cambie de país.
+  - El resto solo si está publicado y es global o de su país (`CourseAccess.IsAvailableIn`, la misma regla del catálogo).
+  - Si no le corresponde: 404, sin revelar que existe.
+  - Los `ContentUrl` de las lecciones solo van a quien gestiona el curso o está inscrito.
+  - Frontend: el 404 muestra "Este curso no está disponible", y al inscribirse se vuelve a pedir el detalle para traer los enlaces.
 
 ## Pendientes
 
-### 1. Detalle de curso sin restricciones
-- `GET /api/courses/{id}` (`GetCourseDetailQuery`) solo exige estar autenticado: cualquier usuario ve cursos inactivos o de otro país, con los `ContentUrl` de todas sus lecciones.
-- El panel de administración probablemente use este endpoint para editar; revisar si conviene separar un detalle admin y restringir el público a cursos activos y disponibles en el país del usuario.
-
-### 2. Inscripción sin control de país
+### 1. Inscripción sin control de país
 - `EnrollInCourseCommand` solo comprueba `course.IsActive`, no que el curso esté disponible en el país del usuario. Tampoco hay restricción de rol (un instructor o admin puede inscribirse como estudiante; puede ser intencional).
 
-### 3. Limpieza menor
+### 2. Limpieza menor
 - `AdminCoursesController.GetAdminList` compara `requesterRole == "instructor"` en vez de usar `User.IsInstructor()`.
 - `AuthorizationExtensions.AddAuthorizationPolicies` tiene todas las políticas comentadas (con roles `Teacher` que no existen). Decidir si se eliminan o si se pasa a políticas con nombre (`StaffOnly`, `AdminOnly`) en lugar de cadenas `Roles = "..."` repetidas.
 - Los roles están como cadenas sueltas en `[Authorize(Roles = ...)]`, `ChangeUserRoleValidator`, etc. Valorar constantes compartidas para evitar otro desajuste como el de `super_admin`.
 - El `country_id` viene del JWT: si un superadmin cambia el país de un usuario, las reglas usan el país antiguo hasta que el usuario vuelva a iniciar sesión.
 
-### 4. Siguientes partes de la revisión
+### 3. Siguientes partes de la revisión
 - Mismo repaso para **admin** y **superadmin** en usuarios y países.
 - Comprobar que el resto del **frontend** (rutas protegidas en `App.tsx`) aplica las mismas reglas que el backend y maneja bien los 403.

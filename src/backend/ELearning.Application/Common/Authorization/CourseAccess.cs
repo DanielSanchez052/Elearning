@@ -43,6 +43,14 @@ public static class CourseAccess
         return current.All(id => id == requesterCountryId);
     }
 
+    /// <summary>
+    /// Disponibilidad para quien no gestiona el curso (misma regla que el catálogo):
+    /// publicado y, además, global o asignado a su país.
+    /// </summary>
+    public static bool IsAvailableIn(Course course, int countryId) =>
+        course.IsActive
+        && (course.IsGlobal || course.CourseCountries.Any(cc => cc.CountryId == countryId));
+
     public static bool IsSuperAdmin(string requesterRole) =>
         ParseRole(requesterRole) == UserRole.SuperAdmin;
 

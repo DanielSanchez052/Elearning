@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { enrollmentsApi } from '@/api/enrollments';
 import { quizzesKeys } from '@/hooks/quizzes';
+import { courseKeys } from '@/hooks/useCourses';
 import { badgeKeys } from '@/hooks/useBadges';
 
 export const enrollmentKeys = {
@@ -37,6 +38,8 @@ export function useEnrollInCourse() {
       queryClient.invalidateQueries({ queryKey: enrollmentKeys.mine() });
       queryClient.invalidateQueries({ queryKey: enrollmentKeys.progress(courseId) });
       queryClient.invalidateQueries({ queryKey: quizzesKeys.courseExam(courseId) });
+      // El detalle solo trae los enlaces al contenido de las lecciones a quien está inscrito.
+      queryClient.invalidateQueries({ queryKey: courseKeys.detail(courseId) });
     },
   });
 }

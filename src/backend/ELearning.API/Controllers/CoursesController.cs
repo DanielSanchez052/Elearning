@@ -36,7 +36,7 @@ public class CoursesController(
     public async Task<IActionResult> GetCourseDetail(Guid id)
     {
         var result = await getCourseDetailHandler.HandleAsync(
-            new GetCourseDetailQuery(id),
+            new GetCourseDetailQuery(id, User.GetUserId(), User.GetRole(), User.GetCountryId()),
             HttpContext.RequestAborted);
         return this.ToActionResult(result);
     }
