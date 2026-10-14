@@ -326,7 +326,7 @@ export default function DesignSystemPage() {
               instructorName="Carlos Rivas"
               lessonCount={9}
               badges={<Badge tone="info">Inscrito</Badge>}
-              footer={<ProgressBar value={63} label="5 / 8 lecciones requeridas" showValue size="sm" tone="success" />}
+              date="3 mar 2026"
             />
             <CourseCard
               to="/design-system"
