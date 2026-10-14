@@ -18,28 +18,30 @@ interface AuthLayoutProps {
 /** Shell de autenticación del rediseño: marca arriba y una tarjeta centrada con título, aviso, contenido y pie. */
 export function AuthLayout({ title, subtitle, notice, footer, children }: AuthLayoutProps) {
   return (
-    <AppRoot className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 py-12 sm:px-6">
-      <Link
-        to="/login"
-        className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <span className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <GraduationCapIcon className="size-5" aria-hidden="true" />
-        </span>
-        <span className="text-lg font-semibold text-foreground">ELearning</span>
-      </Link>
+    <AppRoot className="min-h-screen">
+      <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 py-12 sm:px-6">
+        <Link
+          to="/login"
+          className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <GraduationCapIcon className="size-5" aria-hidden="true" />
+          </span>
+          <span className="text-lg font-semibold text-foreground">ELearning</span>
+        </Link>
 
-      <Card elevated padding="lg" className="w-full max-w-md">
-        {title && (
-          <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
-            {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
-          </div>
-        )}
-        {notice && <div className="mb-5">{notice}</div>}
-        {children}
-        {footer && <p className="mt-6 text-center text-sm text-muted-foreground">{footer}</p>}
-      </Card>
+        <Card elevated padding="lg" className="w-full max-w-md">
+          {title && (
+            <div className="mb-6">
+              <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
+              {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+            </div>
+          )}
+          {notice && <div className="mb-5">{notice}</div>}
+          {children}
+          {footer && <p className="mt-6 text-center text-sm text-muted-foreground">{footer}</p>}
+        </Card>
+      </main>
     </AppRoot>
   );
 }

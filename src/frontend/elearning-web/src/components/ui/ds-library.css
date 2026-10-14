@@ -9,7 +9,7 @@
 @import "../../index.css";
 
 /* Colores de tokens: superficies, texto, acciones, estados y bordes */
-@source inline("{,hover:}{bg,text,border}-{background,sunken,card,sidebar,overlay,secondary,secondary-hover,muted,accent,primary,primary-hover,primary-foreground,brand,brand-foreground,success,success-foreground,warning,warning-foreground,info,info-foreground,destructive,destructive-foreground,foreground,foreground-soft,muted-foreground,subtle-foreground,placeholder,border,border-strong,input,ring}");
+@source inline("{,hover:}{bg,text,border}-{background,sunken,card,sidebar,overlay,secondary,secondary-hover,muted,accent,primary,primary-hover,primary-foreground,brand,brand-foreground,success,success-foreground,success-strong,destructive-strong,warning,warning-foreground,info,info-foreground,destructive,destructive-foreground,foreground,foreground-soft,muted-foreground,subtle-foreground,placeholder,border,border-strong,input,ring}");
 @source inline("{,hover:}{bg,border}-{brand,success,warning,info,destructive}/{10,20,30}");
 @source inline("divide-{y,x} divide-border ring-ring focus-visible:ring-2");
 
