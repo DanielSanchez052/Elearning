@@ -31,6 +31,14 @@ import type { CourseDetailDto, LessonDto } from '@/types/course.types';
 
 const httpStatus = (error: unknown) => (isAxiosError(error) ? error.response?.status : undefined);
 
+function BackToCatalog() {
+  return (
+    <Link to="/courses" className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+      <ArrowLeftIcon className="size-4" aria-hidden="true" /> Cursos
+    </Link>
+  );
+}
+
 function CourseDetailSkeleton() {
   return (
     <div className="grid gap-6 md:grid-cols-3" aria-busy="true">
@@ -112,236 +120,245 @@ function CourseDetailContent({ course }: { course: CourseDetailDto }) {
   } as const;
   const [chipClass, ExamIcon] = examChip[examState];
 
+  if (activeLesson) {
+    return (
+      <LessonPlayer
+        courseId={course.id}
+        courseTitle={course.title}
+        lesson={activeLesson}
+        lessons={lessons}
+        completedLessonIds={completedLessonIds}
+        completedRequired={progress?.completedLessons ?? 0}
+        totalRequired={progress?.requiredLessons ?? requiredCount}
+        statusOf={statusOf}
+        onClose={() => setActiveLesson(null)}
+        onOpenLesson={openLesson}
+      />
+    );
+  }
+
   return (
-    <div className="grid gap-6 md:grid-cols-3">
-      {/* Encabezado del curso */}
-      <Card padding="none" className="overflow-hidden md:col-span-2">
-        <div className="flex h-full">
-          <CourseThumbnail
-            src={course.thumbnailUrl}
-            title={course.title}
-            className="hidden w-56 shrink-0 sm:block"
-          />
-          <div className="flex min-w-0 flex-1 flex-col gap-3 p-6">
-            <div className="flex flex-wrap gap-2">
-              {course.isGlobal ? (
-                <Badge tone="brand"><GlobeIcon /> Global</Badge>
-              ) : (
-                <Badge><ShieldIcon /> {course.countries.map((c) => c.name).join(', ') || 'Por país'}</Badge>
-              )}
-              {enrolled && (
-                <Badge tone={isCompleted ? 'success' : 'info'}>{isCompleted ? 'Completado' : 'Inscrito'}</Badge>
-              )}
+    <>
+      <BackToCatalog />
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Encabezado del curso */}
+        <Card padding="none" className="overflow-hidden md:col-span-2">
+          <div className="flex h-full">
+            <CourseThumbnail
+              src={course.thumbnailUrl}
+              title={course.title}
+              className="hidden w-56 shrink-0 sm:block"
+            />
+            <div className="flex min-w-0 flex-1 flex-col gap-3 p-6">
+              <div className="flex flex-wrap gap-2">
+                {course.isGlobal ? (
+                  <Badge tone="brand"><GlobeIcon /> Global</Badge>
+                ) : (
+                  <Badge><ShieldIcon /> {course.countries.map((c) => c.name).join(', ') || 'Por país'}</Badge>
+                )}
+                {enrolled && (
+                  <Badge tone={isCompleted ? 'success' : 'info'}>{isCompleted ? 'Completado' : 'Inscrito'}</Badge>
+                )}
+              </div>
+              <h1 className="text-2xl font-semibold text-foreground">{course.title}</h1>
+              {course.description && <p className="text-sm text-foreground-soft">{course.description}</p>}
+              <div className="flex-1" />
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-2 text-sm text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <Avatar name={course.instructorName} size="xs" tone="neutral" />
+                  {course.instructorName}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <BookOpenIcon className="size-4" aria-hidden="true" />
+                  {lessons.length} {lessons.length === 1 ? 'lección' : 'lecciones'} · {requiredCount}{' '}
+                  {requiredCount === 1 ? 'requerida' : 'requeridas'}
+                </span>
+              </div>
             </div>
-            <h1 className="text-2xl font-semibold text-foreground">{course.title}</h1>
-            {course.description && <p className="text-sm text-foreground-soft">{course.description}</p>}
-            <div className="flex-1" />
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-2">
-                <Avatar name={course.instructorName} size="xs" tone="neutral" />
-                {course.instructorName}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <BookOpenIcon className="size-4" aria-hidden="true" />
-                {lessons.length} {lessons.length === 1 ? 'lección' : 'lecciones'} · {requiredCount}{' '}
-                {requiredCount === 1 ? 'requerida' : 'requeridas'}
-              </span>
+          </div>
+        </Card>
+
+        {/* Inscripción o progreso */}
+        {progressQuery.isLoading ? (
+          <Skeleton className="h-48 rounded-2xl" />
+        ) : enrolled && progress ? (
+          <Card className="flex flex-col justify-center gap-4">
+            <div>
+              <p className="text-base font-semibold text-foreground">Tu progreso</p>
+              <p className="mt-1 text-xs text-subtle-foreground">
+                Inscrito el {formatDate(progress.enrolledAt)}
+                {enrollmentSummary?.deadlineAt && ` · Fecha límite: ${formatDate(enrollmentSummary.deadlineAt)}`}
+              </p>
             </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Inscripción o progreso */}
-      {progressQuery.isLoading ? (
-        <Skeleton className="h-48 rounded-2xl" />
-      ) : enrolled && progress ? (
-        <Card className="flex flex-col justify-center gap-4">
-          <div>
-            <p className="text-base font-semibold text-foreground">Tu progreso</p>
-            <p className="mt-1 text-xs text-subtle-foreground">
-              Inscrito el {formatDate(progress.enrolledAt)}
-              {enrollmentSummary?.deadlineAt && ` · Fecha límite: ${formatDate(enrollmentSummary.deadlineAt)}`}
-            </p>
-          </div>
-          <ProgressBar
-            value={Math.round(progress.progressPercent)}
-            showValue
-            tone="success"
-            label={`${requiredLessonsLabel(progress.completedLessons, progress.requiredLessons)} completadas`}
-          />
-          {currentLesson && (
-            <Button fullWidth onClick={() => openLesson(currentLesson)}>
-              <PlayCircleIcon /> Continuar lección
-            </Button>
-          )}
-        </Card>
-      ) : notEnrolled ? (
-        <Card className="flex flex-col justify-center gap-4">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-brand/10 text-brand-foreground">
-            <GraduationCapIcon className="size-5" aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-base font-semibold text-foreground">Aún no estás inscrito</p>
-            <p className="mt-1 text-sm text-muted-foreground">Inscríbete para desbloquear las lecciones y el examen final.</p>
-          </div>
-          {enrollMutation.isError && <Alert tone="danger">{getApiErrorMessage(enrollMutation.error)}</Alert>}
-          <Button size="lg" fullWidth onClick={() => enrollMutation.mutate(course.id)} disabled={enrollMutation.isPending}>
-            {enrollMutation.isPending ? 'Inscribiendo…' : 'Inscribirme al curso'}
-          </Button>
-        </Card>
-      ) : (
-        <StateBlock
-          tipo="error"
-          compact
-          title="No pudimos verificar tu inscripción"
-          text="Inténtalo de nuevo en unos segundos."
-          onAction={() => progressQuery.refetch()}
-        />
-      )}
-
-      {/* Lecciones */}
-      <Card padding="none" className="overflow-hidden md:col-span-2">
-        <div className="flex items-center justify-between gap-3 border-b border-border px-6 py-4">
-          <h2 className="text-lg font-semibold text-foreground">Lecciones</h2>
-          <span className="text-sm text-muted-foreground">
-            {enrolled
-              ? `${completed.size} de ${lessons.length} completadas`
-              : `${lessons.length} ${lessons.length === 1 ? 'lección' : 'lecciones'}`}
-          </span>
-        </div>
-        {lessons.length === 0 ? (
-          <StateBlock bordered={false} compact title="Este curso aún no tiene lecciones" text="El instructor todavía está preparando el contenido." />
-        ) : (
-          <ol className="divide-y divide-border">
-            {lessons.map((lesson, index) => {
-              const status = statusOf(lesson);
-              return (
-                <li key={lesson.id}>
-                  <LessonRow
-                    index={index + 1}
-                    title={lesson.title}
-                    type={lesson.type}
-                    isRequired={lesson.isRequired}
-                    status={status}
-                    current={lesson.id === currentLesson?.id}
-                    lockReason={
-                      enrolled
-                        ? 'Se desbloquea al completar las lecciones requeridas anteriores.'
-                        : undefined
-                    }
-                    onClick={() => openLesson(lesson)}
-                  />
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </Card>
-
-      {/* Examen final */}
-      <div>
-        <Card>
-          <div className="flex items-center gap-3">
-            <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-xl', hasExam ? chipClass : 'bg-secondary text-subtle-foreground')}>
-              <ExamIcon className="size-5" aria-hidden="true" />
+            <ProgressBar
+              value={Math.round(progress.progressPercent)}
+              showValue
+              tone="success"
+              label={`${requiredLessonsLabel(progress.completedLessons, progress.requiredLessons)} completadas`}
+            />
+            {currentLesson && (
+              <Button fullWidth onClick={() => openLesson(currentLesson)}>
+                <PlayCircleIcon /> Continuar lección
+              </Button>
+            )}
+          </Card>
+        ) : notEnrolled ? (
+          <Card className="flex flex-col justify-center gap-4">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-brand/10 text-brand-foreground">
+              <GraduationCapIcon className="size-5" aria-hidden="true" />
             </span>
             <div>
-              <h2 className="text-base font-semibold text-foreground">Examen final</h2>
-              {examQuestions.length > 0 && (
-                <p className="text-xs text-subtle-foreground">
-                  {examQuestions.length} {examQuestions.length === 1 ? 'pregunta' : 'preguntas'}
-                  {passScore !== undefined && ` · Mínimo para aprobar: ${passScore}%`}
-                  {maxAttempts !== undefined && ` · ${maxAttempts} ${maxAttempts === 1 ? 'intento' : 'intentos'}`}
-                </p>
-              )}
+              <p className="text-base font-semibold text-foreground">Aún no estás inscrito</p>
+              <p className="mt-1 text-sm text-muted-foreground">Inscríbete para desbloquear las lecciones y el examen final.</p>
             </div>
+            {enrollMutation.isError && <Alert tone="danger">{getApiErrorMessage(enrollMutation.error)}</Alert>}
+            <Button size="lg" fullWidth onClick={() => enrollMutation.mutate(course.id)} disabled={enrollMutation.isPending}>
+              {enrollMutation.isPending ? 'Inscribiendo…' : 'Inscribirme al curso'}
+            </Button>
+          </Card>
+        ) : (
+          <StateBlock
+            tipo="error"
+            compact
+            title="No pudimos verificar tu inscripción"
+            text="Inténtalo de nuevo en unos segundos."
+            onAction={() => progressQuery.refetch()}
+          />
+        )}
+
+        {/* Lecciones */}
+        <Card padding="none" className="overflow-hidden md:col-span-2">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-6 py-4">
+            <h2 className="text-lg font-semibold text-foreground">Lecciones</h2>
+            <span className="text-sm text-muted-foreground">
+              {enrolled
+                ? `${completed.size} de ${lessons.length} completadas`
+                : `${lessons.length} ${lessons.length === 1 ? 'lección' : 'lecciones'}`}
+            </span>
           </div>
-
-          {examQuery.isLoading && enrolled ? (
-            <Skeleton className="mt-4 h-20 rounded-xl" />
-          ) : !hasExam ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              Este curso no tiene examen final. Se completa al terminar las lecciones requeridas.
-            </p>
-          ) : examState === 'locked' ? (
-            <>
-              <p className="mt-4 text-sm text-muted-foreground">
-                {enrolled
-                  ? 'Completa las lecciones requeridas para habilitar el examen final.'
-                  : 'Inscríbete y completa las lecciones requeridas para habilitar el examen final.'}
-              </p>
-              <Button variant="secondary" fullWidth disabled className="mt-4">
-                <LockIcon /> Iniciar examen
-              </Button>
-            </>
-          ) : examState === 'ready' ? (
-            <>
-              <p className="mt-4 text-sm text-muted-foreground">
-                Completaste las lecciones requeridas. Al aprobar obtendrás tu certificado.
-              </p>
-              <ButtonLink to={`/courses/${course.id}/exam`} fullWidth className="mt-4">
-                Iniciar examen
-              </ButtonLink>
-            </>
-          ) : examState === 'passed' && passed ? (
-            <>
-              <div className="mt-4 flex items-center justify-between rounded-xl bg-success/10 px-4 py-3">
-                <span className="text-sm font-medium text-success-foreground">Aprobado</span>
-                <span className="text-2xl font-semibold text-foreground tabular-nums">{Math.round(passed.score)}%</span>
-              </div>
-              <p className="mt-2 text-xs text-subtle-foreground">
-                Intento {passed.attemptNumber}
-                {maxAttempts ? ` de ${maxAttempts}` : ''} · {formatDate(passed.completedAt)}
-              </p>
-              {certificate && (
-                <Button
-                  variant="outline"
-                  fullWidth
-                  className="mt-4"
-                  onClick={() => certificateDownload.download(certificate)}
-                  disabled={certificateDownload.downloadingId === certificate.id}
-                >
-                  <DownloadIcon /> {certificateDownload.downloadingId === certificate.id ? 'Descargando…' : 'Descargar certificado'}
-                </Button>
-              )}
-              {certificateDownload.error && (
-                <p className="mt-2 text-xs text-destructive-foreground" role="alert">{certificateDownload.error}</p>
-              )}
-            </>
-          ) : lastAttempt ? (
-            <>
-              <div className="mt-4 flex items-center justify-between rounded-xl bg-destructive/10 px-4 py-3">
-                <span className="text-sm font-medium text-destructive-foreground">No aprobado</span>
-                <span className="text-2xl font-semibold text-foreground tabular-nums">{Math.round(lastAttempt.score)}%</span>
-              </div>
-              <p className="mt-2 text-xs text-subtle-foreground">
-                Intento {lastAttempt.attemptNumber}
-                {maxAttempts ? ` de ${maxAttempts}` : ''}
-                {attemptsLeft !== undefined &&
-                  ` · ${attemptsLeft === 0 ? 'Sin intentos disponibles' : `Te ${attemptsLeft === 1 ? 'queda 1 intento' : `quedan ${attemptsLeft} intentos`}`}`}
-              </p>
-              {attemptsLeft !== 0 && (
-                <ButtonLink to={`/courses/${course.id}/exam`} fullWidth className="mt-4">
-                  Reintentar examen
-                </ButtonLink>
-              )}
-            </>
-          ) : null}
+          {lessons.length === 0 ? (
+            <StateBlock bordered={false} compact title="Este curso aún no tiene lecciones" text="El instructor todavía está preparando el contenido." />
+          ) : (
+            <ol className="divide-y divide-border">
+              {lessons.map((lesson, index) => {
+                const status = statusOf(lesson);
+                return (
+                  <li key={lesson.id}>
+                    <LessonRow
+                      index={index + 1}
+                      title={lesson.title}
+                      type={lesson.type}
+                      isRequired={lesson.isRequired}
+                      status={status}
+                      current={lesson.id === currentLesson?.id}
+                      lockReason={
+                        enrolled
+                          ? 'Se desbloquea al completar las lecciones requeridas anteriores.'
+                          : undefined
+                      }
+                      onClick={() => openLesson(lesson)}
+                    />
+                  </li>
+                );
+              })}
+            </ol>
+          )}
         </Card>
-      </div>
 
-      {activeLesson && (
-        <LessonPlayer
-          courseId={course.id}
-          lesson={activeLesson}
-          courseTitle={course.title}
-          allLessons={course.lessons}
-          completedLessonIds={completedLessonIds}
-          onClose={() => setActiveLesson(null)}
-          onNavigate={setActiveLesson}
-        />
-      )}
-    </div>
+        {/* Examen final */}
+        <div>
+          <Card>
+            <div className="flex items-center gap-3">
+              <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-xl', hasExam ? chipClass : 'bg-secondary text-subtle-foreground')}>
+                <ExamIcon className="size-5" aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Examen final</h2>
+                {examQuestions.length > 0 && (
+                  <p className="text-xs text-subtle-foreground">
+                    {examQuestions.length} {examQuestions.length === 1 ? 'pregunta' : 'preguntas'}
+                    {passScore !== undefined && ` · Mínimo para aprobar: ${passScore}%`}
+                    {maxAttempts !== undefined && ` · ${maxAttempts} ${maxAttempts === 1 ? 'intento' : 'intentos'}`}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {examQuery.isLoading && enrolled ? (
+              <Skeleton className="mt-4 h-20 rounded-xl" />
+            ) : !hasExam ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Este curso no tiene examen final. Se completa al terminar las lecciones requeridas.
+              </p>
+            ) : examState === 'locked' ? (
+              <>
+                <p className="mt-4 text-sm text-muted-foreground">
+                  {enrolled
+                    ? 'Completa las lecciones requeridas para habilitar el examen final.'
+                    : 'Inscríbete y completa las lecciones requeridas para habilitar el examen final.'}
+                </p>
+                <Button variant="secondary" fullWidth disabled className="mt-4">
+                  <LockIcon /> Iniciar examen
+                </Button>
+              </>
+            ) : examState === 'ready' ? (
+              <>
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Completaste las lecciones requeridas. Al aprobar obtendrás tu certificado.
+                </p>
+                <ButtonLink to={`/courses/${course.id}/exam`} fullWidth className="mt-4">
+                  Iniciar examen
+                </ButtonLink>
+              </>
+            ) : examState === 'passed' && passed ? (
+              <>
+                <div className="mt-4 flex items-center justify-between rounded-xl bg-success/10 px-4 py-3">
+                  <span className="text-sm font-medium text-success-foreground">Aprobado</span>
+                  <span className="text-2xl font-semibold text-foreground tabular-nums">{Math.round(passed.score)}%</span>
+                </div>
+                <p className="mt-2 text-xs text-subtle-foreground">
+                  Intento {passed.attemptNumber}
+                  {maxAttempts ? ` de ${maxAttempts}` : ''} · {formatDate(passed.completedAt)}
+                </p>
+                {certificate && (
+                  <Button
+                    variant="outline"
+                    fullWidth
+                    className="mt-4"
+                    onClick={() => certificateDownload.download(certificate)}
+                    disabled={certificateDownload.downloadingId === certificate.id}
+                  >
+                    <DownloadIcon /> {certificateDownload.downloadingId === certificate.id ? 'Descargando…' : 'Descargar certificado'}
+                  </Button>
+                )}
+                {certificateDownload.error && (
+                  <p className="mt-2 text-xs text-destructive-foreground" role="alert">{certificateDownload.error}</p>
+                )}
+              </>
+            ) : lastAttempt ? (
+              <>
+                <div className="mt-4 flex items-center justify-between rounded-xl bg-destructive/10 px-4 py-3">
+                  <span className="text-sm font-medium text-destructive-foreground">No aprobado</span>
+                  <span className="text-2xl font-semibold text-foreground tabular-nums">{Math.round(lastAttempt.score)}%</span>
+                </div>
+                <p className="mt-2 text-xs text-subtle-foreground">
+                  Intento {lastAttempt.attemptNumber}
+                  {maxAttempts ? ` de ${maxAttempts}` : ''}
+                  {attemptsLeft !== undefined &&
+                    ` · ${attemptsLeft === 0 ? 'Sin intentos disponibles' : `Te ${attemptsLeft === 1 ? 'queda 1 intento' : `quedan ${attemptsLeft} intentos`}`}`}
+                </p>
+                {attemptsLeft !== 0 && (
+                  <ButtonLink to={`/courses/${course.id}/exam`} fullWidth className="mt-4">
+                    Reintentar examen
+                  </ButtonLink>
+                )}
+              </>
+            ) : null}
+          </Card>
+        </div>
+
+      </div>
+    </>
   );
 }
 
@@ -352,10 +369,8 @@ export default function CourseDetailPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <Link to="/courses" className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeftIcon className="size-4" aria-hidden="true" /> Cursos
-      </Link>
 
+      {!course && <BackToCatalog />}
       {courseQuery.isLoading ? (
         <CourseDetailSkeleton />
       ) : courseQuery.isError || !course ? (
