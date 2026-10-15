@@ -238,9 +238,12 @@ export default function AdminCoursesPage() {
                                 {course.isActive ? 'Despublicar' : 'Publicar'}
                               </Button>
                             )}
-                            <ButtonLink to={`/courses/${course.id}`} variant="ghost" size="icon" aria-label={`Ver ${course.title}`} title="Ver como estudiante">
-                              <EyeIcon />
-                            </ButtonLink>
+                            {/* Quien no gestiona el curso solo lo ve si está publicado (como un estudiante). */}
+                            {(canManageListedCourse(user, course) || course.isActive) && (
+                              <ButtonLink to={`/courses/${course.id}`} variant="ghost" size="icon" aria-label={`Ver ${course.title}`} title="Ver como estudiante">
+                                <EyeIcon />
+                              </ButtonLink>
+                            )}
                             {canManageListedCourse(user, course) ? (
                               <>
                                 <ButtonLink to={`/admin/courses/${course.id}/edit`} variant="ghost" size="icon" aria-label={`Editar ${course.title}`} title="Editar">

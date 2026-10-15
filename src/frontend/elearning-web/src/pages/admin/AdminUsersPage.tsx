@@ -46,6 +46,9 @@ function VerifiedBadge({ verified }: { verified: boolean }) {
 export default function AdminUsersPage() {
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === 'superadmin';
+  // Mismas reglas que ChangeUserRoleHandler: nadie cambia su propio rol y solo un superadmin edita a otro superadmin.
+  const canEditUser = (target: UserSummaryDto) =>
+    target.id !== user?.id && (isSuperAdmin || target.role !== 'superadmin');
 
   // Filtros
   const [search, setSearch] = useState('');
@@ -230,9 +233,15 @@ export default function AdminUsersPage() {
                         </TableCell>
                         <TableCell className="py-3 text-muted-foreground tabular-nums whitespace-nowrap">{formatDate(u.createdAt)}</TableCell>
                         <TableCell className="py-3 text-right">
-                          <Button variant="ghost" size="sm" onClick={() => setSelected(u)} aria-label={`Editar a ${u.fullName}`}>
-                            <PencilIcon /> Editar
-                          </Button>
+                          {canEditUser(u) ? (
+                            <Button variant="ghost" size="sm" onClick={() => setSelected(u)} aria-label={`Editar a ${u.fullName}`}>
+                              <PencilIcon /> Editar
+                            </Button>
+                          ) : (
+                            <span className="px-2 text-xs text-subtle-foreground">
+                              {u.id === user?.id ? 'Tú' : 'Solo lectura'}
+                            </span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

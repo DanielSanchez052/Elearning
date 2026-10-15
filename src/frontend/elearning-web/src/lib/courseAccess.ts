@@ -31,6 +31,14 @@ export function canManageCourse(user: User, course: CourseScope): boolean {
   }
 }
 
+/**
+ * Disponible para inscribirse (CourseAccess.IsAvailableIn): publicado y global o asignado al país
+ * del usuario. El staff puede abrir otros cursos en vista previa, pero no inscribirse en ellos.
+ */
+export function isCourseAvailableIn(user: User, course: Pick<CourseScope, 'isGlobal' | 'countries'> & { isActive: boolean }): boolean {
+  return course.isActive && (course.isGlobal || course.countries.some((c) => c.id === user?.countryId));
+}
+
 /** Por qué el usuario no puede gestionar el curso, para mostrarlo en la página. */
 export function courseAccessDeniedReason(user: User, course: Pick<CourseScope, 'isGlobal'>): string {
   if (course.isGlobal) return 'Los cursos globales solo los gestiona el superadmin.';

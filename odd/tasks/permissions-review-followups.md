@@ -39,6 +39,12 @@ Los cursos se crean asignados al país del creador (`country_id` del JWT).
   - Eliminado `AuthorizationExtensions` (todo comentado y con un `AddAuthorization()` duplicado) y los controladores vacíos `LessonsController` y `ReportsController`.
   - `JwtService` leía `Jwt:ExpiresInMinutes`, pero la configuración define `Jwt:ExpirationMinutes`; funcionaba solo porque el valor por defecto coincidía (60).
   - Fuera comentarios que repetían el código, un TODO especulativo y `using` sin uso en handlers y validadores.
+- **Auditoría de sincronización frontend ↔ backend** (2026-10-14). Se quitaron acciones visibles que el backend rechazaba:
+  - `/admin/countries` era accesible por URL para el admin, con botones de crear y activar que daban 403. La ruta queda solo para superadmin.
+  - Usuarios: "Editar" ya no aparece en la fila propia ("Tú") ni, para el admin, en las de superadmin ("Solo lectura").
+  - Vista del curso: el staff que abre en vista previa un curso en borrador o de otro país ya no ve "Inscribirme" (daba 404), sino un aviso de vista previa.
+  - Listado de cursos: el ojo "Ver como estudiante" solo aparece si la vista va a cargar.
+  - En sentido contrario no falta nada: todas las acciones que el backend permite a cada rol tienen su lugar en la interfaz.
 
 ## Limitaciones conocidas (aceptadas)
 
@@ -54,5 +60,7 @@ Los cursos se crean asignados al país del creador (`country_id` del JWT).
 ## Pendientes
 
 ### 1. Siguientes partes de la revisión
-- Mismo repaso para **admin** y **superadmin** en usuarios y países.
+- Mismo repaso para **admin** y **superadmin** en usuarios y países. Ya detectado en el backend (la interfaz no lo expone, porque el listado del admin solo muestra usuarios de su país):
+  - `GET /api/admin/users/{id}` y `PATCH /api/admin/users/{id}/role` no limitan al admin a su país: con el id puede ver o cambiar el rol de un usuario de otro país.
+  - Un admin puede cambiar el rol de otro admin (por ejemplo, degradarlo a estudiante); solo están protegidos los superadmin y el propio usuario. Decidir si es intencional.
 - Comprobar que el resto del **frontend** (rutas protegidas en `App.tsx`) aplica las mismas reglas que el backend y maneja bien los 403.

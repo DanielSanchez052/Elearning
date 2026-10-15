@@ -24,7 +24,9 @@ import { CourseThumbnail } from '@/components/courses/CourseThumbnail';
 import { LessonRow, type LessonRowStatus } from '@/components/courses/LessonRow';
 import LessonPlayer from '@/components/courses/LessonPlayer';
 import { getApiErrorMessage } from '@/lib/axios';
+import { isCourseAvailableIn } from '@/lib/courseAccess';
 import { enrollmentStatusKey, requiredLessonsLabel } from '@/lib/enrollment';
+import { useAuthStore } from '@/store/authStore';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CourseDetailDto, LessonDto } from '@/types/course.types';
@@ -66,9 +68,12 @@ function CourseDetailContent({ course }: { course: CourseDetailDto }) {
   const enrollMutation = useEnrollInCourse();
   const [activeLesson, setActiveLesson] = useState<LessonDto | null>(null);
 
+  const user = useAuthStore((s) => s.user);
   const progress = progressQuery.data;
   const enrolled = Boolean(progress);
   const notEnrolled = progressQuery.isError && httpStatus(progressQuery.error) === 404;
+  // El staff puede ver en vista previa cursos en borrador o de otros países, pero no inscribirse.
+  const canEnroll = isCourseAvailableIn(user, course);
 
   const lessons = [...course.lessons].sort((a, b) => a.orderIndex - b.orderIndex);
   const completed = new Set(progress?.lessons.filter((l) => l.isCompleted).map((l) => l.lessonId) ?? []);
@@ -201,6 +206,20 @@ function CourseDetailContent({ course }: { course: CourseDetailDto }) {
                 <PlayCircleIcon /> Continuar lección
               </Button>
             )}
+          </Card>
+        ) : notEnrolled && !canEnroll ? (
+          <Card className="flex flex-col justify-center gap-4">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-brand/10 text-brand-foreground">
+              <ShieldIcon className="size-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-base font-semibold text-foreground">Vista previa</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {course.isActive
+                  ? 'Este curso no está disponible en tu país, así que no puedes inscribirte.'
+                  : 'El curso está en borrador: los estudiantes podrán inscribirse cuando se publique.'}
+              </p>
+            </div>
           </Card>
         ) : notEnrolled ? (
           <Card className="flex flex-col justify-center gap-4">
