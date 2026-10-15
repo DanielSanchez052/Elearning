@@ -41,11 +41,11 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, LoginResponseDt
         var user = await _users.GetByEmailTrackedAsync(cmd.Email, ct);
 
         if (user is null || !_hasher.Verify(user.PasswordHash, cmd.Password))
-            return Result.Unauthorized<LoginResponseDto>("Email o contraseña incorrectos.");
+            return Result.Unauthorized<LoginResponseDto>("Email o contraseÃ±a incorrectos.");
 
         if (!user.IsEmailVerified)
             return Result.Unauthorized<LoginResponseDto>(
-                "Debes verificar tu email antes de iniciar sesión.");
+                "Debes verificar tu email antes de iniciar sesiÃ³n.");
 
         user!.RecordLogin();
         await _users.UpdateAsync(user, ct);

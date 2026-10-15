@@ -33,7 +33,7 @@ public class ChangeUserRoleHandlerTests
         var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Student);
         SetupTarget(target);
 
-        var cmd = new ChangeUserRoleCommand(TargetId, "instructor", SuperAdminId, "superadmin");
+        var cmd = new ChangeUserRoleCommand(TargetId, "instructor", SuperAdminId, "superadmin", 1);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.True(result.IsSuccess);
@@ -45,7 +45,7 @@ public class ChangeUserRoleHandlerTests
         var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Student);
         SetupTarget(target);
 
-        await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "instructor", SuperAdminId, "superadmin"));
+        await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "instructor", SuperAdminId, "superadmin", 1));
 
         _usersMock.Verify(r => r.UpdateAsync(target, default), Times.Once);
     }
@@ -56,7 +56,7 @@ public class ChangeUserRoleHandlerTests
         var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Student);
         SetupTarget(target);
 
-        await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "instructor", SuperAdminId, "superadmin"));
+        await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "instructor", SuperAdminId, "superadmin", 1));
 
         Assert.Equal(UserRole.Instructor, target.Role);
     }
@@ -67,7 +67,7 @@ public class ChangeUserRoleHandlerTests
         var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Student);
         SetupTarget(target);
 
-        var cmd = new ChangeUserRoleCommand(TargetId, "instructor", AdminId, "admin");
+        var cmd = new ChangeUserRoleCommand(TargetId, "instructor", AdminId, "admin", 1);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.True(result.IsSuccess);
@@ -83,7 +83,7 @@ public class ChangeUserRoleHandlerTests
         var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Student);
         SetupTarget(target);
 
-        var cmd = new ChangeUserRoleCommand(TargetId, newRole, AdminId, "admin");
+        var cmd = new ChangeUserRoleCommand(TargetId, newRole, AdminId, "admin", 1);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -98,7 +98,7 @@ public class ChangeUserRoleHandlerTests
         var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.SuperAdmin);
         SetupTarget(target);
 
-        var cmd = new ChangeUserRoleCommand(TargetId, "student", AdminId, "admin");
+        var cmd = new ChangeUserRoleCommand(TargetId, "student", AdminId, "admin", 1);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -111,7 +111,7 @@ public class ChangeUserRoleHandlerTests
         var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.SuperAdmin);
         SetupTarget(target);
 
-        var cmd = new ChangeUserRoleCommand(TargetId, "admin", SuperAdminId, "superadmin");
+        var cmd = new ChangeUserRoleCommand(TargetId, "admin", SuperAdminId, "superadmin", 1);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.True(result.IsSuccess);
@@ -125,7 +125,7 @@ public class ChangeUserRoleHandlerTests
         var target = UserHelpers.BuildUser(id: SuperAdminId, role: UserRole.SuperAdmin);
         SetupTarget(target);
 
-        var cmd = new ChangeUserRoleCommand(SuperAdminId, "admin", SuperAdminId, "superadmin");
+        var cmd = new ChangeUserRoleCommand(SuperAdminId, "admin", SuperAdminId, "superadmin", 1);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -140,7 +140,7 @@ public class ChangeUserRoleHandlerTests
         var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Instructor);
         SetupTarget(target);
 
-        var cmd = new ChangeUserRoleCommand(TargetId, "instructor", SuperAdminId, "superadmin");
+        var cmd = new ChangeUserRoleCommand(TargetId, "instructor", SuperAdminId, "superadmin", 1);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -156,7 +156,7 @@ public class ChangeUserRoleHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(TargetId, default))
             .ReturnsAsync((User?)null);
 
-        var cmd = new ChangeUserRoleCommand(TargetId, "instructor", SuperAdminId, "superadmin");
+        var cmd = new ChangeUserRoleCommand(TargetId, "instructor", SuperAdminId, "superadmin", 1);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -173,8 +173,74 @@ public class ChangeUserRoleHandlerTests
         SetupTarget(target);
 
         // Admin intenta asignar superadmin → Forbidden antes de tocar la BD
-        await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "superadmin", AdminId, "admin"));
+        await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "superadmin", AdminId, "admin", 1));
 
         _usersMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ── Admin limitado a su país y a estudiantes/instructores ─────────────
+
+    [Fact]
+    public async Task HandleAsync_AdminTargetsUserOfAnotherCountry_ReturnsNotFound()
+    {
+        var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Student, countryId: 2);
+        SetupTarget(target);
+
+        var result = await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "instructor", AdminId, "admin", 1));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
+        Assert.Equal(UserRole.Student, target.Role);
+    }
+
+    [Fact]
+    public async Task HandleAsync_AdminDemotesAnotherAdmin_ReturnsForbidden()
+    {
+        var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Admin, countryId: 1);
+        SetupTarget(target);
+
+        var result = await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "student", AdminId, "admin", 1));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
+        Assert.Equal(UserRole.Admin, target.Role);
+    }
+
+    [Fact]
+    public async Task HandleAsync_AdminChangesInstructorOfOwnCountryToStudent_ReturnsSuccess()
+    {
+        var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Instructor, countryId: 1);
+        SetupTarget(target);
+
+        var result = await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "student", AdminId, "admin", 1));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(UserRole.Student, target.Role);
+    }
+
+    [Fact]
+    public async Task HandleAsync_SuperAdminTargetsUserOfAnyCountry_ReturnsSuccess()
+    {
+        var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Admin, countryId: 2);
+        SetupTarget(target);
+
+        var result = await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "instructor", SuperAdminId, "superadmin", 1));
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Theory]
+    [InlineData("instructor")]
+    [InlineData("student")]
+    [InlineData("1")]
+    public async Task HandleAsync_NonAdminRequester_ReturnsForbidden(string requesterRole)
+    {
+        var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Student, countryId: 1);
+        SetupTarget(target);
+
+        var result = await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "instructor", OtherTargetId, requesterRole, 1));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
     }
 }

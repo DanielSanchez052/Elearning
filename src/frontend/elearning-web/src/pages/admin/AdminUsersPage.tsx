@@ -46,9 +46,10 @@ function VerifiedBadge({ verified }: { verified: boolean }) {
 export default function AdminUsersPage() {
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === 'superadmin';
-  // Mismas reglas que ChangeUserRoleHandler: nadie cambia su propio rol y solo un superadmin edita a otro superadmin.
+  // Mismas reglas que UserAccess en el backend: nadie cambia su propio rol, y el admin solo gestiona
+  // estudiantes e instructores (el listado ya le llega filtrado a su país).
   const canEditUser = (target: UserSummaryDto) =>
-    target.id !== user?.id && (isSuperAdmin || target.role !== 'superadmin');
+    target.id !== user?.id && (isSuperAdmin || target.role === 'student' || target.role === 'instructor');
 
   // Filtros
   const [search, setSearch] = useState('');

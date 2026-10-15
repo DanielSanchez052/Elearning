@@ -1,6 +1,6 @@
 using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Common.Authorization;
 using ELearning.Domain.Constants;
-using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Users.Commands;
@@ -9,9 +9,11 @@ public sealed record ChangeUserRoleCommand(
     Guid TargetUserId,
     string NewRole,
     Guid RequesterId,
-    string RequesterRole
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand;
 
+/// <summary>Reglas de quién cambia el rol de quién: ver <see cref="UserAccess"/>.</summary>
 public sealed class ChangeUserRoleHandler : ICommandHandler<ChangeUserRoleCommand>
 {
     private readonly IUserRepository _users;
@@ -23,24 +25,22 @@ public sealed class ChangeUserRoleHandler : ICommandHandler<ChangeUserRoleComman
 
     public async Task<Result> HandleAsync(ChangeUserRoleCommand cmd, CancellationToken ct = default)
     {
-        // El validador ya garantiza un NewRole válido; el rol del solicitante viene del token.
+        // El validador ya garantiza un NewRole válido.
         if (!RoleNames.TryParse(cmd.NewRole, out var newRole))
             return Result.ValidationFailure("Rol inválido.");
-        if (!RoleNames.TryParse(cmd.RequesterRole, out var requesterRole))
-            return Result.Forbidden("Rol del solicitante no reconocido.");
 
-        if (requesterRole == UserRole.Admin && newRole is not (UserRole.Student or UserRole.Instructor))
-            return Result.Forbidden("Un Admin solo puede asignar los roles Student e Instructor.");
+        if (!UserAccess.CanAssignRole(cmd.RequesterRole, newRole))
+            return Result.Forbidden(UserAccess.AssignRoleForbiddenMessage);
 
         var target = await _users.GetByIdTrackedAsync(cmd.TargetUserId, ct);
-        if (target is null)
+        if (target is null || !UserAccess.CanView(target, cmd.RequesterRole, cmd.RequesterCountryId))
             return Result.NotFound($"Usuario con id '{cmd.TargetUserId}' no encontrado.");
 
-        if (target.Role == UserRole.SuperAdmin && requesterRole != UserRole.SuperAdmin)
-            return Result.Forbidden("No puedes modificar el rol de un Super Admin.");
-
         if (target.Id == cmd.RequesterId)
-            return Result.Forbidden("No puedes cambiar tu propio rol.");
+            return Result.Forbidden(UserAccess.OwnRoleForbiddenMessage);
+
+        if (!UserAccess.CanChangeRoleOf(target, cmd.RequesterRole))
+            return Result.Forbidden(UserAccess.ManageStaffForbiddenMessage);
 
         if (target.Role == newRole)
             return Result.Conflict($"El usuario ya tiene el rol '{cmd.NewRole}'.");

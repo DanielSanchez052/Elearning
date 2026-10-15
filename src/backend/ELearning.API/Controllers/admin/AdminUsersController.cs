@@ -50,7 +50,7 @@ public class AdminUsersController(
     public async Task<IActionResult> GetUserById(Guid id)
     {
         var result = await getUserByIdHandler.HandleAsync(
-            new GetUserByIdQuery(id),
+            new GetUserByIdQuery(id, User.GetRole(), User.GetCountryId()),
             HttpContext.RequestAborted);
         return this.ToActionResult(result);
     }
@@ -62,7 +62,8 @@ public class AdminUsersController(
             TargetUserId: id,
             NewRole: request.Role,
             RequesterId: User.GetUserId(),
-            RequesterRole: User.GetRole()
+            RequesterRole: User.GetRole(),
+            RequesterCountryId: User.GetCountryId()
         );
 
         var result = await changeRoleHandler.HandleAsync(cmd, HttpContext.RequestAborted);

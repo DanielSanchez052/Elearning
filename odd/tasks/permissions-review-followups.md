@@ -45,6 +45,14 @@ Los cursos se crean asignados al país del creador (`country_id` del JWT).
   - Vista del curso: el staff que abre en vista previa un curso en borrador o de otro país ya no ve "Inscribirme" (daba 404), sino un aviso de vista previa.
   - Listado de cursos: el ojo "Ver como estudiante" solo aparece si la vista va a cargar.
   - En sentido contrario no falta nada: todas las acciones que el backend permite a cada rol tienen su lugar en la interfaz.
+- **Usuarios y países (admin y superadmin)**, decisiones del 2026-10-14, centralizadas en `ELearning.Application/Common/Authorization/UserAccess.cs`:
+  - El admin solo ve y modifica usuarios de su país, también en el detalle (`GET /api/admin/users/{id}`) y en el cambio de rol; los de otro país dan 404.
+  - El admin solo cambia el rol de estudiantes e instructores, y solo a estudiante o instructor. Los admins y superadmins los gestiona el superadmin, que puede cambiar el rol de cualquiera menos el suyo (así siempre queda al menos uno).
+  - Cambiar de país a un instructor no mueve sus cursos: siguen en su país original y él los sigue gestionando como creador.
+  - Desactivar un país solo bloquea las altas nuevas: los usuarios de ese país siguen entrando y cursando. El registro ya no acepta países inactivos (antes solo lo impedía la interfaz).
+  - El superadmin puede cambiar el país de cualquiera, incluido el suyo.
+  - Frontend: el admin solo ve "Editar" en estudiantes e instructores.
+  - De paso: cinco archivos del backend estaban en Windows-1252 en vez de UTF-8 (sus tildes se habrían roto al compilar fuera de Windows); convertidos a UTF-8.
 
 ## Limitaciones conocidas (aceptadas)
 
@@ -59,8 +67,4 @@ Los cursos se crean asignados al país del creador (`country_id` del JWT).
 
 ## Pendientes
 
-### 1. Siguientes partes de la revisión
-- Mismo repaso para **admin** y **superadmin** en usuarios y países. Ya detectado en el backend (la interfaz no lo expone, porque el listado del admin solo muestra usuarios de su país):
-  - `GET /api/admin/users/{id}` y `PATCH /api/admin/users/{id}/role` no limitan al admin a su país: con el id puede ver o cambiar el rol de un usuario de otro país.
-  - Un admin puede cambiar el rol de otro admin (por ejemplo, degradarlo a estudiante); solo están protegidos los superadmin y el propio usuario. Decidir si es intencional.
-- Comprobar que el resto del **frontend** (rutas protegidas en `App.tsx`) aplica las mismas reglas que el backend y maneja bien los 403.
+Ninguno: la revisión de permisos quedó completa el 2026-10-14. Fuera de alcance: los reportes sin implementar (`quizzes-notifications-reports-tests.md`) y la carrera al borrar las últimas preguntas u opciones (`exam-module-empty-required-quiz-guards.md`). El logout del backend está en "Limitaciones conocidas".

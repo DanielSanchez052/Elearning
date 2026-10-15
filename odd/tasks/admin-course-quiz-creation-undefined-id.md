@@ -21,7 +21,7 @@ fire-and-forget on the frontend (nothing reads the resolved id), so they don't
 hit this bug despite having the same response shape.
 
 ## Tasks
-- [ ] **T1** — `CreateQuizQuestion` → `AdminQuizzesPage.tsx:92` (`res.data.value`).
+- [x] **T1** — `CreateQuizQuestion` → `AdminQuizzesPage.tsx:92` (`res.data.value`). Resuelto en `quiz-option-questionid-undefined.md`; verificado el 2026-10-14 (el código ya no usa `res.data.value`).
   Already spawned as a separate background task (`task_ddf1d069`, worktree
   `fix/quiz-option-questionid-undefined`) before this doc existed — not
   duplicated here, tracked for cross-reference only.

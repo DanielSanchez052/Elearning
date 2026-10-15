@@ -22,7 +22,7 @@ public class GetUserByIdHandlerTests
         var user = UserHelpers.BuildUser(id: userId);
         _usersMock.Setup(r => r.GetByIdAsync(userId, default)).ReturnsAsync(user);
 
-        var result = await _handler.HandleAsync(new GetUserByIdQuery(userId));
+        var result = await _handler.HandleAsync(new GetUserByIdQuery(userId, "superadmin", 1));
 
         Assert.True(result.IsSuccess);
     }
@@ -41,7 +41,7 @@ public class GetUserByIdHandlerTests
             verified: false);
         _usersMock.Setup(r => r.GetByIdAsync(userId, default)).ReturnsAsync(user);
 
-        var result = await _handler.HandleAsync(new GetUserByIdQuery(userId));
+        var result = await _handler.HandleAsync(new GetUserByIdQuery(userId, "superadmin", 1));
 
         var dto = result.Value;
         Assert.Equal(userId, dto.Id);
@@ -59,7 +59,7 @@ public class GetUserByIdHandlerTests
         var userId = Guid.NewGuid();
         _usersMock.Setup(r => r.GetByIdAsync(userId, default)).ReturnsAsync((User?)null);
 
-        var result = await _handler.HandleAsync(new GetUserByIdQuery(userId));
+        var result = await _handler.HandleAsync(new GetUserByIdQuery(userId, "superadmin", 1));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
@@ -73,8 +73,39 @@ public class GetUserByIdHandlerTests
         var user = UserHelpers.BuildUser(id: userId, role: UserRole.SuperAdmin);
         _usersMock.Setup(r => r.GetByIdAsync(userId, default)).ReturnsAsync(user);
 
-        var result = await _handler.HandleAsync(new GetUserByIdQuery(userId));
+        var result = await _handler.HandleAsync(new GetUserByIdQuery(userId, "superadmin", 1));
 
         Assert.Equal("superadmin", result.Value.Role);
+    }
+
+    [Theory]
+    [InlineData(1, true)]    // mismo país
+    [InlineData(2, false)]   // otro país → 404
+    public async Task HandleAsync_Admin_OnlySeesUsersOfOwnCountry(int userCountryId, bool expectedSuccess)
+    {
+        var userId = Guid.NewGuid();
+        var user = UserHelpers.BuildUser(id: userId, countryId: userCountryId);
+        _usersMock.Setup(r => r.GetByIdAsync(userId, default)).ReturnsAsync(user);
+
+        var result = await _handler.HandleAsync(new GetUserByIdQuery(userId, "admin", 1));
+
+        Assert.Equal(expectedSuccess, result.IsSuccess);
+        if (!expectedSuccess)
+            Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
+    }
+
+    [Theory]
+    [InlineData("instructor")]
+    [InlineData("student")]
+    public async Task HandleAsync_NonAdminRequester_ReturnsNotFound(string requesterRole)
+    {
+        var userId = Guid.NewGuid();
+        var user = UserHelpers.BuildUser(id: userId, countryId: 1);
+        _usersMock.Setup(r => r.GetByIdAsync(userId, default)).ReturnsAsync(user);
+
+        var result = await _handler.HandleAsync(new GetUserByIdQuery(userId, requesterRole, 1));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
     }
 }
