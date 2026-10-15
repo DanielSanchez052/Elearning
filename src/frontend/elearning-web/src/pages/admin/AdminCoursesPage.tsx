@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminCourses, useToggleCourseStatus, useDeleteCourse } from '@/hooks/admin/courses';
 import { useAdminCountries } from '@/hooks/admin/countries';
+import { useAssignableInstructors } from '@/hooks/admin/users';
 import { useAuthStore } from '../../store/authStore';
 import {
   Alert,
@@ -49,10 +50,10 @@ export default function AdminCoursesPage() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<StatusTab>('todos');
   const [countryId, setCountryId] = useState<number | undefined>();
+  const [instructorFilter, setInstructorFilter] = useState('');
   const [page, setPage] = useState(1);
   const [toDelete, setToDelete] = useState<CourseSummaryDto | null>(null);
 
-  // Busca mientras se escribe, con una pausa corta.
   useEffect(() => {
     const t = setTimeout(() => {
       setQuery(search.trim());
@@ -65,24 +66,27 @@ export default function AdminCoursesPage() {
     search: query || undefined,
     isActive: status === 'todos' ? undefined : status === 'publicados',
     countryId,
+    instructorId: instructorFilter && instructorFilter !== 'none' ? instructorFilter : undefined,
+    unassigned: instructorFilter === 'none' || undefined,
     page,
     pageSize: PAGE_SIZE,
   });
 
-  // El filtro por país solo lo usa el superadmin; el resto ya ve únicamente los cursos de su alcance.
   const { data: countries } = useAdminCountries({ enabled: isSuperAdmin });
+  const { data: instructors } = useAssignableInstructors(!isInstructor);
   const toggle = useToggleCourseStatus();
   const [rowError, setRowError] = useState('');
 
   const courses = data?.items ?? [];
   const total = data?.totalCount ?? 0;
-  const hasFilters = Boolean(query || status !== 'todos' || countryId);
+  const hasFilters = Boolean(query || status !== 'todos' || countryId || instructorFilter);
 
   const resetFilters = () => {
     setSearch('');
     setQuery('');
     setStatus('todos');
     setCountryId(undefined);
+    setInstructorFilter('');
     setPage(1);
   };
 
@@ -96,7 +100,7 @@ export default function AdminCoursesPage() {
   };
 
   const scopeText = isInstructor
-    ? 'Tus cursos como instructor'
+    ? 'Cursos que tienes asignados'
     : `${data ? `${total} ${total === 1 ? 'curso' : 'cursos'}` : 'Cursos'}${isSuperAdmin ? ' en total' : ' en tu país'}`;
 
   return (
@@ -142,6 +146,25 @@ export default function AdminCoursesPage() {
             {countries.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
+              </option>
+            ))}
+          </Select>
+        )}
+        {!isInstructor && (
+          <Select
+            aria-label="Instructor"
+            className="w-full sm:w-56"
+            value={instructorFilter}
+            onChange={(e) => {
+              setInstructorFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">Todos los instructores</option>
+            <option value="none">Sin asignar</option>
+            {instructors?.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.fullName}
               </option>
             ))}
           </Select>
@@ -214,7 +237,9 @@ export default function AdminCoursesPage() {
                             <p className="line-clamp-2 min-w-40 font-medium text-foreground">{course.title}</p>
                           </div>
                         </TableCell>
-                        <TableCell className="py-3 whitespace-nowrap">{course.instructorName}</TableCell>
+                        <TableCell className="py-3 whitespace-nowrap">
+                          {course.instructorName ?? <span className="text-subtle-foreground">Sin asignar</span>}
+                        </TableCell>
                         <TableCell className="py-3 tabular-nums">{course.lessonCount}</TableCell>
                         <TableCell className="py-3">
                           <Badge tone={course.isActive ? 'success' : 'neutral'}>{course.isActive ? 'Publicado' : 'Borrador'}</Badge>

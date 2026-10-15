@@ -1,5 +1,5 @@
+using ELearning.Application.Features.Notifications.Messages;
 using ELearning.Domain.Entities;
-using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Notifications.Services;
@@ -13,15 +13,10 @@ public class NotificationPublisher : INotificationPublisher
         _notifications = notifications;
     }
 
-    public async Task PublishAsync(
-        Guid userId,
-        NotificationType type,
-        string title,
-        string message,
-        Guid? referenceId = null,
-        CancellationToken ct = default)
+    public async Task PublishAsync(Guid recipientId, NotificationMessage message, CancellationToken ct = default)
     {
-        var notification = Notification.Create(userId, type, title, message, referenceId);
+        var notification = Notification.Create(
+            recipientId, message.Type, message.Title, message.Body, message.ReferenceId);
         await _notifications.AddAsync(notification, ct);
     }
 }

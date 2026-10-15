@@ -6,7 +6,8 @@ public sealed record CreateCourseRequest(
     string Title,
     string? Description,
     string? ThumbnailUrl,
-    bool IsGlobal
+    bool IsGlobal,
+    Guid? InstructorId = null
 );
 
 public sealed record UpdateCourseRequest(
@@ -17,6 +18,8 @@ public sealed record UpdateCourseRequest(
 );
 
 public sealed record AssignCountriesRequest(List<int> CountryIds);
+
+public sealed record AssignInstructorRequest(Guid? InstructorId);
 
 public sealed record CreateLessonRequest(
     string Title,

@@ -169,10 +169,12 @@ function CourseDetailContent({ course }: { course: CourseDetailDto }) {
               {course.description && <p className="text-sm text-foreground-soft">{course.description}</p>}
               <div className="flex-1" />
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-2 text-sm text-muted-foreground">
-                <span className="flex items-center gap-2">
-                  <Avatar name={course.instructorName} size="xs" tone="neutral" />
-                  {course.instructorName}
-                </span>
+                {course.instructorName && (
+                  <span className="flex items-center gap-2">
+                    <Avatar name={course.instructorName} size="xs" tone="neutral" />
+                    {course.instructorName}
+                  </span>
+                )}
                 <span className="flex items-center gap-1.5">
                   <BookOpenIcon className="size-4" aria-hidden="true" />
                   {lessons.length} {lessons.length === 1 ? 'lección' : 'lecciones'} · {requiredCount}{' '}

@@ -21,6 +21,7 @@ public class User
 
     public Country Country { get; private set; } = null!;
     public ICollection<Course> CreatedCourses { get; private set; } = new List<Course>();
+    public ICollection<Course> AssignedCourses { get; private set; } = new List<Course>();
     public ICollection<CourseEnrollment> Enrollments { get; private set; } = new List<CourseEnrollment>();
     public ICollection<UserBadge> Badges { get; private set; } = new List<UserBadge>();
     public ICollection<Notification> Notifications { get; private set; } = new List<Notification>();

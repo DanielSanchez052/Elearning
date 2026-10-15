@@ -10,6 +10,7 @@ namespace ELearning.Tests.Unit.Aplication.Features.Users;
 public class ChangeUserRoleHandlerTests
 {
     private readonly Mock<IUserRepository> _usersMock = new();
+    private readonly Mock<ICourseRepository> _coursesMock = new();
     private readonly ChangeUserRoleHandler _handler;
 
     private static readonly Guid SuperAdminId = Guid.NewGuid();
@@ -18,7 +19,7 @@ public class ChangeUserRoleHandlerTests
     private static readonly Guid OtherTargetId = Guid.NewGuid();
 
     public ChangeUserRoleHandlerTests() =>
-        _handler = new ChangeUserRoleHandler(_usersMock.Object);
+        _handler = new ChangeUserRoleHandler(_usersMock.Object, _coursesMock.Object);
 
     private void SetupTarget(User target) =>
         _usersMock
@@ -242,5 +243,35 @@ public class ChangeUserRoleHandlerTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
+    }
+
+    // ── Instructor con cursos asignados ───────────────────────────────────
+
+    [Fact]
+    public async Task HandleAsync_InstructorWithAssignedCourses_ReturnsConflict()
+    {
+        var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Instructor, countryId: 1);
+        SetupTarget(target);
+        _coursesMock.Setup(r => r.CountByInstructorAsync(TargetId, default)).ReturnsAsync(2);
+
+        var result = await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "student", AdminId, "admin", 1));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Conflict, result.ErrorType);
+        Assert.Contains("2 cursos asignados", result.Error);
+        Assert.Equal(UserRole.Instructor, target.Role);
+    }
+
+    [Fact]
+    public async Task HandleAsync_InstructorWithoutAssignedCourses_ChangesRole()
+    {
+        var target = UserHelpers.BuildUser(id: TargetId, role: UserRole.Instructor, countryId: 1);
+        SetupTarget(target);
+        _coursesMock.Setup(r => r.CountByInstructorAsync(TargetId, default)).ReturnsAsync(0);
+
+        var result = await _handler.HandleAsync(new ChangeUserRoleCommand(TargetId, "student", AdminId, "admin", 1));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(UserRole.Student, target.Role);
     }
 }

@@ -65,6 +65,17 @@ export function useUpdateCourse(id: string) {
   });
 }
 
+export function useAssignInstructor(courseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (instructorId: string | null) => coursesApi.assignInstructor(courseId, instructorId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: coursesKeys.all });
+      qc.invalidateQueries({ queryKey: courseKeys.detail(courseId) });
+    },
+  });
+}
+
 export function useAssignCountries(courseId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -106,10 +117,6 @@ export function useReorderLessons(courseId: string) {
   return useMutation({
     mutationFn: (data: ReorderLessonsRequest) =>
       coursesApi.reorderLessons(courseId, data),
-    // Optimistic update: no invalidamos en onSuccess para no causar
-    // un refetch que interrumpa el drag. El orden local ya fue actualizado
-    // antes de llamar a la API (ver CourseFormPage).
-    // Solo sincronizamos si hay error (onError invalida para resetear).
     onError: () => {
       qc.invalidateQueries({ queryKey: courseKeys.detail(courseId) });
     },

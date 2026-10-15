@@ -23,8 +23,9 @@ public class GetCourseDetailHandlerTests
     private Course SetupCourse(bool isActive = true, bool isGlobal = false, Guid? ownerId = null, params int[] countryIds)
     {
         var instructor = User.Create("Linus Torvalds", "linus@test.com", "hash", CountryId, UserRole.Instructor);
-        var course = Course.Create("Curso Backend", "Desc", "thumb.png", ownerId ?? instructor.Id, isGlobal);
+        var course = Course.Create("Curso Backend", "Desc", "thumb.png", ownerId ?? instructor.Id, isGlobal, instructorId: ownerId ?? instructor.Id);
         Helpers.SetPrivate(course, nameof(Course.CreatedByUser), instructor);
+        Helpers.SetPrivate(course, nameof(Course.Instructor), instructor);
         if (isActive)
             course.Activate();
         foreach (var countryId in countryIds)
@@ -58,8 +59,9 @@ public class GetCourseDetailHandlerTests
     public async Task HandleAsync_ExistingCourse_ReturnsMappedDetailDto()
     {
         var instructor = User.Create("Linus Torvalds", "linus@test.com", "hash", 1, UserRole.Instructor);
-        var course = Course.Create("Curso Backend", "Desc", "thumb.png", instructor.Id, isGlobal: false);
+        var course = Course.Create("Curso Backend", "Desc", "thumb.png", instructor.Id, isGlobal: false, instructorId: instructor.Id);
         Helpers.SetPrivate(course, nameof(Course.CreatedByUser), instructor);
+        Helpers.SetPrivate(course, nameof(Course.Instructor), instructor);
 
         var lesson1 = Lesson.Create(course.Id, "Intro", LessonType.Video, "video.mp4", 1, true);
         var lesson2 = Lesson.Create(course.Id, "Quiz", LessonType.Quiz, null, 2, false);

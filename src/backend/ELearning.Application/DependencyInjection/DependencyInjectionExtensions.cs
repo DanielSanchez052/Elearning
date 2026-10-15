@@ -1,6 +1,7 @@
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Common.Decorators;
 using ELearning.Application.Common.Validators;
+using ELearning.Application.Features.Courses.Services;
 using ELearning.Application.Features.Notifications.Services;
 using ELearning.Application.Features.Gamification.Rules;
 using ELearning.Application.Features.Gamification.Services;
@@ -30,6 +31,7 @@ public static class DependencyInjectionExtensions
     private static void RegisterServices(IServiceCollection services)
     {
         services.AddScoped<INotificationPublisher, NotificationPublisher>();
+        services.AddScoped<ICourseInstructorNotifier, CourseInstructorNotifier>();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 using ELearning.Application.Common.Authorization;
 using ELearning.Domain.Entities;
+using ELearning.Domain.Enums;
 
 namespace ELearning.Tests.Unit.Aplication.Common;
 
@@ -9,7 +10,7 @@ public class CourseAccessTests
 
     private static Course BuildCourse(bool isGlobal = false, params int[] countryIds)
     {
-        var course = Course.Create("Curso", null, null, OwnerId, isGlobal);
+        var course = Course.Create("Curso", null, null, OwnerId, isGlobal, instructorId: OwnerId);
         foreach (var countryId in countryIds)
             course.CourseCountries.Add(CourseCountry.Create(course.Id, countryId));
         return course;
@@ -36,16 +37,63 @@ public class CourseAccessTests
         Assert.False(CourseAccess.CanManage(BuildCourse(true, 57), Guid.NewGuid(), "admin", 57));
 
     [Fact]
-    public void CanManage_InstructorOwner_True() =>
+    public void CanManage_AssignedInstructor_True() =>
         Assert.True(CourseAccess.CanManage(BuildCourse(false, 57), OwnerId, "instructor", 57));
 
     [Fact]
-    public void CanManage_InstructorNotOwner_False() =>
+    public void CanManage_InstructorNotAssigned_False() =>
         Assert.False(CourseAccess.CanManage(BuildCourse(false, 57), Guid.NewGuid(), "instructor", 57));
 
     [Fact]
-    public void CanManage_InstructorOwner_GlobalCourse_False() =>
-        Assert.False(CourseAccess.CanManage(BuildCourse(true), OwnerId, "instructor", 57));
+    public void CanManage_AssignedInstructor_GlobalCourse_True() =>
+        Assert.True(CourseAccess.CanManage(BuildCourse(true), OwnerId, "instructor", 57));
+
+    [Fact]
+    public void CanManage_CreatorNoLongerAssigned_False()
+    {
+        var creatorId = Guid.NewGuid();
+        var course = Course.Create("Curso", null, null, creatorId, isGlobal: false, instructorId: creatorId);
+        course.AssignInstructor(Guid.NewGuid());
+
+        Assert.False(CourseAccess.CanManage(course, creatorId, "instructor", 57));
+    }
+
+    [Fact]
+    public void CanManage_UnassignedCourse_NoInstructorCanManageIt()
+    {
+        var course = Course.Create("Curso", null, null, Guid.NewGuid(), isGlobal: false);
+
+        Assert.False(CourseAccess.CanManage(course, Guid.NewGuid(), "instructor", 57));
+    }
+
+    // ── Asignación de instructor ──────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("admin", false, 57, true)]       // curso de su país
+    [InlineData("admin", false, 52, false)]      // curso de otro país
+    [InlineData("admin", true, 57, false)]       // global: el admin no lo gestiona
+    [InlineData("superadmin", true, 52, true)]
+    [InlineData("instructor", false, 57, false)] // aunque sea el asignado, no reasigna
+    public void CanAssignInstructor_DependsOnRoleAndCourse(string role, bool isGlobal, int courseCountry, bool expected)
+    {
+        var course = isGlobal ? BuildCourse(true) : BuildCourse(false, courseCountry);
+
+        Assert.Equal(expected, CourseAccess.CanAssignInstructor(course, OwnerId, role, 57));
+    }
+
+    [Theory]
+    [InlineData(UserRole.Instructor, 57, "admin", true)]
+    [InlineData(UserRole.Instructor, 52, "admin", false)]      // de otro país
+    [InlineData(UserRole.Instructor, 52, "superadmin", true)]
+    [InlineData(UserRole.Student, 57, "admin", false)]         // no es instructor
+    [InlineData(UserRole.Admin, 57, "superadmin", false)]
+    public void IsEligibleInstructor_RequiresInstructorRoleVisibleToRequester(
+        UserRole candidateRole, int candidateCountry, string requesterRole, bool expected)
+    {
+        var candidate = User.Create("Candidato", "c@test.com", "hash", candidateCountry, candidateRole);
+
+        Assert.Equal(expected, CourseAccess.IsEligibleInstructor(candidate, requesterRole, 57));
+    }
 
     [Theory]
     [InlineData("student")]

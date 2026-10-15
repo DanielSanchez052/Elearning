@@ -17,7 +17,7 @@ public class AssignCourseCountriesHandlerTests
 
     private static Course BuildCourse(Guid ownerId, bool isGlobal = false, params int[] countryIds)
     {
-        var course = Course.Create("Título", "Desc", null, ownerId, isGlobal);
+        var course = Course.Create("Título", "Desc", null, ownerId, isGlobal, instructorId: ownerId);
         foreach (var countryId in countryIds)
             course.CourseCountries.Add(CourseCountry.Create(course.Id, countryId));
         return course;
@@ -73,10 +73,12 @@ public class AssignCourseCountriesHandlerTests
         Assert.Equal(ResultErrorType.Conflict, result.ErrorType);
     }
 
+    // El admin no gestiona cursos globales (403). El instructor asignado sí lo gestiona, pero un
+    // curso global no admite países (409), igual que para el superadmin.
     [Theory]
-    [InlineData("instructor")]
-    [InlineData("admin")]
-    public async Task HandleAsync_GlobalCourse_NonSuperAdmin_ReturnsForbidden(string role)
+    [InlineData("admin", ResultErrorType.Forbidden)]
+    [InlineData("instructor", ResultErrorType.Conflict)]
+    public async Task HandleAsync_GlobalCourse_NonSuperAdmin_IsRejected(string role, ResultErrorType expected)
     {
         var ownerId = Guid.NewGuid();
         var course = BuildCourse(ownerId, isGlobal: true);
@@ -86,7 +88,7 @@ public class AssignCourseCountriesHandlerTests
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
+        Assert.Equal(expected, result.ErrorType);
     }
 
     [Fact]

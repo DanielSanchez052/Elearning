@@ -34,7 +34,7 @@ public class ReorderLessonsHandlerTests
     public async Task HandleAsync_InstructorNotOwner_ReturnsForbidden()
     {
         var ownerId = Guid.NewGuid();
-        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
 
         _coursesMock
             .Setup(r => r.GetByIdAsync(course.Id, default))
@@ -51,7 +51,7 @@ public class ReorderLessonsHandlerTests
     public async Task HandleAsync_OrdersContainLessonOutsideCourse_ReturnsConflict()
     {
         var ownerId = Guid.NewGuid();
-        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
         var lesson = Lesson.Create(course.Id, "L1", LessonType.Video, "v.mp4", 1);
         var invalidLessonId = Guid.NewGuid();
 
@@ -73,7 +73,7 @@ public class ReorderLessonsHandlerTests
     public async Task HandleAsync_ValidRequest_CallsUpdateOrdersAsync()
     {
         var ownerId = Guid.NewGuid();
-        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
         var lesson1 = Lesson.Create(course.Id, "L1", LessonType.Video, "v1.mp4", 1);
         var lesson2 = Lesson.Create(course.Id, "L2", LessonType.Pdf, "p.pdf", 2);
 

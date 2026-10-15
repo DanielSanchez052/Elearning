@@ -4,6 +4,7 @@ public class Course
 {
     public Guid Id { get; private set; }
     public Guid CreatedBy { get; private set; }
+    public Guid? InstructorId { get; private set; }
     public string Title { get; private set; } = string.Empty;
     public string? Description { get; private set; }
     public string? ThumbnailUrl { get; private set; }
@@ -14,13 +15,15 @@ public class Course
     public DateTime UpdatedAt { get; private set; }
 
     public User CreatedByUser { get; private set; } = null!;
+    public User? Instructor { get; private set; }
     public ICollection<Lesson> Lessons { get; private set; } = new List<Lesson>();
     public ICollection<CourseEnrollment> Enrollments { get; private set; } = new List<CourseEnrollment>();
     public ICollection<CourseCountry> CourseCountries { get; private set; } = new List<CourseCountry>();
 
     private Course() { }
 
-    public static Course Create(string title, string? description, string? thumbnailUrl, Guid createdBy, bool isGlobal)
+    public static Course Create(
+        string title, string? description, string? thumbnailUrl, Guid createdBy, bool isGlobal, Guid? instructorId = null)
     {
         return new Course
         {
@@ -29,12 +32,20 @@ public class Course
             Description = description,
             ThumbnailUrl = thumbnailUrl,
             CreatedBy = createdBy,
+            InstructorId = instructorId,
             IsGlobal = isGlobal,
             IsActive = false,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             TimeLimitMins = null,
         };
+    }
+
+    /// <summary>Asigna o quita (null) el instructor responsable del curso.</summary>
+    public void AssignInstructor(Guid? instructorId)
+    {
+        InstructorId = instructorId;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public void Activate()

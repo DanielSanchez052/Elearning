@@ -19,6 +19,20 @@ export function useAdminUsers(params: GetUsersParams = {}) {
   });
 }
 
+/**
+ * Instructores que se pueden asignar a un curso. El backend ya limita el listado del admin a su
+ * país; para el resto de roles no se pide (`/admin/users` es solo de admin y superadmin).
+ */
+export function useAssignableInstructors(enabled: boolean) {
+  const params: GetUsersParams = { role: 'instructor', pageSize: 100 };
+  return useQuery({
+    queryKey: usersKeys.byParams(params),
+    queryFn: () => usersApi.getUsers(params).then((r) => r.data.items),
+    staleTime: 1000 * 60 * 2,
+    enabled,
+  });
+}
+
 // ── Mutations ─────────────────────────────────────────────────────────────────
 
 export function useChangeUserRole() {

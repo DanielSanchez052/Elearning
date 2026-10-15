@@ -18,7 +18,7 @@ public class ToggleCourseStatusHandlerTests
 
     private static Course BuildCourse(Guid ownerId, bool isActive)
     {
-        var course = Course.Create("Título", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Título", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
         if (isActive)
             course.Activate();
         return course;
