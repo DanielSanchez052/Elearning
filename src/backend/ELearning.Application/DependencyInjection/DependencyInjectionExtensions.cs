@@ -30,6 +30,7 @@ public static class DependencyInjectionExtensions
 
     private static void RegisterServices(IServiceCollection services)
     {
+        services.AddSingleton(TimeProvider.System);
         services.AddScoped<INotificationPublisher, NotificationPublisher>();
         services.AddScoped<ICourseInstructorNotifier, CourseInstructorNotifier>();
     }

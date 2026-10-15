@@ -18,6 +18,7 @@ import StudentLayout from './components/layout/StudentLayout';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminReportsPage from './pages/admin/AdminReportsPage';
 import AdminCoursesPage from './pages/admin/AdminCoursesPage';
 import AdminCountriesPage from './pages/admin/AdminCountriesPage';
 import AdminCourseFormPage from './pages/admin/AdminCourseFormPage';
@@ -83,6 +84,7 @@ export default function App() {
               <Route element={<AdminLayout />}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/users" element={<AdminUsersPage />} />
+                <Route path="/admin/reports" element={<AdminReportsPage />} />
               </Route>
             </Route>
 
