@@ -5,6 +5,7 @@ import { ROLES, type UserRole } from '@/types/user.types';
 import { AppRoot, Avatar, Button } from '@/components/ui';
 import {
   ArrowLeftIcon,
+  BarChartIcon,
   BookOpenIcon,
   GlobeIcon,
   GraduationCapIcon,
@@ -21,6 +22,7 @@ const navItems: { to: string; label: string; roles: UserRole[]; Icon: typeof Boo
   { to: '/admin', label: 'Dashboard', roles: ['admin', 'superadmin'], Icon: LayoutDashboardIcon },
   { to: '/admin/users', label: 'Usuarios', roles: ['admin', 'superadmin'], Icon: UsersIcon },
   { to: '/admin/courses', label: 'Cursos', roles: ['instructor', 'admin', 'superadmin'], Icon: BookOpenIcon },
+  { to: '/admin/reports', label: 'Reportes', roles: ['admin', 'superadmin'], Icon: BarChartIcon },
   { to: '/admin/countries', label: 'Países', roles: ['superadmin'], Icon: GlobeIcon },
 ];
 

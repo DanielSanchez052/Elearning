@@ -33,6 +33,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<ICountryRepository, CountryRepository>();
         services.AddScoped<ILessonRepository, LessonRepository>();
         services.AddScoped<IQuizRepository, QuizRepository>();
+        services.AddScoped<IReportRepository, ReportRepository>();
 
         return services;
     }
