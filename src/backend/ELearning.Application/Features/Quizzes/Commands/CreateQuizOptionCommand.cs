@@ -1,4 +1,5 @@
 using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Features.Quizzes.Common;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Interfaces.Repositories;
 
@@ -8,16 +9,23 @@ public sealed record CreateQuizOptionCommand(
     Guid QuestionId,
     string OptionText,
     bool IsCorrect,
-    int OrderIndex
+    int OrderIndex,
+    Guid RequesterId,
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand<Guid>;
 
 public sealed class CreateQuizOptionHandler : ICommandHandler<CreateQuizOptionCommand, Guid>
 {
     private readonly IQuizRepository _quizzes;
+    private readonly ICourseRepository _courses;
+    private readonly ILessonRepository _lessons;
 
-    public CreateQuizOptionHandler(IQuizRepository quizzes)
+    public CreateQuizOptionHandler(IQuizRepository quizzes, ICourseRepository courses, ILessonRepository lessons)
     {
         _quizzes = quizzes;
+        _courses = courses;
+        _lessons = lessons;
     }
 
     public async Task<Result<Guid>> HandleAsync(CreateQuizOptionCommand cmd, CancellationToken ct = default)
@@ -34,6 +42,9 @@ public sealed class CreateQuizOptionHandler : ICommandHandler<CreateQuizOptionCo
         var question = await _quizzes.GetQuestionByIdAsync(cmd.QuestionId, ct);
         if (question is null)
             return Result.NotFound<Guid>("Pregunta no encontrada");
+
+        if (!await QuizAuthoringAccess.CanManageQuestionAsync(question, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId, _courses, _lessons, ct))
+            return Result.Forbidden<Guid>(QuizAuthoringAccess.ForbiddenMessage);
 
         var option = QuizOption.Create(cmd.QuestionId, cmd.OptionText, cmd.IsCorrect, cmd.OrderIndex);
         await _quizzes.CreateOptionAsync(option, ct);

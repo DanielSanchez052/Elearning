@@ -15,7 +15,8 @@ public class ReorderLessonsValidatorTests
                 new LessonOrderItem(Guid.NewGuid(), 2)
             ],
             RequesterId: Guid.NewGuid(),
-            RequesterRole: "instructor");
+            RequesterRole: "instructor",
+            RequesterCountryId: 57);
 
     [Fact]
     public void Validate_EmptyCourseId_HasCourseIdError()

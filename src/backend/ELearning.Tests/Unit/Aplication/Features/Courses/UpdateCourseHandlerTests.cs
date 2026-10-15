@@ -14,20 +14,25 @@ public class UpdateCourseHandlerTests
     public UpdateCourseHandlerTests() =>
         _handler = new UpdateCourseHandler(_coursesMock.Object);
 
-    private static Course BuildCourse(Guid createdBy)
+    private static Course BuildCourse(Guid createdBy, int countryId = 57, bool isGlobal = false)
     {
-        return Course.Create("Título", "Desc", "thumb.png", createdBy, isGlobal: false);
+        var course = Course.Create("Título", "Desc", "thumb.png", createdBy, isGlobal);
+        if (!isGlobal)
+            course.CourseCountries.Add(CourseCountry.Create(course.Id, countryId));
+        return course;
     }
 
-    private static UpdateCourseCommand Valid(Guid courseId, Guid requesterId, string requesterRole = "instructor") =>
+    private static UpdateCourseCommand Valid(
+        Guid courseId, Guid requesterId, string requesterRole = "instructor", int requesterCountryId = 57, bool isGlobal = false) =>
         new(
             CourseId: courseId,
             Title: "  Nuevo título  ",
             Description: "  Nueva descripción  ",
             ThumbnailUrl: "https://cdn.test/new.png",
-            IsGlobal: true,
+            IsGlobal: isGlobal,
             RequesterId: requesterId,
-            RequesterRole: requesterRole);
+            RequesterRole: requesterRole,
+            RequesterCountryId: requesterCountryId);
 
     [Fact]
     public async Task HandleAsync_CourseNotFound_ReturnsNotFound()
@@ -53,7 +58,7 @@ public class UpdateCourseHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var result = await _handler.HandleAsync(Valid(course.Id, requesterId, "instructor"));
+        var result = await _handler.HandleAsync(Valid(course.Id, requesterId, "instructor", 57));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
@@ -69,7 +74,7 @@ public class UpdateCourseHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var result = await _handler.HandleAsync(Valid(course.Id, ownerId, "instructor"));
+        var result = await _handler.HandleAsync(Valid(course.Id, ownerId, "instructor", 57));
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Nuevo título", course.Title);
@@ -88,9 +93,77 @@ public class UpdateCourseHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var result = await _handler.HandleAsync(Valid(course.Id, requesterId, "admin"));
+        var result = await _handler.HandleAsync(Valid(course.Id, requesterId, "admin", 57));
 
         Assert.True(result.IsSuccess);
         _coursesMock.Verify(r => r.UpdateAsync(course, default), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_AdminOfAnotherCountry_ReturnsForbidden()
+    {
+        var course = BuildCourse(Guid.NewGuid(), countryId: 57);
+
+        _coursesMock
+            .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
+            .ReturnsAsync(course);
+
+        var result = await _handler.HandleAsync(Valid(course.Id, Guid.NewGuid(), "admin", 52));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
+        _coursesMock.Verify(r => r.UpdateAsync(It.IsAny<Course>(), default), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("instructor")]
+    [InlineData("admin")]
+    public async Task HandleAsync_NonSuperAdminMakesCourseGlobal_ReturnsForbidden(string role)
+    {
+        var ownerId = Guid.NewGuid();
+        var course = BuildCourse(ownerId);
+
+        _coursesMock
+            .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
+            .ReturnsAsync(course);
+
+        var result = await _handler.HandleAsync(Valid(course.Id, ownerId, role, 57, isGlobal: true));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
+        Assert.False(course.IsGlobal);
+    }
+
+    [Theory]
+    [InlineData("instructor")]
+    [InlineData("admin")]
+    public async Task HandleAsync_NonSuperAdminOnGlobalCourse_ReturnsForbidden(string role)
+    {
+        var ownerId = Guid.NewGuid();
+        var course = BuildCourse(ownerId, isGlobal: true);
+
+        _coursesMock
+            .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
+            .ReturnsAsync(course);
+
+        var result = await _handler.HandleAsync(Valid(course.Id, ownerId, role, 57));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task HandleAsync_SuperAdminMakesCourseGlobal_Succeeds()
+    {
+        var course = BuildCourse(Guid.NewGuid(), countryId: 57);
+
+        _coursesMock
+            .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
+            .ReturnsAsync(course);
+
+        var result = await _handler.HandleAsync(Valid(course.Id, Guid.NewGuid(), "superadmin", 1, isGlobal: true));
+
+        Assert.True(result.IsSuccess);
+        Assert.True(course.IsGlobal);
     }
 }

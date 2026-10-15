@@ -48,6 +48,22 @@ public class RegisterUserHandlerTests
     // ── Tests ─────────────────────────────────────────────────────────────────
 
     [Fact]
+    public async Task HandleAsync_InactiveCountry_ReturnsConflictAndDoesNotCreateUser()
+    {
+        SetupValidScenario();
+        var inactive = Country.Create("CO", "Colombia");
+        Helpers.SetPrivate(inactive, "Id", 1);
+        inactive.Deactivate();
+        _countriesMock.Setup(r => r.GetByIdAsync(1, default)).ReturnsAsync(inactive);
+
+        var result = await _handler.HandleAsync(ValidCmd());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Conflict, result.ErrorType);
+        _usersMock.Verify(r => r.CreateAsync(It.IsAny<User>(), default), Times.Never);
+    }
+
+    [Fact]
     public async Task HandleAsync_ValidData_ReturnsSuccessWithGuid()
     {
         SetupValidScenario();

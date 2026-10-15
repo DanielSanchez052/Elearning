@@ -23,7 +23,7 @@ public class ReorderLessonsHandlerTests
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default))
             .ReturnsAsync((Course?)null);
 
-        var cmd = new ReorderLessonsCommand(Guid.NewGuid(), [new LessonOrderItem(Guid.NewGuid(), 1)], Guid.NewGuid(), "instructor");
+        var cmd = new ReorderLessonsCommand(Guid.NewGuid(), [new LessonOrderItem(Guid.NewGuid(), 1)], Guid.NewGuid(), "instructor", 57);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -40,7 +40,7 @@ public class ReorderLessonsHandlerTests
             .Setup(r => r.GetByIdAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var cmd = new ReorderLessonsCommand(course.Id, [new LessonOrderItem(Guid.NewGuid(), 1)], Guid.NewGuid(), "instructor");
+        var cmd = new ReorderLessonsCommand(course.Id, [new LessonOrderItem(Guid.NewGuid(), 1)], Guid.NewGuid(), "instructor", 57);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -62,7 +62,7 @@ public class ReorderLessonsHandlerTests
             .Setup(r => r.GetByCourseAsync(course.Id, default))
             .ReturnsAsync([lesson]);
 
-        var cmd = new ReorderLessonsCommand(course.Id, [new LessonOrderItem(invalidLessonId, 1)], ownerId, "instructor");
+        var cmd = new ReorderLessonsCommand(course.Id, [new LessonOrderItem(invalidLessonId, 1)], ownerId, "instructor", 57);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -94,7 +94,7 @@ public class ReorderLessonsHandlerTests
             course.Id,
             [new LessonOrderItem(lesson1.Id, 2), new LessonOrderItem(lesson2.Id, 1)],
             ownerId,
-            "instructor");
+            "instructor", 57);
 
         var result = await _handler.HandleAsync(cmd);
 

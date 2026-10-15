@@ -10,7 +10,7 @@ public class EnrollInCourseValidatorTests
     [Fact]
     public void Validate_EmptyUserId_HasUserIdError()
     {
-        var result = _validator.Validate(new EnrollInCourseCommand(Guid.Empty, Guid.NewGuid()));
+        var result = _validator.Validate(new EnrollInCourseCommand(Guid.Empty, Guid.NewGuid(), 57));
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(EnrollInCourseCommand.UserId));
@@ -19,7 +19,7 @@ public class EnrollInCourseValidatorTests
     [Fact]
     public void Validate_EmptyCourseId_HasCourseIdError()
     {
-        var result = _validator.Validate(new EnrollInCourseCommand(Guid.NewGuid(), Guid.Empty));
+        var result = _validator.Validate(new EnrollInCourseCommand(Guid.NewGuid(), Guid.Empty, 57));
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(EnrollInCourseCommand.CourseId));
@@ -28,7 +28,7 @@ public class EnrollInCourseValidatorTests
     [Fact]
     public void Validate_ValidCommand_IsValid()
     {
-        var result = _validator.Validate(new EnrollInCourseCommand(Guid.NewGuid(), Guid.NewGuid()));
+        var result = _validator.Validate(new EnrollInCourseCommand(Guid.NewGuid(), Guid.NewGuid(), 57));
 
         Assert.True(result.IsValid);
         Assert.Empty(result.Errors);

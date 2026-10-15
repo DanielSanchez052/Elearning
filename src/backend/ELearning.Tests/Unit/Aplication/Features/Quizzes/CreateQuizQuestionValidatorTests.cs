@@ -15,7 +15,10 @@ public class CreateQuizQuestionValidatorTests
             QuestionText: "¿Qué es C#?",
             PassScore: 70,
             MaxAttempts: 3,
-            IsRequired: true);
+            IsRequired: true,
+            RequesterId: Guid.NewGuid(),
+            RequesterRole: "admin",
+            RequesterCountryId: 1);
 
     [Fact]
     public void Validate_WithoutLessonIdAndCourseId_HasFkError()

@@ -6,7 +6,7 @@ public class EmailService : IEmailService
 {
     public Task SendEmailVerificationAsync(string to, string fullName, string token, CancellationToken ct = default)
     {
-        Console.WriteLine("=== Email de Verificación ===");
+        Console.WriteLine("=== Email de VerificaciÃ³n ===");
         Console.WriteLine($"Para: {to}");
         Console.WriteLine($"Nombre: {fullName}");
         Console.WriteLine($"Token: {token}");
@@ -17,7 +17,7 @@ public class EmailService : IEmailService
 
     public Task SendPasswordResetAsync(string to, string fullName, string token, CancellationToken ct = default)
     {
-        Console.WriteLine("=== Email de Reseteo de contraseña ===");
+        Console.WriteLine("=== Email de Reseteo de contraseÃ±a ===");
         Console.WriteLine($"Para: {to}");
         Console.WriteLine($"Nombre: {fullName}");
         Console.WriteLine($"Token: {token}");

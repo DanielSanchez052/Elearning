@@ -2,6 +2,7 @@ using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Auth.DTOs.AuthResponse;
 using ELearning.Application.Features.Auth.DTOs.User;
 using ELearning.Application.Features.Gamification.Services;
+using ELearning.Domain.Constants;
 using ELearning.Domain.Interfaces.Repositories;
 using ELearning.Domain.Interfaces.Services;
 
@@ -40,11 +41,11 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, LoginResponseDt
         var user = await _users.GetByEmailTrackedAsync(cmd.Email, ct);
 
         if (user is null || !_hasher.Verify(user.PasswordHash, cmd.Password))
-            return Result.Unauthorized<LoginResponseDto>("Email o contraseña incorrectos.");
+            return Result.Unauthorized<LoginResponseDto>("Email o contraseÃ±a incorrectos.");
 
         if (!user.IsEmailVerified)
             return Result.Unauthorized<LoginResponseDto>(
-                "Debes verificar tu email antes de iniciar sesión.");
+                "Debes verificar tu email antes de iniciar sesiÃ³n.");
 
         user!.RecordLogin();
         await _users.UpdateAsync(user, ct);
@@ -58,7 +59,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, LoginResponseDt
                 Id: user.Id,
                 FullName: user.FullName,
                 Email: user.Email,
-                Role: user.Role.ToString().ToLowerInvariant(),
+                Role: user.Role.ToRoleName(),
                 Country: user.Country?.Name ?? string.Empty
             )
         );

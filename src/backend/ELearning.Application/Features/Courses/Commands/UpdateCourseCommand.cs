@@ -1,6 +1,5 @@
-﻿
-using ELearning.Application.Common.Abstractions;
-using ELearning.Domain.Enums;
+﻿using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Common.Authorization;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Courses.Commands;
@@ -12,7 +11,8 @@ public sealed record UpdateCourseCommand(
     string? ThumbnailUrl,
     bool IsGlobal,
     Guid RequesterId,   // extraído del JWT
-    string RequesterRole  // extraído del JWT
+    string RequesterRole,  // extraído del JWT
+    int RequesterCountryId
 ) : ICommand;
 
 public sealed class UpdateCourseHandler : ICommandHandler<UpdateCourseCommand>
@@ -32,10 +32,11 @@ public sealed class UpdateCourseHandler : ICommandHandler<UpdateCourseCommand>
         if (course is null)
             return Result.NotFound($"Curso con id '{cmd.CourseId}' no encontrado.");
 
-        // Verificar permisos — solo el creador, admin o super_admin pueden editar
-        var requesterRole = Enum.Parse<UserRole>(cmd.RequesterRole, ignoreCase: true);
-        if (requesterRole == UserRole.Instructor && course.CreatedBy != cmd.RequesterId)
-            return Result.Forbidden("Solo el instructor que creó el curso puede editarlo.");
+        if (!CourseAccess.CanManage(course, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId))
+            return Result.Forbidden(CourseAccess.ForbiddenMessage);
+
+        if (cmd.IsGlobal && !CourseAccess.IsSuperAdmin(cmd.RequesterRole))
+            return Result.Forbidden(CourseAccess.GlobalForbiddenMessage);
 
         course.Update(
             title: cmd.Title.Trim(),

@@ -4,6 +4,7 @@ using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Users.Commands;
 using ELearning.Application.Features.Users.DTOs;
 using ELearning.Application.Features.Users.Queries;
+using ELearning.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,7 +12,7 @@ namespace ELearning.API.Controllers;
 
 [ApiController]
 [Route("api/admin/users")]
-[Authorize(Roles = "admin,superadmin")]
+[Authorize(Roles = RoleNames.Admins)]
 public class AdminUsersController(
     IQueryHandler<GetUsersQuery, PagedResult<UserSummaryDto>> getUsersHandler,
     IQueryHandler<GetUserByIdQuery, UserSummaryDto> getUserByIdHandler,
@@ -28,7 +29,7 @@ public class AdminUsersController(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var effectiveCountryId = User.IsAdmin() && !User.IsSuperAdmin()
+        var effectiveCountryId = User.IsAdmin()
             ? User.GetCountryId()
             : countryId;
 
@@ -49,7 +50,7 @@ public class AdminUsersController(
     public async Task<IActionResult> GetUserById(Guid id)
     {
         var result = await getUserByIdHandler.HandleAsync(
-            new GetUserByIdQuery(id),
+            new GetUserByIdQuery(id, User.GetRole(), User.GetCountryId()),
             HttpContext.RequestAborted);
         return this.ToActionResult(result);
     }
@@ -61,7 +62,8 @@ public class AdminUsersController(
             TargetUserId: id,
             NewRole: request.Role,
             RequesterId: User.GetUserId(),
-            RequesterRole: User.GetRole()
+            RequesterRole: User.GetRole(),
+            RequesterCountryId: User.GetCountryId()
         );
 
         var result = await changeRoleHandler.HandleAsync(cmd, HttpContext.RequestAborted);
@@ -69,7 +71,7 @@ public class AdminUsersController(
     }
 
     [HttpPatch("{id:guid}/country")]
-    [Authorize(Roles = "superadmin")]
+    [Authorize(Roles = RoleNames.SuperAdmin)]
     public async Task<IActionResult> ChangeUserCountry(Guid id, [FromBody] ChangeCountryRequest request)
     {
         var cmd = new ChangeUserCountryCommand(

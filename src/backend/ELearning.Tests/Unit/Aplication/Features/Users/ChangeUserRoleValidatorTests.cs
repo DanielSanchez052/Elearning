@@ -8,7 +8,7 @@ public class ChangeUserRoleValidatorTests
     private readonly ChangeUserRoleValidator _validator = new();
 
     private static ChangeUserRoleCommand Valid() =>
-        new(Guid.NewGuid(), "instructor", Guid.NewGuid(), "super_admin");
+        new(Guid.NewGuid(), "instructor", Guid.NewGuid(), "superadmin", 1);
 
     // ── TargetUserId ──────────────────────────────────────────────────────
 
@@ -98,7 +98,7 @@ public class ChangeUserRoleValidatorTests
     [Fact]
     public void Validate_EmptyTargetIdAndInvalidRole_HasTwoErrors()
     {
-        var cmd = new ChangeUserRoleCommand(Guid.Empty, "invalid_role", Guid.NewGuid(), "super_admin");
+        var cmd = new ChangeUserRoleCommand(Guid.Empty, "invalid_role", Guid.NewGuid(), "superadmin", 1);
         var result = _validator.Validate(cmd);
 
         Assert.Equal(2, result.Errors.Count);

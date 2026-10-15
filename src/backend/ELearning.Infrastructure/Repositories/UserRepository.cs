@@ -1,3 +1,4 @@
+using ELearning.Domain.Constants;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Interfaces.Repositories;
 using ELearning.Infrastructure.Persistence;
@@ -86,7 +87,9 @@ public sealed class UserRepository : IUserRepository
 
         if (!string.IsNullOrWhiteSpace(role))
         {
-            query = query.Where(u => u.Role.ToString().ToLower() == role);
+            query = RoleNames.TryParse(role, out var parsedRole)
+                ? query.Where(u => u.Role == parsedRole)
+                : query.Where(_ => false);
         }
 
         if (!string.IsNullOrWhiteSpace(search))

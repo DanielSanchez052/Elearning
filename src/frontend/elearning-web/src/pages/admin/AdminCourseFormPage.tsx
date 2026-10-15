@@ -57,12 +57,15 @@ import {
   StateBlock,
   Textarea,
 } from '@/components/ui';
-import { ArrowLeftIcon, ClipboardCheckIcon, GripVerticalIcon, ListChecksIcon, PencilIcon, PlusIcon, TrashIcon } from '@/components/ui/icons';
+import { ArrowLeftIcon, ClipboardCheckIcon, GripVerticalIcon, ListChecksIcon, PencilIcon, PlusIcon, ShieldIcon, TrashIcon } from '@/components/ui/icons';
 import { ButtonLink } from '@/components/ButtonLink';
 import { LessonRow } from '@/components/courses/LessonRow';
 import FileUploadField from '@/components/admin/FileUploadField';
 import { getApiErrorMessage } from '../../lib/axios';
+import { canManageCourse, canToggleCourseCountry, courseAccessDeniedReason, isSuperAdmin } from '@/lib/courseAccess';
+import { useAuthStore } from '@/store/authStore';
 import type { CourseDetailDto, LessonDto } from '../../types';
+import type { CurrentUser } from '@/types/user.types';
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -83,12 +86,24 @@ type LessonFormData = z.infer<typeof lessonSchema>;
 
 const sameIds = (a: number[], b: number[]) => a.length === b.length && [...a].sort().join() === [...b].sort().join();
 
+type CountryOption = { id: number; name: string; code: string };
+
+/** Para admin e instructor: los países que ya tiene el curso más el país propio (el único que pueden tocar). */
+function ownScopeCountries(course: CourseDetailDto | undefined, user: CurrentUser | null): CountryOption[] {
+  const options: CountryOption[] = course?.countries.map(({ id, name, code }) => ({ id, name, code })) ?? [];
+  if (user && !options.some((c) => c.id === user.countryId)) {
+    options.push({ id: user.countryId, name: user.country, code: '' });
+  }
+  return options;
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CourseFormPage() {
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
   const courseQuery = useCourseDetail(id ?? '');
+  const user = useAuthStore((s) => s.user);
 
   if (isEditing && courseQuery.isLoading) return <CourseFormSkeleton />;
 
@@ -97,6 +112,19 @@ export default function CourseFormPage() {
       <div className="flex flex-col gap-6 px-4 py-8 sm:px-8">
         <BackToCourses />
         <StateBlock tipo="error" title="No pudimos cargar el curso" onAction={() => courseQuery.refetch()} />
+      </div>
+    );
+  }
+
+  if (isEditing && courseQuery.data && !canManageCourse(user, courseQuery.data)) {
+    return (
+      <div className="flex flex-col gap-6 px-4 py-8 sm:px-8">
+        <BackToCourses />
+        <StateBlock
+          icon={ShieldIcon}
+          title="No puedes editar este curso"
+          text={courseAccessDeniedReason(user, courseQuery.data)}
+        />
       </div>
     );
   }
@@ -121,9 +149,16 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
   const id = course?.id ?? '';
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { data: countries } = useAdminCountries();
+  const user = useAuthStore((s) => s.user);
+  const superAdmin = isSuperAdmin(user);
+  // Solo el superadmin elige entre todos los países (y `/admin/countries` no está abierto al instructor).
+  const { data: countries } = useAdminCountries({ enabled: superAdmin });
 
-  const initialCountries = useMemo(() => course?.countries.map((c) => c.id) ?? [], [course]);
+  // Los cursos nuevos se crean en el país del creador; el superadmin puede cambiarlo antes de guardar.
+  const initialCountries = useMemo(
+    () => course?.countries.map((c) => c.id) ?? (superAdmin || !user ? [] : [user.countryId]),
+    [course, superAdmin, user]
+  );
   const [thumbnailUrl, setThumbnailUrl] = useState(course?.thumbnailUrl ?? '');
   const [savedThumbnail, setSavedThumbnail] = useState(course?.thumbnailUrl ?? '');
   const [selectedCountries, setSelectedCountries] = useState<number[]>(initialCountries);
@@ -219,7 +254,8 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
       }
 
       const courseId = await createCourse.mutateAsync(payload);
-      if (!data.isGlobal && selectedCountries.length > 0 && courseId) {
+      // El backend ya lo asigna al país del creador; solo el superadmin puede elegir otros.
+      if (superAdmin && !data.isGlobal && selectedCountries.length > 0 && courseId) {
         // useAssignCountries se ata al id de la ruta (vacío al crear): se llama a la API directamente.
         // La navegación siguiente vuelve a montar el editor con los datos frescos del servidor.
         await coursesApi.assignCountries(courseId, { countryIds: selectedCountries });
@@ -241,7 +277,20 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
 
   const isPending = createCourse.isPending || updateCourse.isPending || assignCountries.isPending;
   const activeDragLesson = activeDragId ? lessons.find((l) => l.id === activeDragId) : null;
-  const activeCountries = (countries ?? []).filter((c) => c.isActive || selectedCountries.includes(c.id));
+  const countryOptions = superAdmin
+    ? countries?.filter((c) => c.isActive || selectedCountries.includes(c.id))
+    : ownScopeCountries(course, user);
+
+  // Fuera del superadmin solo se toca el país propio, y nunca se deja el curso sin países:
+  // al crear ya va asignado al país del creador, y al editar hace falta que quede algún otro.
+  const isCountryEditable = (countryId: number) =>
+    superAdmin ||
+    (isEditing &&
+      canToggleCourseCountry(user, countryId) &&
+      selectedCountries.some((selected) => selected !== countryId));
+  // El admin gestiona por país: si quita el suyo, pierde el acceso (el instructor lo conserva como creador).
+  const leavesOwnCountry =
+    user?.role === 'admin' && isEditing && savedCountries.includes(user.countryId) && !selectedCountries.includes(user.countryId);
 
   return (
     <div className="flex flex-col gap-6 px-4 py-8 sm:px-8">
@@ -387,48 +436,53 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
         <div className="flex min-w-0 flex-col gap-6">
           <Card>
             <h2 className="text-base font-semibold text-foreground">Alcance</h2>
-            <p className="mt-1 text-xs text-muted-foreground">Define quién puede ver este curso.</p>
-            <Controller
-              control={control}
-              name="isGlobal"
-              render={({ field }) => (
-                <div role="radiogroup" aria-label="Alcance del curso" className="mt-4 flex flex-col gap-2">
-                  <RadioCard
-                    name="scope"
-                    value="global"
-                    checked={field.value}
-                    onChange={() => field.onChange(true)}
-                    label="Global"
-                    description="Visible para estudiantes de todos los países."
-                  />
-                  <RadioCard
-                    name="scope"
-                    value="countries"
-                    checked={!field.value}
-                    onChange={() => field.onChange(false)}
-                    label="Países asignados"
-                    description="Visible solo en los países que elijas."
-                  />
-                </div>
-              )}
-            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              {superAdmin ? 'Define quién puede ver este curso.' : 'Visible para los estudiantes de los países asignados.'}
+            </p>
+            {superAdmin && (
+              <Controller
+                control={control}
+                name="isGlobal"
+                render={({ field }) => (
+                  <div role="radiogroup" aria-label="Alcance del curso" className="mt-4 flex flex-col gap-2">
+                    <RadioCard
+                      name="scope"
+                      value="global"
+                      checked={field.value}
+                      onChange={() => field.onChange(true)}
+                      label="Global"
+                      description="Visible para estudiantes de todos los países."
+                    />
+                    <RadioCard
+                      name="scope"
+                      value="countries"
+                      checked={!field.value}
+                      onChange={() => field.onChange(false)}
+                      label="Países asignados"
+                      description="Visible solo en los países que elijas."
+                    />
+                  </div>
+                )}
+              />
+            )}
             {!isGlobal && (
-              <div className="mt-4 border-t border-border pt-4">
+              <div className={superAdmin ? 'mt-4 border-t border-border pt-4' : 'mt-4'}>
                 <Label className="text-xs">Países asignados</Label>
-                {countries ? (
+                {countryOptions ? (
                   <div className="flex flex-col gap-2">
-                    {activeCountries.map((c) => (
+                    {countryOptions.map((c) => (
                       <Checkbox
                         key={c.id}
                         className="w-full rounded-lg px-2 py-1.5 hover:bg-secondary"
                         checked={selectedCountries.includes(c.id)}
+                        disabled={!isCountryEditable(c.id)}
                         onChange={() =>
                           setSelectedCountries((prev) => (prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]))
                         }
                         label={
                           <span className="flex w-full items-center justify-between gap-3">
                             {c.name}
-                            <span className="font-mono text-xs text-subtle-foreground">{c.code}</span>
+                            {c.code && <span className="font-mono text-xs text-subtle-foreground">{c.code}</span>}
                           </span>
                         }
                       />
@@ -437,8 +491,20 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
                 ) : (
                   <Skeleton className="h-24 rounded-xl" />
                 )}
-                {selectedCountries.length === 0 && (
+                {superAdmin && selectedCountries.length === 0 && (
                   <p className="mt-3 text-xs text-warning-foreground">Selecciona al menos un país para que el curso sea visible.</p>
+                )}
+                {!superAdmin && (
+                  <p className="mt-3 text-xs text-subtle-foreground">
+                    {isEditing
+                      ? 'Solo puedes añadir o quitar tu país; el resto de países los gestiona el superadmin.'
+                      : 'El curso se crea en tu país. Solo el superadmin puede publicarlo en otros países o de forma global.'}
+                  </p>
+                )}
+                {leavesOwnCountry && (
+                  <Alert tone="warning" className="mt-3">
+                    Si quitas tu país, dejarás de poder gestionar este curso.
+                  </Alert>
                 )}
               </div>
             )}

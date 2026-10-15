@@ -52,7 +52,6 @@ public class MarkLessonCompleteHandler : ICommandHandler<MarkLessonCompleteComma
             return Result.NotFound<MarkLessonCompleteResult>("la lección indicada no existe en el curso.");
         }
 
-        // 3. Get or create progress record
         var progress = await _enrollments.GetProgressAsync(enrollment.Id, command.LessonId, ct);
         bool wasAlreadyComplete = false;
 

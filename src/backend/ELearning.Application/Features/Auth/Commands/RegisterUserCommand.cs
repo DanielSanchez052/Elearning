@@ -32,11 +32,13 @@ public sealed class RegisterUserHandler : ICommandHandler<RegisterUserCommand, G
     {
         var country = await _countries.GetByIdAsync(cmd.CountryId, ct);
         if (country is null)
-            return Result.NotFound<Guid>($"El pa�s con id '{cmd.CountryId}' no existe.");
+            return Result.NotFound<Guid>($"El país con id '{cmd.CountryId}' no existe.");
+        if (!country.IsActive)
+            return Result.Conflict<Guid>($"El país '{country.Name}' no está disponible para nuevos registros.");
 
         var emailTaken = await _users.ExistsByEmailAsync(cmd.Email, ct);
         if (emailTaken)
-            return Result.Conflict<Guid>($"El email '{cmd.Email}' ya est� registrado.");
+            return Result.Conflict<Guid>($"El email '{cmd.Email}' ya está registrado.");
 
         var passwordHash = _hasher.Hash(cmd.Password);
 

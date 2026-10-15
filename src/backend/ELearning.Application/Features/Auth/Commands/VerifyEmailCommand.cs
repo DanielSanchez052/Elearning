@@ -18,7 +18,7 @@ public sealed class VerifyEmailHandler : ICommandHandler<VerifyEmailCommand>
         var user = await _users.GetByEmailVerifyTokenTrackedAsync(cmd.Token, ct);
 
         if (user is null)
-            return Result.NotFound("El token de verificaciÛn no es v·lido.");
+            return Result.NotFound("El token de verificaci√≥n no es v√°lido.");
 
         if (user.IsEmailVerified)
             return Result.Conflict("El email ya fue verificado anteriormente.");

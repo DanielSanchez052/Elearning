@@ -29,7 +29,7 @@ public class DeleteCourseHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(It.IsAny<Guid>(), default))
             .ReturnsAsync((Course?)null);
 
-        var result = await _handler.HandleAsync(new DeleteCourseCommand(Guid.NewGuid(), Guid.NewGuid(), "instructor"));
+        var result = await _handler.HandleAsync(new DeleteCourseCommand(Guid.NewGuid(), Guid.NewGuid(), "instructor", 57));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.NotFound, result.ErrorType);
@@ -44,7 +44,7 @@ public class DeleteCourseHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var result = await _handler.HandleAsync(new DeleteCourseCommand(course.Id, Guid.NewGuid(), "instructor"));
+        var result = await _handler.HandleAsync(new DeleteCourseCommand(course.Id, Guid.NewGuid(), "instructor", 57));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
@@ -60,7 +60,7 @@ public class DeleteCourseHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var result = await _handler.HandleAsync(new DeleteCourseCommand(course.Id, course.CreatedBy, "instructor"));
+        var result = await _handler.HandleAsync(new DeleteCourseCommand(course.Id, course.CreatedBy, "instructor", 57));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Conflict, result.ErrorType);
@@ -75,7 +75,7 @@ public class DeleteCourseHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var result = await _handler.HandleAsync(new DeleteCourseCommand(course.Id, course.CreatedBy, "instructor"));
+        var result = await _handler.HandleAsync(new DeleteCourseCommand(course.Id, course.CreatedBy, "instructor", 57));
 
         Assert.True(result.IsSuccess);
         Assert.False(course.IsActive);

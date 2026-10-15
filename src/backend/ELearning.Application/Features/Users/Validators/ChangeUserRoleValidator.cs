@@ -1,5 +1,6 @@
 using ELearning.Application.Common.Validators;
 using ELearning.Application.Features.Users.Commands;
+using ELearning.Domain.Constants;
 
 namespace ELearning.Application.Features.Users.Validators;
 
@@ -14,8 +15,8 @@ public sealed class ChangeUserRoleValidator : IValidator<ChangeUserRoleCommand>
 
         if (string.IsNullOrWhiteSpace(cmd.NewRole))
             result.AddError(nameof(cmd.NewRole), "El nuevo rol es requerido.");
-        else if (!AllowedRoles.Contains(cmd.NewRole.ToLowerInvariant()))
-            result.AddError(nameof(cmd.NewRole), "Rol inválido. Usa: student, instructor, admin, superadmin.");
+        else if (!RoleNames.TryParse(cmd.NewRole, out _))
+            result.AddError(nameof(cmd.NewRole), $"Rol inválido. Usa: {string.Join(", ", RoleNames.All)}.");
 
         if (cmd.RequesterId == Guid.Empty)
             result.AddError(nameof(cmd.RequesterId), "El id del solicitante es requerido.");
@@ -25,12 +26,4 @@ public sealed class ChangeUserRoleValidator : IValidator<ChangeUserRoleCommand>
 
         return result;
     }
-
-    private static readonly HashSet<string> AllowedRoles = new()
-    {
-        "student",
-        "instructor",
-        "admin",
-        "superadmin"
-    };
 }

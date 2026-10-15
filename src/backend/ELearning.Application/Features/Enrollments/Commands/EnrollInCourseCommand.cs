@@ -1,11 +1,16 @@
 ﻿using ELearning.Application.Common.Abstractions;
-using ELearning.Application.Common.Exceptions;
+using ELearning.Application.Common.Authorization;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Enrollments.Commands;
 
-public record EnrollInCourseCommand(Guid UserId, Guid CourseId) : ICommand<Guid>;
+/// <summary>
+/// Cualquier rol puede inscribirse, pero solo en cursos disponibles en su país
+/// (publicados y globales o asignados a él; ver <see cref="CourseAccess.IsAvailableIn"/>).
+/// Si no lo está, responde 404 como el detalle del curso, sin revelar que existe.
+/// </summary>
+public record EnrollInCourseCommand(Guid UserId, Guid CourseId, int UserCountryId) : ICommand<Guid>;
 
 public class EnrollInCourseHandler : ICommandHandler<EnrollInCourseCommand, Guid>
 {
@@ -22,11 +27,8 @@ public class EnrollInCourseHandler : ICommandHandler<EnrollInCourseCommand, Guid
     {
         var course = await _courses.GetByIdAsync(command.CourseId, ct);
 
-        if(course is null)
+        if (course is null || !CourseAccess.IsAvailableIn(course, command.UserCountryId))
             return Result.NotFound<Guid>($"Curso con id '{command.CourseId}' no encontrado.");
-
-        if (!course.IsActive)
-            return Result.Conflict<Guid>("No es posible inscribirse en un curso inactivo.");
 
         var alreadyEnrolled = await _enrollments.ExistsAsync(command.UserId, command.CourseId, ct);
         if (alreadyEnrolled)

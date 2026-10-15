@@ -6,12 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ELearning.API.Controllers;
 
-// TODO: Si en el futuro se necesitan endpoints públicos para estados/provincias, considerar crear un LocationController con endpoints anidados (e.g. GET api/locations/countries/{countryId}/states) para mantener la jerarquía geográfica clara.
-
 /// <summary>
 /// Endpoint público de países — no requiere autenticación.
 /// Usado principalmente para poblar el dropdown de registro.
-/// Para gestión de países (crear, activar/desactivar) ver AdminController.
+/// Para gestión de países (crear, activar/desactivar) ver AdminCountriesController.
 /// </summary>
 [ApiController]
 [Route("api/countries")]

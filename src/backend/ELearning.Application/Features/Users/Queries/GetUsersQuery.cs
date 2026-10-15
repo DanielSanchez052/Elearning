@@ -1,5 +1,6 @@
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Users.DTOs;
+using ELearning.Domain.Constants;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Users.Queries;
@@ -41,7 +42,7 @@ public sealed class GetUsersHandler : IQueryHandler<GetUsersQuery, PagedResult<U
             Id: u.Id,
             FullName: u.FullName,
             Email: u.Email,
-            Role: u.Role.ToString().ToLowerInvariant(),
+            Role: u.Role.ToRoleName(),
             Country: u.Country.Name,
             CountryId: u.CountryId,
             IsEmailVerified: u.IsEmailVerified,

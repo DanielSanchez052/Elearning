@@ -33,7 +33,7 @@ Runner: `dotnet test ELearning.Tests/ELearning.Tests.csproj`
 - [x] 1. Quizzes admin CRUD handler tests (6 classes) — delegated writer
 - [x] 2. SubmitQuizHandler tests (scoring logic) — delegated writer
 - [x] 3. Quizzes query handler tests (3 classes) — delegated writer
-- [ ] 4. Notifications handler tests (4 classes) — BLOCKED: reopened as a missing-feature gap, not a test gap (see Progress). Awaiting user decision.
+- [x] 4. Notifications handler tests (4 classes) — resuelto: las notificaciones se implementaron en `notifications-backend-implementation.md` y sus tests están en `ELearning.Tests/Unit/Aplication/Features/Notifications/` (verificado el 2026-10-14).
 - [ ] 5. Reports handler tests (2 classes) — BLOCKED: same situation as task 4 (see Progress).
 
 ## Progress

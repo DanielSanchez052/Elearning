@@ -67,7 +67,7 @@ export default function App() {
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
 
-            {/* ── Solo instructores, admins y super_admin ─────────────────── */}
+            {/* ── Solo instructores, admins y superadmin ──────────────────── */}
             <Route element={<RoleRoute allowedRoles={['instructor', 'admin', 'superadmin']} />}>
               <Route element={<AdminLayout />}>
                 <Route path="/admin/courses" element={<AdminCoursesPage />} />
@@ -78,11 +78,17 @@ export default function App() {
               </Route>
             </Route>
 
-            {/* ── Solo admins y super_admin ───────────────────────────────── */}
+            {/* ── Solo admins y superadmin ────────────────────────────────── */}
             <Route element={<RoleRoute allowedRoles={['admin', 'superadmin']} />}>
               <Route element={<AdminLayout />}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/users" element={<AdminUsersPage />} />
+              </Route>
+            </Route>
+
+            {/* ── Solo superadmin: crear y activar países ─────────────────── */}
+            <Route element={<RoleRoute allowedRoles={['superadmin']} />}>
+              <Route element={<AdminLayout />}>
                 <Route path="/admin/countries" element={<AdminCountriesPage />} />
               </Route>
             </Route>

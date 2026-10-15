@@ -1,4 +1,5 @@
 using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Features.Quizzes.Common;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Enums;
 using ELearning.Domain.Interfaces.Repositories;
@@ -12,7 +13,10 @@ public sealed record CreateQuizQuestionCommand(
     string QuestionText,
     decimal PassScore,
     int MaxAttempts,
-    bool IsRequired
+    bool IsRequired,
+    Guid RequesterId,
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand<Guid>;
 
 public sealed class CreateQuizQuestionHandler : ICommandHandler<CreateQuizQuestionCommand, Guid>
@@ -44,6 +48,9 @@ public sealed class CreateQuizQuestionHandler : ICommandHandler<CreateQuizQuesti
             if (lesson is null)
                 return Result.NotFound<Guid>($"Lección con id '{cmd.LessonId}' no encontrada");
 
+            if (!await QuizAuthoringAccess.CanManageCourseAsync(lesson.CourseId, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId, _courses, ct))
+                return Result.Forbidden<Guid>(QuizAuthoringAccess.ForbiddenMessage);
+
             var question = QuizQuestion.CreatePerLesson(
                 cmd.LessonId.Value,
                 cmd.QuestionText,
@@ -66,6 +73,9 @@ public sealed class CreateQuizQuestionHandler : ICommandHandler<CreateQuizQuesti
             var course = await _courses.GetByIdAsync(cmd.CourseId.Value, ct);
             if (course is null)
                 return Result.NotFound<Guid>($"Curso con id '{cmd.CourseId}' no encontrado");
+
+            if (!QuizAuthoringAccess.CanManage(course, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId))
+                return Result.Forbidden<Guid>(QuizAuthoringAccess.ForbiddenMessage);
 
             var question = QuizQuestion.CreateCourseExam(
                 cmd.CourseId.Value,

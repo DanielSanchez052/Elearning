@@ -1,21 +1,27 @@
 using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Features.Quizzes.Common;
 using ELearning.Domain.Interfaces.Repositories;
 
 namespace ELearning.Application.Features.Quizzes.Commands;
 
 public sealed record DeleteQuizQuestionCommand(
-    Guid QuestionId
+    Guid QuestionId,
+    Guid RequesterId,
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand;
 
 public sealed class DeleteQuizQuestionHandler : ICommandHandler<DeleteQuizQuestionCommand>
 {
     private readonly IQuizRepository _quizzes;
     private readonly ILessonRepository _lessons;
+    private readonly ICourseRepository _courses;
 
-    public DeleteQuizQuestionHandler(IQuizRepository quizzes, ILessonRepository lessons)
+    public DeleteQuizQuestionHandler(IQuizRepository quizzes, ILessonRepository lessons, ICourseRepository courses)
     {
         _quizzes = quizzes;
         _lessons = lessons;
+        _courses = courses;
     }
 
     public async Task<Result> HandleAsync(DeleteQuizQuestionCommand cmd, CancellationToken ct = default)
@@ -26,6 +32,9 @@ public sealed class DeleteQuizQuestionHandler : ICommandHandler<DeleteQuizQuesti
         var question = await _quizzes.GetQuestionByIdAsync(cmd.QuestionId, ct);
         if (question is null)
             return Result.NotFound("Pregunta no encontrada");
+
+        if (!await QuizAuthoringAccess.CanManageQuestionAsync(question, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId, _courses, _lessons, ct))
+            return Result.Forbidden(QuizAuthoringAccess.ForbiddenMessage);
 
         // Solo bloqueamos si borrar dejaría una lección OBLIGATORIA sin preguntas
         // (el gate de "lecciones requeridas" nunca podría satisfacerse). Un quiz

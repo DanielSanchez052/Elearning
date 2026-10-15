@@ -24,7 +24,7 @@ public class UpdateLessonHandlerTests
             .Setup(r => r.GetByIdTrackedAsync(It.IsAny<Guid>(), default))
             .ReturnsAsync((Lesson?)null);
 
-        var cmd = new UpdateLessonCommand(Guid.NewGuid(), "Nuevo título", "v2.mp4", true, Guid.NewGuid(), "instructor");
+        var cmd = new UpdateLessonCommand(Guid.NewGuid(), "Nuevo título", "v2.mp4", true, Guid.NewGuid(), "instructor", 57);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -45,7 +45,7 @@ public class UpdateLessonHandlerTests
             .Setup(r => r.GetByIdAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var cmd = new UpdateLessonCommand(lesson.Id, "Nuevo título", "v2.mp4", true, Guid.NewGuid(), "instructor");
+        var cmd = new UpdateLessonCommand(lesson.Id, "Nuevo título", "v2.mp4", true, Guid.NewGuid(), "instructor", 57);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -66,7 +66,7 @@ public class UpdateLessonHandlerTests
             .Setup(r => r.GetByIdAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var cmd = new UpdateLessonCommand(lesson.Id, "  Lección actualizada  ", "new.mp4", false, ownerId, "instructor");
+        var cmd = new UpdateLessonCommand(lesson.Id, "  Lección actualizada  ", "new.mp4", false, ownerId, "instructor", 57);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.True(result.IsSuccess);
@@ -93,7 +93,7 @@ public class UpdateLessonHandlerTests
             .Setup(r => r.GetQuestionsByLessonAsync(lesson.Id, default))
             .ReturnsAsync(new List<QuizQuestion>());
 
-        var cmd = new UpdateLessonCommand(lesson.Id, "Quiz Capítulo 1", null, true, ownerId, "instructor");
+        var cmd = new UpdateLessonCommand(lesson.Id, "Quiz Capítulo 1", null, true, ownerId, "instructor", 57);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.False(result.IsSuccess);
@@ -119,7 +119,7 @@ public class UpdateLessonHandlerTests
             .Setup(r => r.GetQuestionsByLessonAsync(lesson.Id, default))
             .ReturnsAsync(new List<QuizQuestion> { question });
 
-        var cmd = new UpdateLessonCommand(lesson.Id, "Quiz Capítulo 1", null, true, ownerId, "instructor");
+        var cmd = new UpdateLessonCommand(lesson.Id, "Quiz Capítulo 1", null, true, ownerId, "instructor", 57);
         var result = await _handler.HandleAsync(cmd);
 
         Assert.True(result.IsSuccess);

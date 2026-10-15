@@ -26,10 +26,10 @@ public sealed class ResetPasswordHandler : ICommandHandler<ResetPasswordCommand>
         var user = await _users.GetByResetTokenTrackedAsync(cmd.Token, ct);
 
         if (user is null)
-            return Result.NotFound("El token de recuperaciÛn no es v·lido.");
+            return Result.NotFound("El token de recuperaci√≥n no es v√°lido.");
 
         if (user.ResetTokenExpires is null || user.ResetTokenExpires < DateTime.UtcNow)
-            return Result.Conflict("El token de recuperaciÛn ha expirado. Solicita uno nuevo.");
+            return Result.Conflict("El token de recuperaci√≥n ha expirado. Solicita uno nuevo.");
 
         var newHash = _hasher.Hash(cmd.NewPassword);
         user.SetPasswordHash(newHash);

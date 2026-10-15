@@ -1,11 +1,11 @@
-﻿using System.Security.Claims;
+﻿using ELearning.Domain.Constants;
+using System.Security.Claims;
 
 namespace ELearning.API.Extensions;
 
 public static class ClaimsPrincipalExtensions
 {
     private const string SubClaim       = "sub";
-    private const string EmailClaim     = "email";
     private const string CountryIdClaim = "country_id";
 
     /// <summary>
@@ -26,9 +26,10 @@ public static class ClaimsPrincipalExtensions
     }
 
     /// <summary>
-    /// Extrae el CountryId del usuario desde el claim 'country_id' del JWT.
-    /// Úsalo en handlers de cursos y reportes para filtrar por país
-    /// sin hacer un round-trip adicional a la base de datos.
+    /// Extrae el CountryId del usuario desde el claim 'country_id' del JWT,
+    /// sin hacer un round-trip adicional a la base de datos. Refleja el país
+    /// del usuario al iniciar sesión: un cambio posterior no se ve hasta que el
+    /// token expira (Jwt:ExpirationMinutes) y vuelve a entrar.
     /// </summary>
     public static int GetCountryId(this ClaimsPrincipal user)
     {
@@ -42,7 +43,9 @@ public static class ClaimsPrincipalExtensions
     }
 
     /// <summary>
-    /// Extrae el rol del usuario desde el claim 'role' del JWT.
+    /// Extrae el rol del usuario desde el claim 'role' del JWT. Como el país, refleja el rol
+    /// al iniciar sesión: tras un cambio de rol, el token anterior conserva sus permisos hasta
+    /// que expira (limitación aceptada; ver odd/tasks/permissions-review-followups.md).
     /// </summary>
     public static string GetRole(this ClaimsPrincipal user)
     {
@@ -55,40 +58,15 @@ public static class ClaimsPrincipalExtensions
         return value;
     }
 
-    /// <summary>
-    /// Extrae el email del usuario desde el claim 'email' del JWT.
-    /// </summary>
-    public static string GetEmail(this ClaimsPrincipal user)
-    {
-        var value = user.FindFirstValue(EmailClaim)
-                 ?? user.FindFirstValue(ClaimTypes.Email);
-
-        if (value is null)
-            throw new InvalidOperationException(
-                "El claim 'email' no está presente en el token.");
-
-        return value;
-    }
-
     // ── Helpers de rol ────────────────────────────────────────────────────────
-    // Evitan hacer string comparisons dispersas por todo el código del controlador.
+    // Cada uno comprueba exactamente un rol: IsAdmin() no incluye al superadmin.
 
     public static bool IsSuperAdmin(this ClaimsPrincipal user) =>
-        user.IsInRole("super_admin");
+        user.IsInRole(RoleNames.SuperAdmin);
 
     public static bool IsAdmin(this ClaimsPrincipal user) =>
-        user.IsInRole("admin") || user.IsInRole("super_admin");
+        user.IsInRole(RoleNames.Admin);
 
     public static bool IsInstructor(this ClaimsPrincipal user) =>
-        user.IsInRole("instructor");
-
-    public static bool IsStudent(this ClaimsPrincipal user) =>
-        user.IsInRole("student");
-
-    /// <summary>
-    /// Verifica si el usuario tiene acceso administrativo
-    /// (admin o super_admin).
-    /// </summary>
-    public static bool HasAdminAccess(this ClaimsPrincipal user) =>
-        user.IsAdmin();
+        user.IsInRole(RoleNames.Instructor);
 }

@@ -1,20 +1,27 @@
 using ELearning.Application.Common.Abstractions;
+using ELearning.Application.Features.Quizzes.Common;
 using ELearning.Domain.Interfaces.Repositories;
-using System.Linq;
 
 namespace ELearning.Application.Features.Quizzes.Commands;
 
 public sealed record DeleteQuizOptionCommand(
-    Guid OptionId
+    Guid OptionId,
+    Guid RequesterId,
+    string RequesterRole,
+    int RequesterCountryId
 ) : ICommand;
 
 public sealed class DeleteQuizOptionHandler : ICommandHandler<DeleteQuizOptionCommand>
 {
     private readonly IQuizRepository _quizzes;
+    private readonly ICourseRepository _courses;
+    private readonly ILessonRepository _lessons;
 
-    public DeleteQuizOptionHandler(IQuizRepository quizzes)
+    public DeleteQuizOptionHandler(IQuizRepository quizzes, ICourseRepository courses, ILessonRepository lessons)
     {
         _quizzes = quizzes;
+        _courses = courses;
+        _lessons = lessons;
     }
 
     public async Task<Result> HandleAsync(DeleteQuizOptionCommand cmd, CancellationToken ct = default)
@@ -25,6 +32,9 @@ public sealed class DeleteQuizOptionHandler : ICommandHandler<DeleteQuizOptionCo
         var option = await _quizzes.GetOptionByIdAsync(cmd.OptionId, ct);
         if (option is null)
             return Result.NotFound("Opción no encontrada");
+
+        if (!await QuizAuthoringAccess.CanManageQuestionAsync(option.QuestionId, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId, _quizzes, _courses, _lessons, ct))
+            return Result.Forbidden(QuizAuthoringAccess.ForbiddenMessage);
 
         var options = await _quizzes.GetOptionsByQuestionAsync(option.QuestionId, ct);
 

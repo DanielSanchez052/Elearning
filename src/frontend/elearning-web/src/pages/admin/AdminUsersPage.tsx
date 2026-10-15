@@ -46,6 +46,10 @@ function VerifiedBadge({ verified }: { verified: boolean }) {
 export default function AdminUsersPage() {
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === 'superadmin';
+  // Mismas reglas que UserAccess en el backend: nadie cambia su propio rol, y el admin solo gestiona
+  // estudiantes e instructores (el listado ya le llega filtrado a su país).
+  const canEditUser = (target: UserSummaryDto) =>
+    target.id !== user?.id && (isSuperAdmin || target.role === 'student' || target.role === 'instructor');
 
   // Filtros
   const [search, setSearch] = useState('');
@@ -230,9 +234,15 @@ export default function AdminUsersPage() {
                         </TableCell>
                         <TableCell className="py-3 text-muted-foreground tabular-nums whitespace-nowrap">{formatDate(u.createdAt)}</TableCell>
                         <TableCell className="py-3 text-right">
-                          <Button variant="ghost" size="sm" onClick={() => setSelected(u)} aria-label={`Editar a ${u.fullName}`}>
-                            <PencilIcon /> Editar
-                          </Button>
+                          {canEditUser(u) ? (
+                            <Button variant="ghost" size="sm" onClick={() => setSelected(u)} aria-label={`Editar a ${u.fullName}`}>
+                              <PencilIcon /> Editar
+                            </Button>
+                          ) : (
+                            <span className="px-2 text-xs text-subtle-foreground">
+                              {u.id === user?.id ? 'Tú' : 'Solo lectura'}
+                            </span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

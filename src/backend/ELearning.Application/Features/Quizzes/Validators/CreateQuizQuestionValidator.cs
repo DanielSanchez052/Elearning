@@ -19,21 +19,17 @@ public sealed class CreateQuizQuestionValidator : IValidator<CreateQuizQuestionC
         else if (hasLesson && hasCourse)
             result.AddError("FK", "No puede proporcionar ambos LessonId y CourseId");
 
-        // Validar Type
         if (cmd.Type != (int)QuizType.PerLesson && cmd.Type != (int)QuizType.CourseExam)
             result.AddError(nameof(cmd.Type), "Type debe ser PerLesson (0) o CourseExam (1)");
 
-        // Validar QuestionText
         if (string.IsNullOrWhiteSpace(cmd.QuestionText))
             result.AddError(nameof(cmd.QuestionText), "La pregunta es requerida");
         else if (cmd.QuestionText.Length > 500)
             result.AddError(nameof(cmd.QuestionText), "La pregunta no puede exceder 500 caracteres");
 
-        // Validar PassScore
         if (cmd.PassScore < 0 || cmd.PassScore > 100)
             result.AddError(nameof(cmd.PassScore), "PassScore debe estar entre 0 y 100");
 
-        // Validar MaxAttempts
         if (cmd.MaxAttempts <= 0)
             result.AddError(nameof(cmd.MaxAttempts), "MaxAttempts debe ser mayor a 0");
 

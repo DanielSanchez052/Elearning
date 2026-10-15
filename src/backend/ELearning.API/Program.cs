@@ -13,7 +13,6 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddCorsConfiguration();
 builder.Services.AddJwtAuthentication(builder.Configuration);
-builder.Services.AddAuthorizationPolicies();
 builder.Services.AddDbContextConfiguration(builder.Configuration);
 
 builder.Services.AddApplication();

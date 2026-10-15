@@ -2,6 +2,7 @@
 using ELearning.Application.Common.Abstractions;
 using ELearning.Application.Features.Media.Commands;
 using ELearning.Application.Features.Media.DTOs;
+using ELearning.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,9 +10,7 @@ namespace ELearning.API.Controllers;
 
 [ApiController]
 [Route("api/media")]
-[Authorize(Roles = "instructor,admin,superadmin")]
-// Solo instructores y admins pueden subir archivos —
-// los estudiantes consumen el contenido pero no lo crean
+[Authorize(Roles = RoleNames.Staff)]
 public class MediaController(
     ICommandHandler<UploadVideoCommand, UploadResultDto> uploadVideoHandler,
     ICommandHandler<UploadPdfCommand, UploadResultDto> uploadPdfHandler,
