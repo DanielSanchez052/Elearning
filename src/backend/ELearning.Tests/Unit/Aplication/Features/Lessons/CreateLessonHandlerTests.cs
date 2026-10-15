@@ -34,7 +34,7 @@ public class CreateLessonHandlerTests
     public async Task HandleAsync_InstructorNotOwner_ReturnsForbidden()
     {
         var ownerId = Guid.NewGuid();
-        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
 
         _coursesMock
             .Setup(r => r.GetByIdAsync(course.Id, default))
@@ -51,7 +51,7 @@ public class CreateLessonHandlerTests
     public async Task HandleAsync_ValidCommand_CreatesLessonWithMaxOrderPlusOne()
     {
         var ownerId = Guid.NewGuid();
-        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
         Lesson? created = null;
 
         _coursesMock
@@ -80,7 +80,7 @@ public class CreateLessonHandlerTests
     public async Task HandleAsync_RequiredQuizLesson_ReturnsValidationFailureAndDoesNotCreate()
     {
         var ownerId = Guid.NewGuid();
-        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
 
         _coursesMock
             .Setup(r => r.GetByIdAsync(course.Id, default))

@@ -1,5 +1,6 @@
 using ELearning.Application.Features.Gamification.Rules;
 using ELearning.Application.Features.Gamification.Services;
+using ELearning.Application.Features.Notifications.Messages;
 using ELearning.Application.Features.Notifications.Services;
 using ELearning.Domain.Entities;
 using ELearning.Domain.Enums;
@@ -44,8 +45,7 @@ public class BadgeAwardServiceTests
             .Callback((UserBadge ub, CancellationToken _) => inserted = ub)
             .ReturnsAsync(true);
         _publisherMock
-            .Setup(p => p.PublishAsync(It.IsAny<Guid>(), It.IsAny<NotificationType>(), It.IsAny<string>(),
-                It.IsAny<string>(), It.IsAny<Guid?>(), default))
+            .Setup(p => p.PublishAsync(It.IsAny<Guid>(), It.IsAny<NotificationMessage>(), default))
             .Callback(() => calls.Add("publish"))
             .Returns(Task.CompletedTask);
         _badgesMock.Setup(r => r.SaveChangesAsync(default)).Callback(() => calls.Add("save")).Returns(Task.CompletedTask);
@@ -55,10 +55,7 @@ public class BadgeAwardServiceTests
         Assert.NotNull(inserted);
         _publisherMock.Verify(p => p.PublishAsync(
             user.Id,
-            NotificationType.BadgeEarned,
-            It.Is<string>(t => t.Contains("Primer Inicio de Sesión")),
-            It.Is<string>(m => !string.IsNullOrWhiteSpace(m)),
-            inserted!.Id,
+            It.Is<BadgeEarnedMessage>(m => m.Badge == badge && m.ReferenceId == inserted!.Id),
             default), Times.Once);
         Assert.Equal(["publish", "save"], calls);
     }
@@ -92,25 +89,10 @@ public class BadgeAwardServiceTests
         VerifyNothingPublishedOrSaved();
     }
 
-    [Theory]
-    [InlineData(BadgeCode.LoginFirst, "Primer Inicio de Sesión")]
-    [InlineData(BadgeCode.CourseDone, "Curso Completado")]
-    [InlineData(BadgeCode.Speedster, "Velocista")]
-    public void BuildNotificationCopy_EveryBadge_HasSpanishTitleWithNameAndAMessage(BadgeCode code, string name)
-    {
-        var badge = GamificationTestHelpers.BuildBadge(1, code, name);
-
-        var (title, message) = BadgeAwardService.BuildNotificationCopy(badge);
-
-        Assert.Contains(name, title);
-        Assert.True(title.Length <= 150, "notifications.title is varchar(150)");
-        Assert.False(string.IsNullOrWhiteSpace(message));
-    }
-
     private void VerifyNothingPublishedOrSaved()
     {
-        _publisherMock.Verify(p => p.PublishAsync(It.IsAny<Guid>(), It.IsAny<NotificationType>(), It.IsAny<string>(),
-            It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()), Times.Never);
+        _publisherMock.Verify(p => p.PublishAsync(
+            It.IsAny<Guid>(), It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()), Times.Never);
         _badgesMock.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -254,11 +236,10 @@ public class BadgeAwardServiceTests
         _badgesMock.Setup(r => r.HasBadgeAsync(user.Id, badgeB.Id, null, default)).ReturnsAsync(false);
         _badgesMock.Setup(r => r.TryAddAsync(It.IsAny<UserBadge>(), default)).ReturnsAsync(true);
         _publisherMock
-            .Setup(p => p.PublishAsync(
-                user.Id, NotificationType.BadgeEarned, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid?>(), default))
-            .Callback((Guid _, NotificationType _, string title, string _, Guid? _, CancellationToken _) =>
+            .Setup(p => p.PublishAsync(user.Id, It.IsAny<BadgeEarnedMessage>(), default))
+            .Callback((Guid _, NotificationMessage message, CancellationToken _) =>
             {
-                if (title.Contains("Primer Inicio de Sesión"))
+                if (((BadgeEarnedMessage)message).Badge == badgeA)
                     throw new InvalidOperationException("publish failed for badge A");
             })
             .Returns(Task.CompletedTask);

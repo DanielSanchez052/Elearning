@@ -31,7 +31,7 @@ public class QuizAuthoringOwnershipTests
 
     public QuizAuthoringOwnershipTests()
     {
-        _course = Course.Create("Curso", "Desc", null, OwnerId, isGlobal: false);
+        _course = Course.Create("Curso", "Desc", null, OwnerId, isGlobal: false, instructorId: OwnerId);
         _course.CourseCountries.Add(CourseCountry.Create(_course.Id, CountryId));
         _lesson = Lesson.Create(_course.Id, "Lección quiz", LessonType.Quiz, null, 1, isRequired: false);
         _lessonQuestion = QuizQuestion.CreatePerLesson(_lesson.Id, "¿Pregunta?", 60m, 3, 1, false);

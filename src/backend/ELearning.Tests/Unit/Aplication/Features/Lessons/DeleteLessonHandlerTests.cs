@@ -33,7 +33,7 @@ public class DeleteLessonHandlerTests
     public async Task HandleAsync_InstructorNotOwner_ReturnsForbidden()
     {
         var ownerId = Guid.NewGuid();
-        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
         var lesson = Lesson.Create(course.Id, "Lección", LessonType.Video, "v.mp4", 1);
 
         _lessonsMock
@@ -53,7 +53,7 @@ public class DeleteLessonHandlerTests
     public async Task HandleAsync_ValidCommand_CallsDeleteAsync()
     {
         var ownerId = Guid.NewGuid();
-        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
         var lesson = Lesson.Create(course.Id, "Lección", LessonType.Video, "v.mp4", 1);
 
         _lessonsMock

@@ -6,6 +6,7 @@ namespace ELearning.Application.Features.Courses.Queries;
 
 public sealed record GetAdminCourseListQuery(
     Guid? InstructorId,
+    bool UnassignedOnly,
     int? CountryId,
     bool? IsActive,
     string? Search,
@@ -33,6 +34,7 @@ public sealed class GetAdminCourseListHandler : IQueryHandler<GetAdminCourseList
 
         var (courses, totalCount) = await _courses.GetAdminListAsync(
             instructorId: query.InstructorId,
+            unassignedOnly: query.UnassignedOnly,
             countryId: query.CountryId,
             isActive: query.IsActive,
             search: query.Search,
@@ -55,7 +57,8 @@ public sealed class GetAdminCourseListHandler : IQueryHandler<GetAdminCourseList
             ThumbnailUrl: c.ThumbnailUrl,
             IsGlobal: c.IsGlobal,
             IsActive: c.IsActive,
-            InstructorName: c.CreatedByUser.FullName,
+            InstructorId: c.InstructorId,
+            InstructorName: c.Instructor?.FullName,
             LessonCount: lessonCountMap.GetValueOrDefault(c.Id),
             CreatedAt: c.CreatedAt
         )).ToList().AsReadOnly();

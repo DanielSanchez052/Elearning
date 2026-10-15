@@ -16,7 +16,7 @@ public class UpdateCourseHandlerTests
 
     private static Course BuildCourse(Guid createdBy, int countryId = 57, bool isGlobal = false)
     {
-        var course = Course.Create("Título", "Desc", "thumb.png", createdBy, isGlobal);
+        var course = Course.Create("Título", "Desc", "thumb.png", createdBy, isGlobal, instructorId: createdBy);
         if (!isGlobal)
             course.CourseCountries.Add(CourseCountry.Create(course.Id, countryId));
         return course;
@@ -134,22 +134,53 @@ public class UpdateCourseHandlerTests
         Assert.False(course.IsGlobal);
     }
 
-    [Theory]
-    [InlineData("instructor")]
-    [InlineData("admin")]
-    public async Task HandleAsync_NonSuperAdminOnGlobalCourse_ReturnsForbidden(string role)
+    [Fact]
+    public async Task HandleAsync_AdminOnGlobalCourse_ReturnsForbidden()
     {
-        var ownerId = Guid.NewGuid();
-        var course = BuildCourse(ownerId, isGlobal: true);
+        var course = BuildCourse(Guid.NewGuid(), isGlobal: true);
 
         _coursesMock
             .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
             .ReturnsAsync(course);
 
-        var result = await _handler.HandleAsync(Valid(course.Id, ownerId, role, 57));
+        var result = await _handler.HandleAsync(Valid(course.Id, Guid.NewGuid(), "admin", 57, isGlobal: true));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task HandleAsync_AssignedInstructorEditsGlobalCourseKeepingScope_Succeeds()
+    {
+        var instructorId = Guid.NewGuid();
+        var course = BuildCourse(instructorId, isGlobal: true);
+
+        _coursesMock
+            .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
+            .ReturnsAsync(course);
+
+        var result = await _handler.HandleAsync(Valid(course.Id, instructorId, "instructor", 57, isGlobal: true));
+
+        Assert.True(result.IsSuccess);
+        Assert.True(course.IsGlobal);
+        Assert.Equal("Nuevo título", course.Title);
+    }
+
+    [Fact]
+    public async Task HandleAsync_AssignedInstructorRemovesGlobalScope_ReturnsForbidden()
+    {
+        var instructorId = Guid.NewGuid();
+        var course = BuildCourse(instructorId, isGlobal: true);
+
+        _coursesMock
+            .Setup(r => r.GetByIdTrackedAsync(course.Id, default))
+            .ReturnsAsync(course);
+
+        var result = await _handler.HandleAsync(Valid(course.Id, instructorId, "instructor", 57, isGlobal: false));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ResultErrorType.Forbidden, result.ErrorType);
+        Assert.True(course.IsGlobal);
     }
 
     [Fact]

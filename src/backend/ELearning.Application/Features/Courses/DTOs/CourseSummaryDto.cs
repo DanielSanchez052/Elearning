@@ -7,7 +7,8 @@ public sealed record CourseSummaryDto(
     string? ThumbnailUrl,
     bool IsGlobal,
     bool IsActive,
-    string InstructorName,
+    Guid? InstructorId,
+    string? InstructorName,
     int LessonCount,
     DateTime CreatedAt
 );

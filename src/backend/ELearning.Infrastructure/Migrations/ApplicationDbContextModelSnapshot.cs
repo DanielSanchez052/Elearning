@@ -136,6 +136,10 @@ namespace ELearning.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
+                    b.Property<Guid?>("InstructorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("instructor_id");
+
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -169,6 +173,8 @@ namespace ELearning.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedBy");
+
+                    b.HasIndex("InstructorId");
 
                     b.HasIndex("IsActive");
 
@@ -767,7 +773,14 @@ namespace ELearning.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("ELearning.Domain.Entities.User", "Instructor")
+                        .WithMany("AssignedCourses")
+                        .HasForeignKey("InstructorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("CreatedByUser");
+
+                    b.Navigation("Instructor");
                 });
 
             modelBuilder.Entity("ELearning.Domain.Entities.CourseCountry", b =>
@@ -1021,6 +1034,8 @@ namespace ELearning.Infrastructure.Migrations
 
             modelBuilder.Entity("ELearning.Domain.Entities.User", b =>
                 {
+                    b.Navigation("AssignedCourses");
+
                     b.Navigation("Badges");
 
                     b.Navigation("CreatedCourses");

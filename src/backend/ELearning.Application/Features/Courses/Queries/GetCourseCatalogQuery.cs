@@ -52,7 +52,8 @@ public sealed class GetCourseCatalogHandler
             ThumbnailUrl: c.ThumbnailUrl,
             IsGlobal: c.IsGlobal,
             IsActive: c.IsActive,
-            InstructorName: c.CreatedByUser.FullName,
+            InstructorId: c.InstructorId,
+            InstructorName: c.Instructor?.FullName,
             LessonCount: lessonCountMap.GetValueOrDefault(c.Id),
             CreatedAt: c.CreatedAt
         )).ToList().AsReadOnly();

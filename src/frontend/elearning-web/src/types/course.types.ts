@@ -18,7 +18,8 @@ export interface CourseSummaryDto {
   thumbnailUrl: string | null;
   isGlobal: boolean;
   isActive: boolean;
-  instructorName: string;
+  instructorId: string | null;
+  instructorName: string | null;
   lessonCount: number;
   createdAt: string;
 }
@@ -30,8 +31,8 @@ export interface CourseDetailDto {
   thumbnailUrl: string | null;
   isGlobal: boolean;
   isActive: boolean;
-  instructorName: string;
-  instructorId: string;
+  instructorName: string | null;
+  instructorId: string | null;
   lessons: LessonDto[];
   countries: Country[];
   createdAt: string;

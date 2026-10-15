@@ -35,7 +35,7 @@ public sealed class UpdateCourseHandler : ICommandHandler<UpdateCourseCommand>
         if (!CourseAccess.CanManage(course, cmd.RequesterId, cmd.RequesterRole, cmd.RequesterCountryId))
             return Result.Forbidden(CourseAccess.ForbiddenMessage);
 
-        if (cmd.IsGlobal && !CourseAccess.IsSuperAdmin(cmd.RequesterRole))
+        if (cmd.IsGlobal != course.IsGlobal && !CourseAccess.IsSuperAdmin(cmd.RequesterRole))
             return Result.Forbidden(CourseAccess.GlobalForbiddenMessage);
 
         course.Update(

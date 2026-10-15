@@ -9,6 +9,7 @@ export interface CreateCourseRequest {
   description?: string;
   thumbnailUrl?: string;
   isGlobal: boolean;
+  instructorId?: string;
 }
 
 export interface UpdateCourseRequest {
@@ -48,6 +49,7 @@ export interface ReorderLessonsRequest {
 
 export interface GetAdminCoursesParams {
   instructorId?: string;
+  unassigned?: boolean;
   countryId?: number;
   isActive?: boolean;
   search?: string;
@@ -75,6 +77,9 @@ export const coursesApi = {
 
   assignCountries: (id: string, data: AssignCountriesRequest) =>
     axios.put(`/admin/courses/${id}/countries`, data),
+
+  assignInstructor: (id: string, instructorId: string | null) =>
+    axios.put(`/admin/courses/${id}/instructor`, { instructorId }),
 
   // Lessons
   createLesson: (courseId: string, data: CreateLessonRequest) =>

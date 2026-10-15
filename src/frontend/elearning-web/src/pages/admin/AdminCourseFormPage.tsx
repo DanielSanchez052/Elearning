@@ -29,10 +29,12 @@ import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifi
 
 import { courseKeys, useCourseDetail } from '@/hooks/useCourses';
 import { useAdminCountries } from '@/hooks/admin/countries';
+import { useAssignableInstructors } from '@/hooks/admin/users';
 import {
   useCreateCourse,
   useUpdateCourse,
   useAssignCountries,
+  useAssignInstructor,
   useCreateLesson,
   useUpdateLesson,
   useDeleteLesson,
@@ -52,6 +54,7 @@ import {
   Label,
   Modal,
   RadioCard,
+  Select,
   Skeleton,
   Spinner,
   StateBlock,
@@ -62,7 +65,13 @@ import { ButtonLink } from '@/components/ButtonLink';
 import { LessonRow } from '@/components/courses/LessonRow';
 import FileUploadField from '@/components/admin/FileUploadField';
 import { getApiErrorMessage } from '../../lib/axios';
-import { canManageCourse, canToggleCourseCountry, courseAccessDeniedReason, isSuperAdmin } from '@/lib/courseAccess';
+import {
+  canAssignCourseInstructor,
+  canManageCourse,
+  canToggleCourseCountry,
+  courseAccessDeniedReason,
+  isSuperAdmin,
+} from '@/lib/courseAccess';
 import { useAuthStore } from '@/store/authStore';
 import type { CourseDetailDto, LessonDto } from '../../types';
 import type { CurrentUser } from '@/types/user.types';
@@ -153,6 +162,8 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
   const superAdmin = isSuperAdmin(user);
   // Solo el superadmin elige entre todos los países (y `/admin/countries` no está abierto al instructor).
   const { data: countries } = useAdminCountries({ enabled: superAdmin });
+  const canAssignInstructor = canAssignCourseInstructor(user);
+  const { data: instructors } = useAssignableInstructors(canAssignInstructor);
 
   // Los cursos nuevos se crean en el país del creador; el superadmin puede cambiarlo antes de guardar.
   const initialCountries = useMemo(
@@ -163,6 +174,9 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
   const [savedThumbnail, setSavedThumbnail] = useState(course?.thumbnailUrl ?? '');
   const [selectedCountries, setSelectedCountries] = useState<number[]>(initialCountries);
   const [savedCountries, setSavedCountries] = useState<number[]>(initialCountries);
+  // '' = sin instructor (el valor del Select vacío).
+  const [instructorId, setInstructorId] = useState(course?.instructorId ?? '');
+  const [savedInstructorId, setSavedInstructorId] = useState(course?.instructorId ?? '');
   const [saveError, setSaveError] = useState('');
   const [notice, setNotice] = useState('');
   const [lessonDrawer, setLessonDrawer] = useState<{ open: boolean; lesson: LessonDto | null }>({ open: false, lesson: null });
@@ -175,6 +189,7 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
   const createCourse = useCreateCourse();
   const updateCourse = useUpdateCourse(id);
   const assignCountries = useAssignCountries(id);
+  const assignInstructor = useAssignInstructor(id);
   const reorderLessons = useReorderLessons(id);
   const toggleStatus = useToggleCourseStatus();
 
@@ -228,7 +243,8 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
   };
 
   const countriesChanged = !sameIds(selectedCountries, savedCountries);
-  const hasChanges = isDirty || thumbnailUrl !== savedThumbnail || countriesChanged;
+  const instructorChanged = canAssignInstructor && instructorId !== savedInstructorId;
+  const hasChanges = isDirty || thumbnailUrl !== savedThumbnail || countriesChanged || instructorChanged;
 
   const onSubmit = async (data: CourseFormData) => {
     setSaveError('');
@@ -246,14 +262,20 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
         if (!data.isGlobal && selectedCountries.length > 0 && countriesChanged) {
           await assignCountries.mutateAsync(selectedCountries);
         }
+        if (instructorChanged) await assignInstructor.mutateAsync(instructorId || null);
         reset(data);
         setSavedThumbnail(thumbnailUrl);
         setSavedCountries(selectedCountries);
+        setSavedInstructorId(instructorId);
         setNotice('Cambios guardados.');
         return;
       }
 
-      const courseId = await createCourse.mutateAsync(payload);
+      // El instructor que crea un curso queda asignado a sí mismo; admin y superadmin pueden elegir uno.
+      const courseId = await createCourse.mutateAsync({
+        ...payload,
+        instructorId: canAssignInstructor && instructorId ? instructorId : undefined,
+      });
       // El backend ya lo asigna al país del creador; solo el superadmin puede elegir otros.
       if (superAdmin && !data.isGlobal && selectedCountries.length > 0 && courseId) {
         // useAssignCountries se ata al id de la ruta (vacío al crear): se llama a la API directamente.
@@ -275,7 +297,13 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
     });
   };
 
-  const isPending = createCourse.isPending || updateCourse.isPending || assignCountries.isPending;
+  const isPending =
+    createCourse.isPending || updateCourse.isPending || assignCountries.isPending || assignInstructor.isPending;
+  // Si el asignado no está en la lista (más de 100 instructores), se añade para que el Select lo muestre.
+  const instructorOptions =
+    course?.instructorId && course.instructorName && !instructors?.some((i) => i.id === course.instructorId)
+      ? [...(instructors ?? []), { id: course.instructorId, fullName: course.instructorName, country: '' }]
+      : instructors ?? [];
   const activeDragLesson = activeDragId ? lessons.find((l) => l.id === activeDragId) : null;
   const countryOptions = superAdmin
     ? countries?.filter((c) => c.isActive || selectedCountries.includes(c.id))
@@ -437,7 +465,11 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
           <Card>
             <h2 className="text-base font-semibold text-foreground">Alcance</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              {superAdmin ? 'Define quién puede ver este curso.' : 'Visible para los estudiantes de los países asignados.'}
+              {superAdmin
+                ? 'Define quién puede ver este curso.'
+                : isGlobal
+                  ? 'Curso global: visible para estudiantes de todos los países. Solo el superadmin puede cambiar su alcance.'
+                  : 'Visible para los estudiantes de los países asignados.'}
             </p>
             {superAdmin && (
               <Controller
@@ -507,6 +539,35 @@ function CourseEditor({ course }: { course?: CourseDetailDto }) {
                   </Alert>
                 )}
               </div>
+            )}
+          </Card>
+
+          <Card>
+            <h2 className="text-base font-semibold text-foreground">Instructor</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Edita el curso, lo publica y gestiona sus lecciones y evaluaciones.
+            </p>
+            {canAssignInstructor ? (
+              <Field
+                label="Instructor asignado"
+                className="mt-4"
+                hint={superAdmin ? undefined : 'Solo aparecen los instructores de tu país.'}
+              >
+                <Select value={instructorId} onChange={(e) => setInstructorId(e.target.value)}>
+                  <option value="">Sin instructor</option>
+                  {instructorOptions.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.fullName}
+                      {superAdmin && i.country ? ` · ${i.country}` : ''}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            ) : (
+              <p className="mt-4 text-sm text-foreground-soft">
+                {/* Solo admin y superadmin asignan; el instructor llega aquí siendo el asignado o creando el curso. */}
+                {isEditing ? 'Este curso está asignado a ti.' : 'El curso quedará asignado a ti.'}
+              </p>
             )}
           </Card>
 

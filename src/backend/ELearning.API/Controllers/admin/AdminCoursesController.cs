@@ -21,6 +21,7 @@ public class AdminCoursesController(
     ICommandHandler<ToggleCourseStatusCommand> toggleStatusHandler,
     ICommandHandler<DeleteCourseCommand> deleteCourseHandler,
     ICommandHandler<AssignCourseCountriesCommand> assignCountriesHandler,
+    ICommandHandler<AssignCourseInstructorCommand> assignInstructorHandler,
     ICommandHandler<CreateLessonCommand, Guid> createLessonHandler,
     ICommandHandler<UpdateLessonCommand> updateLessonHandler,
     ICommandHandler<DeleteLessonCommand> deleteLessonHandler,
@@ -30,13 +31,13 @@ public class AdminCoursesController(
     [HttpGet]
     public async Task<IActionResult> GetAdminList(
         [FromQuery] Guid? instructorId = null,
+        [FromQuery] bool unassigned = false,
         [FromQuery] int? countryId = null,
         [FromQuery] bool? isActive = null,
         [FromQuery] string? search = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        // El instructor solo ve sus cursos y el admin los de su país; el superadmin filtra libremente.
         var effectiveInstructorId = User.IsInstructor()
             ? User.GetUserId()
             : instructorId;
@@ -47,6 +48,7 @@ public class AdminCoursesController(
 
         var query = new GetAdminCourseListQuery(
             InstructorId: effectiveInstructorId,
+            UnassignedOnly: unassigned,
             CountryId: effectiveCountryId,
             IsActive: isActive,
             Search: search,
@@ -68,7 +70,8 @@ public class AdminCoursesController(
             IsGlobal: request.IsGlobal,
             CreatedBy: User.GetUserId(),
             CreatorCountryId: User.GetCountryId(),
-            CreatorRole: User.GetRole()
+            CreatorRole: User.GetRole(),
+            InstructorId: request.InstructorId
         );
 
         var result = await createCourseHandler.HandleAsync(cmd, HttpContext.RequestAborted);
@@ -133,6 +136,22 @@ public class AdminCoursesController(
         );
 
         var result = await assignCountriesHandler.HandleAsync(cmd, HttpContext.RequestAborted);
+        return this.ToActionResult(result);
+    }
+
+    [HttpPut("{id:guid}/instructor")]
+    [Authorize(Roles = RoleNames.Admins)]
+    public async Task<IActionResult> AssignInstructor(Guid id, [FromBody] AssignInstructorRequest request)
+    {
+        var cmd = new AssignCourseInstructorCommand(
+            CourseId: id,
+            InstructorId: request.InstructorId,
+            RequesterId: User.GetUserId(),
+            RequesterRole: User.GetRole(),
+            RequesterCountryId: User.GetCountryId()
+        );
+
+        var result = await assignInstructorHandler.HandleAsync(cmd, HttpContext.RequestAborted);
         return this.ToActionResult(result);
     }
 

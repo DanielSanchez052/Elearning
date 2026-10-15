@@ -35,7 +35,7 @@ public class UpdateLessonHandlerTests
     public async Task HandleAsync_InstructorNotOwner_ReturnsForbidden()
     {
         var ownerId = Guid.NewGuid();
-        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
         var lesson = Lesson.Create(course.Id, "Lección", LessonType.Video, "v.mp4", 1);
 
         _lessonsMock
@@ -56,7 +56,7 @@ public class UpdateLessonHandlerTests
     public async Task HandleAsync_ValidCommand_UpdatesLessonAndCallsUpdateAsync()
     {
         var ownerId = Guid.NewGuid();
-        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
         var lesson = Lesson.Create(course.Id, "Lección", LessonType.Video, "v.mp4", 1);
 
         _lessonsMock
@@ -80,7 +80,7 @@ public class UpdateLessonHandlerTests
     public async Task HandleAsync_QuizLessonWithoutQuestionsMarkedRequired_ReturnsValidationFailureAndDoesNotUpdate()
     {
         var ownerId = Guid.NewGuid();
-        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
         var lesson = Lesson.Create(course.Id, "Quiz Capítulo 1", LessonType.Quiz, null, 1, isRequired: false);
 
         _lessonsMock
@@ -105,7 +105,7 @@ public class UpdateLessonHandlerTests
     public async Task HandleAsync_QuizLessonWithQuestionsMarkedRequired_UpdatesSuccessfully()
     {
         var ownerId = Guid.NewGuid();
-        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false);
+        var course = Course.Create("Curso", "Desc", null, ownerId, isGlobal: false, instructorId: ownerId);
         var lesson = Lesson.Create(course.Id, "Quiz Capítulo 1", LessonType.Quiz, null, 1, isRequired: false);
         var question = QuizQuestion.CreatePerLesson(lesson.Id, "Pregunta", 60m, 3, 1, true);
 

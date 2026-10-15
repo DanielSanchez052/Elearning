@@ -18,6 +18,7 @@ public sealed class CourseRepository : ICourseRepository
         return _db.Courses
             .AsNoTracking()
             .Include(c => c.CreatedByUser)
+            .Include(c => c.Instructor)
             .Include(c => c.CourseCountries)
                 .ThenInclude(cc => cc.Country)
             .FirstOrDefaultAsync(c => c.Id == id, ct);
@@ -27,6 +28,7 @@ public sealed class CourseRepository : ICourseRepository
     {
         return _db.Courses
             .Include(c => c.CreatedByUser)
+            .Include(c => c.Instructor)
             .Include(c => c.CourseCountries)
                 .ThenInclude(cc => cc.Country)
             .Include(c => c.Enrollments) // necesario para verificar inscritos al eliminar
@@ -35,13 +37,10 @@ public sealed class CourseRepository : ICourseRepository
 
     public async Task<(IReadOnlyList<Course> Courses, int TotalCount)> GetCatalogAsync(int countryId, string? search, int page, int pageSize, CancellationToken ct = default)
     {
-        // Cursos que el usuario puede ver:
-        // 1. Cursos globales (IsGlobal = true)
-        // 2. Cursos asignados al país del usuario
-        // Solo activos
         var query = _db.Courses
             .AsNoTracking()
             .Include(c => c.CreatedByUser)
+            .Include(c => c.Instructor)
             .Where(c => c.IsActive)
             .Where(c => c.IsGlobal ||
                         c.CourseCountries.Any(cc => cc.CountryId == countryId));
@@ -65,6 +64,7 @@ public sealed class CourseRepository : ICourseRepository
 
     public async Task<(IReadOnlyList<Course> Courses, int TotalCount)> GetAdminListAsync(
         Guid? instructorId,
+        bool unassignedOnly,
         int? countryId,
         bool? isActive,
         string? search,
@@ -75,10 +75,13 @@ public sealed class CourseRepository : ICourseRepository
         var query = _db.Courses
             .AsNoTracking()
             .Include(c => c.CreatedByUser)
+            .Include(c => c.Instructor)
             .AsQueryable();
 
         if (instructorId.HasValue)
-            query = query.Where(c => c.CreatedBy == instructorId.Value);
+            query = query.Where(c => c.InstructorId == instructorId.Value);
+        else if (unassignedOnly)
+            query = query.Where(c => c.InstructorId == null);
 
         if (countryId.HasValue)
             query = query.Where(c => c.IsGlobal ||
@@ -113,6 +116,11 @@ public sealed class CourseRepository : ICourseRepository
             .AsNoTracking()
             .AnyAsync(c => c.Title.ToLower() == title.ToLowerInvariant()
                         && c.CreatedBy == instructorId, ct);
+    }
+
+    public Task<int> CountByInstructorAsync(Guid instructorId, CancellationToken ct = default)
+    {
+        return _db.Courses.CountAsync(c => c.InstructorId == instructorId, ct);
     }
 
     // ── Escritura ─────────────────────────────────────────────────────────────

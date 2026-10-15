@@ -16,7 +16,7 @@ public class DeleteCourseHandlerTests
 
     private static Course BuildCourse(Guid createdBy, bool isActive = false)
     {
-        var course = Course.Create("Título", "Desc", null, createdBy, isGlobal: false);
+        var course = Course.Create("Título", "Desc", null, createdBy, isGlobal: false, instructorId: createdBy);
         if (isActive)
             course.Activate();
         return course;

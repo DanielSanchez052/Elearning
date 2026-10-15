@@ -56,6 +56,16 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
             .HasForeignKey(c => c.CreatedBy)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.Property(c => c.InstructorId)
+            .HasColumnName("instructor_id");
+
+        builder.HasIndex(c => c.InstructorId);
+
+        builder.HasOne(c => c.Instructor)
+            .WithMany(u => u.AssignedCourses)
+            .HasForeignKey(c => c.InstructorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasCheckConstraint("chk_courses_time_limit", 
             "time_limit_mins IS NULL OR time_limit_mins > 0");
     }

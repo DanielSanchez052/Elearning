@@ -25,13 +25,17 @@ public interface ICourseRepository
     /// Lista de cursos para el panel admin — sin filtro de país ni estado activo.
     /// </summary>
     Task<(IReadOnlyList<Course> Courses, int TotalCount)> GetAdminListAsync(
-        Guid? instructorId, // null = todos los instructores
+        Guid? instructorId, // instructor asignado; null = todos
+        bool unassignedOnly, // solo cursos sin instructor (se ignora si hay instructorId)
         int? countryId,    // null = todos los países
         bool? isActive,     // null = todos los estados
         string? search,
         int page,
         int pageSize,
         CancellationToken ct = default);
+
+    /// <summary>Cursos que tienen asignado a este instructor.</summary>
+    Task<int> CountByInstructorAsync(Guid instructorId, CancellationToken ct = default);
 
     Task<bool> ExistsByTitleAndInstructorAsync(
         string title,

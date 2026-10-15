@@ -4,5 +4,7 @@ public enum NotificationType
 {
     BadgeEarned,
     NewCourse,
-    Reminder
+    Reminder,
+    CourseAssigned,
+    CourseUnassigned
 }
